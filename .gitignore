@@ -30,3 +30,6 @@
 *.exe
 *.out
 *.app
+
+# Sunset exclusions
+engine/bin
