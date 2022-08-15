@@ -27,6 +27,11 @@ namespace Sunset
 				graphics_policy.wait_for_gpu();
 			}
 
+			void draw(void* buffer, uint32_t vertex_count, uint32_t instance_count)
+			{
+				graphics_policy.draw(buffer, vertex_count, instance_count);
+			}
+
 			void* get_state()
 			{
 				return graphics_policy.get_state();
@@ -58,6 +63,9 @@ namespace Sunset
 			{ }
 
 			void wait_for_gpu()
+			{ }
+
+			void draw(void* buffer, uint32_t vertex_count, uint32_t instance_count)
 			{ }
 
 			void* get_state()

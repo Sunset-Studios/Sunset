@@ -11,6 +11,9 @@
 #include <graphics/api/vulkan/vk_command_queue.h>
 #include <graphics/api/vulkan/vk_render_pass.h>
 #include <graphics/api/vulkan/vk_framebuffer.h>
+#include <graphics/api/vulkan/vk_shader.h>
+#include <graphics/api/vulkan/vk_pipeline_state.h>
+#include <graphics/api/vulkan/vk_shader_pipeline_layout.h>
 #endif
 
 #if USE_SDL_WINDOWING
@@ -18,3 +21,5 @@
 #endif
 
 #include <glm/glm.hpp>
+
+#include <graphics/viewport.h>

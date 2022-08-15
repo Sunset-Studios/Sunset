@@ -25,6 +25,11 @@ namespace Sunset
 			render_pass_policy.destroy(gfx_context);
 		}
 
+		void* get_data()
+		{
+			return render_pass_policy.get_data();
+		}
+
 		std::vector<class Framebuffer*> get_output_framebuffers()
 		{
 			return render_pass_policy.get_output_framebuffers();
@@ -62,6 +67,11 @@ namespace Sunset
 
 		void destroy(class GraphicsContext* const gfx_context)
 		{ }
+
+		void* get_data()
+		{
+			return nullptr;
+		}
 
 		std::vector<class Framebuffer*> get_output_framebuffers()
 		{

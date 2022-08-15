@@ -7,6 +7,12 @@
 
 namespace Sunset
 {
+	struct VulkanRenderPassData
+	{
+		VkRenderPass render_pass{ nullptr };
+		std::vector<class Framebuffer*> output_framebuffers;
+	};
+
 	class VulkanRenderPass
 	{
 	public:
@@ -18,14 +24,19 @@ namespace Sunset
 		void initialize_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain);
 		void destroy(class GraphicsContext* const gfx_context);
 
+		void* get_data()
+		{
+			return &data;
+		}
+
 		std::vector<class Framebuffer*> get_output_framebuffers()
 		{
-			return output_framebuffers;
+			return data.output_framebuffers;
 		}
 
 		void set_output_framebuffers(std::vector<class Framebuffer*>&& framebuffers)
 		{
-			output_framebuffers = framebuffers;
+			data.output_framebuffers = framebuffers;
 		}
 
 		void begin_pass(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, void* command_buffer);
@@ -35,7 +46,6 @@ namespace Sunset
 		void create_default_output_framebuffers(class GraphicsContext* const gfx_context, class Swapchain* const swapchain);
 
 	protected:
-		VkRenderPass render_pass;
-		std::vector<class Framebuffer*> output_framebuffers;
+		VulkanRenderPassData data;
 	};
 }

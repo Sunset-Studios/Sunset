@@ -3,7 +3,9 @@
 #include <graphics/graphics_context.h>
 #include <graphics/resource/swapchain.h>
 #include <graphics/command_queue.h>
+#include <graphics/pipeline_state.h>
 #include <graphics/render_pass.h>
+#include <graphics/resource/shader_pipeline_layout.h>
 
 namespace Sunset
 {
@@ -12,7 +14,18 @@ namespace Sunset
 		graphics_context = GraphicsContextFactory::create(window);
 		swapchain = SwapchainFactory::create(graphics_context);
 		command_queue = GraphicsCommandQueueFactory::create(graphics_context);
+
 		render_pass = RenderPassFactory::create_default(graphics_context, swapchain);
+		pipeline_state = PipelineStateBuilder::create(graphics_context)
+			.add_viewport(0.0f, 0.0f, static_cast<float>(window->get_extent().x), static_cast<float>(window->get_extent().y), 0.0f, 1.0f)
+			.add_scissor(0, 0, window->get_extent().x, window->get_extent().y)
+			.set_shader_layout(ShaderPipelineLayoutFactory::create(graphics_context))
+			.set_shader_stage(PipelineShaderStageType::Vertex, "../../shaders/basic.vert.spv")
+			.set_shader_stage(PipelineShaderStageType::Fragment, "../../shaders/basic.frag.spv")
+			.set_primitive_topology_type(PipelinePrimitiveTopologyType::TriangleList)
+			.set_rasterizer_state(PipelineRasterizerPolygonMode::Fill, 1.0f, PipelineRasterizerCullMode::None)
+			.set_multisample_count(1)
+			.build(render_pass);
 	}
 
 	void Renderer::draw()
@@ -25,7 +38,9 @@ namespace Sunset
 
 		render_pass->begin_pass(graphics_context, swapchain, buffer);
 
-		// TODO: Bulk of our rendering code here
+		pipeline_state->bind(graphics_context, buffer);
+
+		graphics_context->draw(buffer, 3, 1);
 
 		render_pass->end_pass(graphics_context, swapchain, buffer);
 
@@ -40,9 +55,15 @@ namespace Sunset
 
 	void Renderer::destroy()
 	{
-		command_queue->destroy(graphics_context);
+		pipeline_state->destroy(graphics_context);
 		render_pass->destroy(graphics_context);
+		command_queue->destroy(graphics_context);
 		swapchain->destroy(graphics_context);
 		graphics_context->destroy();
+	}
+
+	void Renderer::wait_for_gpu_finish()
+	{
+		graphics_context->wait_for_gpu();
 	}
 }

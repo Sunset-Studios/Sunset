@@ -45,7 +45,7 @@ namespace Sunset
 		render_pass_create_info.subpassCount = 1;
 		render_pass_create_info.pSubpasses = &subpass;
 
-		VK_CHECK(vkCreateRenderPass(context_state->get_device(), &render_pass_create_info, nullptr, &render_pass));
+		VK_CHECK(vkCreateRenderPass(context_state->get_device(), &render_pass_create_info, nullptr, &data.render_pass));
 
 		create_default_output_framebuffers(gfx_context, swapchain);
 	}
@@ -54,11 +54,11 @@ namespace Sunset
 	{
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
 
-		vkDestroyRenderPass(context_state->get_device(), render_pass, nullptr);
+		vkDestroyRenderPass(context_state->get_device(), data.render_pass, nullptr);
 
-		for (int i = 0; i < output_framebuffers.size(); ++i)
+		for (int i = 0; i < data.output_framebuffers.size(); ++i)
 		{
-			output_framebuffers[i]->destroy(gfx_context);
+			data.output_framebuffers[i]->destroy(gfx_context);
 		}
 	}
 
@@ -74,12 +74,12 @@ namespace Sunset
 		VkRenderPassBeginInfo rp_begin_info = {};
 		rp_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 		rp_begin_info.pNext = nullptr;
-		rp_begin_info.renderPass = render_pass;
+		rp_begin_info.renderPass = data.render_pass;
 		rp_begin_info.renderArea.offset.x = 0;
 		rp_begin_info.renderArea.offset.y = 0;
 		rp_begin_info.renderArea.extent.width = context_state->window->get_extent().x;
 		rp_begin_info.renderArea.extent.height = context_state->window->get_extent().y;
-		rp_begin_info.framebuffer = static_cast<VkFramebuffer>(output_framebuffers[swapchain_data->current_image_index]->get_framebuffer_handle());
+		rp_begin_info.framebuffer = static_cast<VkFramebuffer>(data.output_framebuffers[swapchain_data->current_image_index]->get_framebuffer_handle());
 
 		rp_begin_info.clearValueCount = 1;
 		rp_begin_info.pClearValues = &clear_value;
@@ -99,11 +99,11 @@ namespace Sunset
 		VulkanSwapchainData* swapchain_data = static_cast<VulkanSwapchainData*>(swapchain->get_data());
 
 		const size_t swapchain_image_count = swapchain_data->swapchain_images.size();
-		output_framebuffers = std::vector<Framebuffer*>(swapchain_image_count);
+		data.output_framebuffers = std::vector<Framebuffer*>(swapchain_image_count);
 
 		for (size_t i = 0; i < swapchain_image_count; ++i)
 		{
-			output_framebuffers[i] = FramebufferFactory::create(gfx_context, swapchain, &render_pass, &swapchain_data->swapchain_image_views[i]);
+			data.output_framebuffers[i] = FramebufferFactory::create(gfx_context, swapchain, &data.render_pass, &swapchain_data->swapchain_image_views[i]);
 		}
 	}
 

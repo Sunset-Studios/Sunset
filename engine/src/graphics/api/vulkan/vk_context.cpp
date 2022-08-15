@@ -57,6 +57,11 @@ namespace Sunset
 		VK_CHECK(vkResetFences(state.get_device(), 1, &state.sync_pool.get_fence(state.render_fence)));
 	}
 
+	void VulkanContext::draw(void* buffer, uint32_t vertex_count, uint32_t instance_count)
+	{
+		vkCmdDraw(static_cast<VkCommandBuffer>(buffer), vertex_count, instance_count, 0, 0);
+	}
+
 	void create_surface(VulkanContext* const vulkan_context, Window* const window)
 	{
 #if USE_SDL_WINDOWING

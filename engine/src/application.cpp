@@ -17,6 +17,7 @@ namespace Sunset
 	{	
 		if (bIsInitialized)
 		{
+			renderer->wait_for_gpu_finish();
 			renderer->destroy();
 			window->destroy();
 		}

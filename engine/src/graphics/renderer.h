@@ -16,11 +16,13 @@ namespace Sunset
 			void initialize(class Window* const window);
 			void draw();
 			void destroy();
+			void wait_for_gpu_finish();
 
 		protected:
 			class GraphicsContext* graphics_context;
 			class Swapchain* swapchain;
 			class GraphicsCommandQueue* command_queue;
+			class PipelineState* pipeline_state;
 			class RenderPass* render_pass;
 	};
 
