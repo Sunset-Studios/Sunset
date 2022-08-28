@@ -2,19 +2,27 @@
 #include <graphics/resource/swapchain.h>
 #include <graphics/graphics_context.h>
 #include <graphics/resource/framebuffer.h>
+#include <graphics/pipeline_state.h>
 #include <window/window.h>
+#include <input/input_provider.h>
 
 namespace Sunset
 {
-	void VulkanRenderPass::initialize(GraphicsContext* const gfx_context, Swapchain* const swapchain)
+	void VulkanRenderPass::initialize(GraphicsContext* const gfx_context, Swapchain* const swapchain, PipelineStateCache* pso_cache, std::initializer_list<PipelineState*> pipelines_states)
 	{
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
 		VulkanSwapchainData* swapchain_data = static_cast<VulkanSwapchainData*>(swapchain->get_data());
 
 		// TODO: More generic create body
+
+		for (PipelineState* const pipeline_state : pipelines_states)
+		{
+			pso_cache->add(pipeline_state);
+			pipeline_state->build(gfx_context, &data);
+		}
 	}
 
-	void VulkanRenderPass::initialize_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain)
+	void VulkanRenderPass::initialize_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, PipelineStateCache* pso_cache, std::initializer_list<PipelineState*> pipelines_states)
 	{
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
 		VulkanSwapchainData* swapchain_data = static_cast<VulkanSwapchainData*>(swapchain->get_data());
@@ -48,11 +56,19 @@ namespace Sunset
 		VK_CHECK(vkCreateRenderPass(context_state->get_device(), &render_pass_create_info, nullptr, &data.render_pass));
 
 		create_default_output_framebuffers(gfx_context, swapchain);
+
+		for (PipelineState* const pipeline_state : pipelines_states)
+		{
+			pso_cache->add(pipeline_state);
+			pipeline_state->build(gfx_context, &data);
+		}
 	}
 
-	void VulkanRenderPass::destroy(GraphicsContext* const gfx_context)
+	void VulkanRenderPass::destroy(GraphicsContext* const gfx_context, PipelineStateCache* pso_cache)
 	{
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
+
+		pso_cache->destroy(gfx_context);
 
 		vkDestroyRenderPass(context_state->get_device(), data.render_pass, nullptr);
 
@@ -62,7 +78,18 @@ namespace Sunset
 		}
 	}
 
-	void VulkanRenderPass::begin_pass(GraphicsContext* const gfx_context, Swapchain* const swapchain, void* command_buffer)
+	void VulkanRenderPass::draw(class GraphicsContext* const gfx_context, void* command_buffer, PipelineStateCache* pso_cache)
+	{
+		if (InputProvider::get()->get_action(InputKey::K_Space))
+		{
+			pso_index = (pso_index + 1) % pso_cache->size();
+		}
+
+		pso_cache->get(static_cast<int32_t>(pso_index))->bind(gfx_context, command_buffer);
+		gfx_context->draw(command_buffer, 3, 1);
+	}
+
+	void VulkanRenderPass::begin_pass(GraphicsContext* const gfx_context, Swapchain* const swapchain, void* command_buffer, PipelineStateCache* pso_cache)
 	{
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
 		VulkanSwapchainData* swapchain_data = static_cast<VulkanSwapchainData*>(swapchain->get_data());
@@ -88,7 +115,7 @@ namespace Sunset
 	}
 
 
-	void VulkanRenderPass::end_pass(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, void* command_buffer)
+	void VulkanRenderPass::end_pass(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, void* command_buffer, PipelineStateCache* pso_cache)
 	{
 		vkCmdEndRenderPass(static_cast<VkCommandBuffer>(command_buffer));
 	}

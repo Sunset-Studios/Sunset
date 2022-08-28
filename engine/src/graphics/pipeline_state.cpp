@@ -21,6 +21,12 @@ namespace Sunset
 		return *this;
 	}
 
+	Sunset::PipelineStateBuilder& PipelineStateBuilder::clear_shader_stages()
+	{
+		pipeline_state->clear_shader_stages(context);
+		return *this;
+	}
+
 	Sunset::PipelineStateBuilder& PipelineStateBuilder::set_shader_stage(PipelineShaderStageType stage, class Shader* shader)
 	{
 		pipeline_state->set_shader_stage(context, stage, shader);
@@ -51,9 +57,34 @@ namespace Sunset
 		return *this;
 	}
 
-	Sunset::PipelineState* PipelineStateBuilder::build(RenderPass* render_pass)
+	Sunset::PipelineState* PipelineStateBuilder::build(void* render_pass_data)
 	{
-		pipeline_state->build(context, render_pass);
+		pipeline_state->build(context, render_pass_data);
 		return pipeline_state;
+	}
+
+	void PipelineStateCache::add(class PipelineState* pipeline_state)
+	{
+		cache.push_back(pipeline_state);
+	}
+
+	void PipelineStateCache::remove(class PipelineState* pipeline_state)
+	{
+		cache.erase(std::remove(cache.begin(), cache.end(), pipeline_state), cache.end());
+	}
+
+	Sunset::PipelineState* PipelineStateCache::get(uint32_t index)
+	{
+		assert(index < cache.size());
+		return cache[index];
+	}
+
+	void PipelineStateCache::destroy(GraphicsContext* const gfx_context)
+	{
+		for (PipelineState* const state : cache)
+		{
+			state->destroy(gfx_context);
+		}
+		cache.clear();
 	}
 }

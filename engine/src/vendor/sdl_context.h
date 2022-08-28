@@ -1,13 +1,20 @@
 #pragma once
 
+#include <bitset>
+#include <unordered_map>
+
 #include <glm/glm.hpp>
 #include <SDL.h>
 
+#include <input_types.h>
+
 namespace Sunset
 {
-	extern bool bSDLInitialized;
+	extern bool B_SDL_INITIALIZED;
+	extern SDL_Event sdl_event;
+	extern std::unordered_map<SDL_Keycode, InputKey> SDL_TO_SUNSET_KEY_MAP;
 
-	extern void lazy_init();
+	extern void lazy_SDL_init();
 
 	class WindowSDL
 	{
@@ -15,6 +22,7 @@ namespace Sunset
 		WindowSDL() = default;
 
 		void initialize(const char* title, const glm::ivec2& position, const glm::ivec2& extent);
+		void poll();
 		bool is_closing();
 		void destroy();
 
@@ -37,6 +45,17 @@ namespace Sunset
 		glm::ivec2 extent;
 		glm::ivec2 position;
 		SDL_Window* window_handle{ nullptr };
-		SDL_Event e{ 0 };
+	};
+
+	class InputProcessorSDL
+	{
+		public:
+			InputProcessorSDL() = default;
+
+			void initialize();
+			void update(class InputContext* context);
+
+		protected:
+			std::bitset<NUM_AVAILABLE_KEYS> key_bitmap;
 	};
 }

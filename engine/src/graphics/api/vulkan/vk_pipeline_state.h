@@ -122,7 +122,7 @@ namespace Sunset
 	public:
 		void initialize(class GraphicsContext* const gfx_context, struct PipelineStateData* state_data);
 		void destroy(class GraphicsContext* const gfx_context, struct PipelineStateData* state_data);
-		void build(class GraphicsContext* const gfx_context, struct PipelineStateData* state_data, class RenderPass* render_pass);
+		void build(class GraphicsContext* const gfx_context, struct PipelineStateData* state_data, void* render_pass_data);
 		void bind(class GraphicsContext* const gfx_context, void* buffer);
 
 		void* get_handle()

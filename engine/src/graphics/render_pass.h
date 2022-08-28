@@ -1,6 +1,7 @@
 #pragma once
 
 #include <common.h>
+#include <graphics/pipeline_state.h>
 
 namespace Sunset
 {
@@ -10,19 +11,24 @@ namespace Sunset
 	public:
 		GenericRenderPass() = default;
 
-		void initialize(class GraphicsContext* const gfx_context, class Swapchain* const swapchain)
+		void initialize(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, std::initializer_list<class PipelineState*> pipelines_states = {})
 		{
-			render_pass_policy.initialize(gfx_context, swapchain);
+			render_pass_policy.initialize(gfx_context, swapchain, &pso_cache, pipelines_states);
 		}
 
-		void initialize_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain)
+		void initialize_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, std::initializer_list<class PipelineState*> pipelines_states = {})
 		{
-			render_pass_policy.initialize_default(gfx_context, swapchain);
+			render_pass_policy.initialize_default(gfx_context, swapchain, &pso_cache, pipelines_states);
 		}
 
 		void destroy(class GraphicsContext* const gfx_context)
 		{
-			render_pass_policy.destroy(gfx_context);
+			render_pass_policy.destroy(gfx_context, &pso_cache);
+		}
+
+		void draw(class GraphicsContext* const gfx_context, void* command_buffer)
+		{
+			render_pass_policy.draw(gfx_context, command_buffer, &pso_cache);
 		}
 
 		void* get_data()
@@ -42,16 +48,17 @@ namespace Sunset
 
 		void begin_pass(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, void* command_buffer)
 		{
-			render_pass_policy.begin_pass(gfx_context, swapchain, command_buffer);
+			render_pass_policy.begin_pass(gfx_context, swapchain, command_buffer, &pso_cache);
 		}
 
 		void end_pass(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, void* command_buffer)
 		{
-			render_pass_policy.end_pass(gfx_context, swapchain, command_buffer);
+			render_pass_policy.end_pass(gfx_context, swapchain, command_buffer, &pso_cache);
 		}
 
 	private:
 		Policy render_pass_policy;
+		PipelineStateCache pso_cache;
 	};
 
 	class NoopRenderPass
@@ -66,6 +73,9 @@ namespace Sunset
 		{ }
 
 		void destroy(class GraphicsContext* const gfx_context)
+		{ }
+
+		void draw(class GraphicsContext* const gfx_context)
 		{ }
 
 		void* get_data()
@@ -100,19 +110,19 @@ namespace Sunset
 	{
 	public:
 		template<typename ...Args>
-		static RenderPass* create(Args&&... args)
+		static RenderPass* create(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, std::initializer_list<class PipelineState*> pipelines_states = {})
 		{
-			RenderPass* gfx = new RenderPass;
-			gfx->initialize(std::forward<Args>(args)...);
-			return gfx;
+			RenderPass* rp = new RenderPass;
+			rp->initialize(gfx_context, swapchain, pipelines_states);
+			return rp;
 		}
 
 		template<typename ...Args>
-		static RenderPass* create_default(Args&&... args)
+		static RenderPass* create_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, std::initializer_list<class PipelineState*> pipelines_states = {})
 		{
-			RenderPass* gfx = new RenderPass;
-			gfx->initialize_default(std::forward<Args>(args)...);
-			return gfx;
+			RenderPass* rp = new RenderPass;
+			rp->initialize_default(gfx_context, swapchain, pipelines_states);
+			return rp;
 		}
 	};
 }

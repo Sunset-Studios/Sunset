@@ -15,8 +15,18 @@ namespace Sunset
 		swapchain = SwapchainFactory::create(graphics_context);
 		command_queue = GraphicsCommandQueueFactory::create(graphics_context);
 
-		render_pass = RenderPassFactory::create_default(graphics_context, swapchain);
-		pipeline_state = PipelineStateBuilder::create(graphics_context)
+		PipelineState* pipeline_state_colored = PipelineStateBuilder::create(graphics_context)
+			.add_viewport(0.0f, 0.0f, static_cast<float>(window->get_extent().x), static_cast<float>(window->get_extent().y), 0.0f, 1.0f)
+			.add_scissor(0, 0, window->get_extent().x, window->get_extent().y)
+			.set_shader_layout(ShaderPipelineLayoutFactory::create(graphics_context))
+			.set_shader_stage(PipelineShaderStageType::Vertex, "../../shaders/basic_colored.vert.spv")
+			.set_shader_stage(PipelineShaderStageType::Fragment, "../../shaders/basic_colored.frag.spv")
+			.set_primitive_topology_type(PipelinePrimitiveTopologyType::TriangleList)
+			.set_rasterizer_state(PipelineRasterizerPolygonMode::Fill, 1.0f, PipelineRasterizerCullMode::None)
+			.set_multisample_count(1)
+			.get_state();
+
+		PipelineState* pipeline_state_basic = PipelineStateBuilder::create(graphics_context)
 			.add_viewport(0.0f, 0.0f, static_cast<float>(window->get_extent().x), static_cast<float>(window->get_extent().y), 0.0f, 1.0f)
 			.add_scissor(0, 0, window->get_extent().x, window->get_extent().y)
 			.set_shader_layout(ShaderPipelineLayoutFactory::create(graphics_context))
@@ -25,7 +35,9 @@ namespace Sunset
 			.set_primitive_topology_type(PipelinePrimitiveTopologyType::TriangleList)
 			.set_rasterizer_state(PipelineRasterizerPolygonMode::Fill, 1.0f, PipelineRasterizerCullMode::None)
 			.set_multisample_count(1)
-			.build(render_pass);
+			.get_state();
+
+		render_pass = RenderPassFactory::create_default(graphics_context, swapchain, { pipeline_state_basic, pipeline_state_colored });
 	}
 
 	void Renderer::draw()
@@ -37,11 +49,7 @@ namespace Sunset
 		void* buffer = command_queue->begin_one_time_buffer_record(graphics_context);
 
 		render_pass->begin_pass(graphics_context, swapchain, buffer);
-
-		pipeline_state->bind(graphics_context, buffer);
-
-		graphics_context->draw(buffer, 3, 1);
-
+		render_pass->draw(graphics_context, buffer);
 		render_pass->end_pass(graphics_context, swapchain, buffer);
 
 		command_queue->end_one_time_buffer_record(graphics_context);
@@ -55,15 +63,10 @@ namespace Sunset
 
 	void Renderer::destroy()
 	{
-		pipeline_state->destroy(graphics_context);
+		graphics_context->wait_for_gpu();
 		render_pass->destroy(graphics_context);
 		command_queue->destroy(graphics_context);
 		swapchain->destroy(graphics_context);
 		graphics_context->destroy();
-	}
-
-	void Renderer::wait_for_gpu_finish()
-	{
-		graphics_context->wait_for_gpu();
 	}
 }

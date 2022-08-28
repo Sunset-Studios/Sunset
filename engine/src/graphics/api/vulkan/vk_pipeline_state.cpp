@@ -24,10 +24,10 @@ namespace Sunset
 		}
 	}
 
-	void VulkanPipelineState::build(class GraphicsContext* const gfx_context, PipelineStateData* state_data, RenderPass* render_pass)
+	void VulkanPipelineState::build(class GraphicsContext* const gfx_context, PipelineStateData* state_data, void* render_pass_data)
 	{
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
-		VulkanRenderPassData* render_pass_data = static_cast<VulkanRenderPassData*>(render_pass->get_data());
+		VulkanRenderPassData* render_pass = static_cast<VulkanRenderPassData*>(render_pass_data);
 		VulkanShaderPipelineLayoutData* pipeline_layout_data = static_cast<VulkanShaderPipelineLayoutData*>(state_data->layout->get_data());
 
 		std::vector<VkViewport> viewports(VK_FROM_SUNSET_VIEWPORT_LIST(state_data->viewports));
@@ -63,7 +63,7 @@ namespace Sunset
 		pipeline_create_info.pMultisampleState = &multisample_state;
 		pipeline_create_info.pColorBlendState = &color_blending_state;
 		pipeline_create_info.layout = pipeline_layout_data->layout;
-		pipeline_create_info.renderPass = render_pass_data->render_pass;
+		pipeline_create_info.renderPass = render_pass->render_pass;
 		pipeline_create_info.subpass = 0;
 		pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE;
 

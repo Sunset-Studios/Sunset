@@ -45,8 +45,8 @@ namespace Sunset
 		state.sync_pool.release_semaphore(&state, state.present_semaphore);
 		state.sync_pool.release_semaphore(&state, state.render_semaphore);
 
-		vkDestroyDevice(state.get_device(), nullptr);
 		vkDestroySurfaceKHR(state.instance, state.surface, nullptr);
+		vkDestroyDevice(state.get_device(), nullptr);
 		vkb::destroy_debug_utils_messenger(state.instance, state.debug_messenger);
 		vkDestroyInstance(state.instance, nullptr);
 	}

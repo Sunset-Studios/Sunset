@@ -1,6 +1,7 @@
 ﻿#include <application.h>
 #include <window/window.h>
 #include <graphics/renderer.h>
+#include <input/input_provider.h>
 
 #include <SDL.h>
 #include <SDL_vulkan.h>
@@ -12,22 +13,16 @@ namespace Sunset
 		bIsInitialized = true;
 		window = WindowFactory::create(ENGINE_NAME, glm::ivec2(0), glm::ivec2(1280, 720));
 		renderer = RendererFactory::create(window);
+
+		InputProvider::get()->push_context(InputProvider::default_context());
 	}
+
 	void Application::cleanup()
 	{	
 		if (bIsInitialized)
 		{
-			renderer->wait_for_gpu_finish();
 			renderer->destroy();
 			window->destroy();
-		}
-	}
-
-	void Application::draw()
-	{
-		if (bIsInitialized)
-		{
-			renderer->draw();
 		}
 	}
 
@@ -36,10 +31,14 @@ namespace Sunset
 		if (bIsInitialized)
 		{
 			bool bQuit = false;
-			//main loop
+			
 			while (!bQuit && !window->is_closing())
 			{
-				draw();
+				window->poll();
+
+				renderer->draw();
+
+				InputProvider::get()->update();
 			}
 		}
 	}

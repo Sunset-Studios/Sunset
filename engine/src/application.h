@@ -19,9 +19,6 @@ namespace Sunset
 			//shuts down the engine
 			void cleanup();
 
-			//draw loop
-			void draw();
-
 			//run main loop
 			void run();
 

@@ -15,6 +15,11 @@ namespace Sunset
 				window_policy.initialize(title, position, extent);
 			}
 
+			void poll()
+			{
+				window_policy.poll();
+			}
+
 			bool is_closing()
 			{
 				return window_policy.is_closing();
@@ -50,6 +55,9 @@ namespace Sunset
 			NoopWindow() = default;
 
 			void initialize(const char* title, const glm::ivec2& position, const glm::ivec2& extent)
+			{ }
+
+			void poll()
 			{ }
 
 			bool is_closing()

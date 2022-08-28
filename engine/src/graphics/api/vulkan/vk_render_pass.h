@@ -20,9 +20,10 @@ namespace Sunset
 		~VulkanRenderPass() = default;
 
 	public:
-		void initialize(class GraphicsContext* const gfx_context, class Swapchain* const swapchain);
-		void initialize_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain);
-		void destroy(class GraphicsContext* const gfx_context);
+		void initialize(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, class PipelineStateCache* pso_cache, std::initializer_list<class PipelineState*> pipelines_states = {});
+		void initialize_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, class PipelineStateCache* pso_cache, std::initializer_list<class PipelineState*> pipelines_states = {});
+		void destroy(class GraphicsContext* const gfx_context, class PipelineStateCache* pso_cache);
+		void draw(class GraphicsContext* const gfx_context, void* command_buffer, class PipelineStateCache* pso_cache);
 
 		void* get_data()
 		{
@@ -39,13 +40,14 @@ namespace Sunset
 			data.output_framebuffers = framebuffers;
 		}
 
-		void begin_pass(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, void* command_buffer);
-		void end_pass(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, void* command_buffer);
+		void begin_pass(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, void* command_buffer, class PipelineStateCache* pso_cache);
+		void end_pass(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, void* command_buffer, class PipelineStateCache* pso_cache);
 
 	protected:
 		void create_default_output_framebuffers(class GraphicsContext* const gfx_context, class Swapchain* const swapchain);
 
 	protected:
 		VulkanRenderPassData data;
+		size_t pso_index{ 0 };
 	};
 }
