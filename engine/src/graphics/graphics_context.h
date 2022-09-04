@@ -42,6 +42,16 @@ namespace Sunset
 				return graphics_policy.get_frame_number();
 			}
 
+			void set_buffer_allocator(class BufferAllocator* allocator)
+			{
+				graphics_policy.set_buffer_allocator(allocator);
+			}
+
+			class BufferAllocator* get_buffer_allocator()
+			{
+				return graphics_policy.get_buffer_allocator();
+			}
+
 			void advance_frame()
 			{
 				graphics_policy.advance_frame();
@@ -69,6 +79,14 @@ namespace Sunset
 			{ }
 
 			void* get_state()
+			{
+				return nullptr;
+			}
+
+			void set_buffer_allocator(class BufferAllocator* allocator)
+			{ }
+
+			class BufferAllocator* get_buffer_allocator()
 			{
 				return nullptr;
 			}

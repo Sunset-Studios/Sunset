@@ -1,4 +1,5 @@
 #include <graphics/api/vulkan/vk_context.h>
+#include <graphics/resource/buffer.h>
 #include <core/common.h>
 #include <window/window.h>
 
@@ -36,11 +37,13 @@ namespace Sunset
 
 		state.render_semaphore = state.sync_pool.new_semaphore(&state);
 		state.present_semaphore = state.sync_pool.new_semaphore(&state);
-		state.render_fence = state.sync_pool.new_fence(&state);
+		state.render_fence = state.sync_pool.new_fence(&state); 
 	}
 
 	void VulkanContext::destroy()
 	{
+		state.buffer_allocator->destroy();
+
 		state.sync_pool.release_fence(&state, state.render_fence);
 		state.sync_pool.release_semaphore(&state, state.present_semaphore);
 		state.sync_pool.release_semaphore(&state, state.render_semaphore);

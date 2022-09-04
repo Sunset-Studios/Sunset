@@ -15,6 +15,7 @@ namespace Sunset
 			VkDebugUtilsMessengerEXT debug_messenger{ nullptr };
 			VkSurfaceKHR surface{ nullptr };
 			class Window* window{ nullptr };
+			class BufferAllocator* buffer_allocator{ nullptr };
 			vkb::Device device;
 			vkb::PhysicalDevice physical_device;
 			VulkanSyncPool sync_pool;
@@ -55,6 +56,16 @@ namespace Sunset
 			void* get_state()
 			{
 				return &state;
+			}
+
+			void set_buffer_allocator(class BufferAllocator* allocator)
+			{
+				state.buffer_allocator = allocator;
+			}
+
+			class BufferAllocator* get_buffer_allocator()
+			{
+				return state.buffer_allocator;
 			}
 
 			uint32_t get_frame_number() const

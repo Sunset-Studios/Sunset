@@ -1,5 +1,6 @@
 #include <graphics/renderer.h>
 #include <window/window.h>
+#include <graphics/resource/buffer.h>
 #include <graphics/graphics_context.h>
 #include <graphics/resource/swapchain.h>
 #include <graphics/command_queue.h>
@@ -12,6 +13,8 @@ namespace Sunset
 	void Renderer::initialize(Window* const window)
 	{
 		graphics_context = GraphicsContextFactory::create(window);
+		graphics_context->set_buffer_allocator(BufferAllocatorFactory::create(graphics_context));
+
 		swapchain = SwapchainFactory::create(graphics_context);
 		command_queue = GraphicsCommandQueueFactory::create(graphics_context);
 

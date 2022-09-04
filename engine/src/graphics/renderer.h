@@ -18,6 +18,7 @@ namespace Sunset
 			void destroy();
 
 		protected:
+			class BufferAllocator* buffer_allocator;
 			class GraphicsContext* graphics_context;
 			class Swapchain* swapchain;
 			class GraphicsCommandQueue* command_queue;
