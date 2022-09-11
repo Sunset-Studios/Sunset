@@ -19,9 +19,9 @@ namespace Sunset
 
 		protected:
 			class BufferAllocator* buffer_allocator;
-			class GraphicsContext* graphics_context;
+			std::unique_ptr<class GraphicsContext> graphics_context;
 			class Swapchain* swapchain;
-			class GraphicsCommandQueue* command_queue;
+			std::unique_ptr<class GraphicsCommandQueue> command_queue;
 			class RenderPass* render_pass;
 	};
 

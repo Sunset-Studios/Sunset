@@ -104,11 +104,11 @@ namespace Sunset
 	{
 	public:
 		template<typename ...Args>
-		static GraphicsCommandQueue* create(Args&&... args)
+		static std::unique_ptr<GraphicsCommandQueue> create(Args&&... args)
 		{
 			GraphicsCommandQueue* gfx = new GraphicsCommandQueue;
 			gfx->initialize(std::forward<Args>(args)...);
-			return gfx;
+			return std::make_unique<GraphicsCommandQueue>(gfx);
 		}
 	};
 }

@@ -71,7 +71,7 @@ namespace Sunset
 
 	void PipelineStateCache::add(class PipelineState* pipeline_state)
 	{
-		cache.push_back(pipeline_state);
+		cache.push_back(std::make_unique<PipelineState>(pipeline_state));
 	}
 
 	void PipelineStateCache::remove(class PipelineState* pipeline_state)
@@ -82,12 +82,12 @@ namespace Sunset
 	Sunset::PipelineState* PipelineStateCache::get(uint32_t index)
 	{
 		assert(index < cache.size());
-		return cache[index];
+		return cache[index].get();
 	}
 
 	void PipelineStateCache::destroy(GraphicsContext* const gfx_context)
 	{
-		for (PipelineState* const state : cache)
+		for (const std::unique_ptr<PipelineState>& state : cache)
 		{
 			state->destroy(gfx_context);
 		}

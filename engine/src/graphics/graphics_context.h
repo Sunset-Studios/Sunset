@@ -112,11 +112,11 @@ namespace Sunset
 	{
 	public:
 		template<typename ...Args>
-		static GraphicsContext* create(Args&&... args)
+		static std::unique_ptr<GraphicsContext> create(Args&&... args)
 		{
 			GraphicsContext* gfx = new GraphicsContext;
 			gfx->initialize(std::forward<Args>(args)...);
-			return gfx;
+			return std::make_unique<GraphicsContext>(gfx);
 		}
 	};
 }

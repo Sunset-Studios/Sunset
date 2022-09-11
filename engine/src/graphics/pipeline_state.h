@@ -183,6 +183,6 @@ namespace Sunset
 			}
 
 		protected:
-			std::vector<PipelineState*> cache;
+			std::vector<std::unique_ptr<PipelineState>> cache;
 	};
 }
