@@ -1,6 +1,7 @@
 #include <graphics/renderer.h>
 #include <window/window.h>
 #include <graphics/resource/buffer.h>
+#include <graphics/resource/mesh.h>
 #include <graphics/graphics_context.h>
 #include <graphics/resource/swapchain.h>
 #include <graphics/command_queue.h>
@@ -24,6 +25,7 @@ namespace Sunset
 			.set_shader_layout(ShaderPipelineLayoutFactory::create(graphics_context))
 			.set_shader_stage(PipelineShaderStageType::Vertex, "../../shaders/basic_colored.vert.spv")
 			.set_shader_stage(PipelineShaderStageType::Fragment, "../../shaders/basic_colored.frag.spv")
+			.set_vertex_input_description(Vertex::get_description())
 			.set_primitive_topology_type(PipelinePrimitiveTopologyType::TriangleList)
 			.set_rasterizer_state(PipelineRasterizerPolygonMode::Fill, 1.0f, PipelineRasterizerCullMode::None)
 			.set_multisample_count(1)
@@ -35,6 +37,7 @@ namespace Sunset
 			.set_shader_layout(ShaderPipelineLayoutFactory::create(graphics_context))
 			.set_shader_stage(PipelineShaderStageType::Vertex, "../../shaders/basic.vert.spv")
 			.set_shader_stage(PipelineShaderStageType::Fragment, "../../shaders/basic.frag.spv")
+			.set_vertex_input_description(Vertex::get_description())
 			.set_primitive_topology_type(PipelinePrimitiveTopologyType::TriangleList)
 			.set_rasterizer_state(PipelineRasterizerPolygonMode::Fill, 1.0f, PipelineRasterizerCullMode::None)
 			.set_multisample_count(1)

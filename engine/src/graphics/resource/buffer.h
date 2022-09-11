@@ -4,12 +4,6 @@
 
 namespace Sunset
 {
-	enum class BufferType : int16_t
-	{
-		Generic,
-		Vertex
-	};
-
 	template<class Policy>
 	class GenericBufferAllocator
 	{
@@ -44,11 +38,17 @@ namespace Sunset
 		void initialize(class GraphicsContext* const gfx_context, size_t buffer_size, BufferType type)
 		{
 			buffer_policy.initialize(gfx_context, buffer_size, type);
+			buffer_type = type;
 		}
 
 		void copy_from(class GraphicsContext* const gfx_context, void* data, size_t buffer_size)
 		{
 			buffer_policy.copy_from(gfx_context, data, buffer_size);
+		}
+
+		void bind(class GraphicsContext* const gfx_context, void* command_buffer)
+		{
+			buffer_policy.bind(gfx_context, buffer_type, command_buffer);
 		}
 
 		void destroy(class GraphicsContext* const gfx_context)
@@ -58,6 +58,7 @@ namespace Sunset
 
 	private:
 		Policy buffer_policy;
+		BufferType buffer_type;
 	};
 
 	class NoopBufferAllocator
@@ -82,7 +83,7 @@ namespace Sunset
 	public:
 		NoopBuffer() = default;
 
-		void initialize(class GraphicsContext* const gfx_context, size_t buffer_size)
+		void initialize(class GraphicsContext* const gfx_context, size_t buffer_size, BufferType type)
 		{ }
 
 		void destroy(class GraphicsContext* const gfx_context)
@@ -90,12 +91,15 @@ namespace Sunset
 
 		void copy_from(class GraphicsContext* const gfx_context, void* data, size_t buffer_size)
 		{ }
+
+		void bind(class GraphicsContext* const gfx_context, BufferType type, void* command_buffer)
+		{ }
 	};
 
 #if USE_VULKAN_GRAPHICS
 	class Buffer : public GenericBuffer<VulkanBuffer>
 	{ };
-	class BufferAllocator : public GenericBufferAllocator<VulkanBuffer>
+	class BufferAllocator : public GenericBufferAllocator<VulkanBufferAllocator>
 	{ };
 #else
 	class Buffer : public GenericBuffer<NoopBuffer>

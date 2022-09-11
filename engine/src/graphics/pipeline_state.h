@@ -59,6 +59,11 @@ namespace Sunset
 			state_data.layout = layout;
 		}
 
+		void set_vertex_input_description(class GraphicsContext* const gfx_context, PipelineVertexInputDescription vertex_input_description)
+		{
+			state_data.vertex_input_description = vertex_input_description;
+		}
+
 		void set_shader_stage(class GraphicsContext* const gfx_context, PipelineShaderStageType stage, class Shader* shader)
 		{
 			state_data.shader_stages.emplace_back(stage, shader);
@@ -140,6 +145,7 @@ namespace Sunset
 			PipelineStateBuilder& clear_shader_stages();
 			PipelineStateBuilder& set_shader_stage(PipelineShaderStageType stage, class Shader* shader);
 			PipelineStateBuilder& set_shader_stage(PipelineShaderStageType stage, const char* shader_path);
+			PipelineStateBuilder& set_vertex_input_description(PipelineVertexInputDescription vertex_input_description);
 			PipelineStateBuilder& set_primitive_topology_type(PipelinePrimitiveTopologyType topology_type);
 			PipelineStateBuilder& set_rasterizer_state(PipelineRasterizerPolygonMode polygon_mode, float line_width, PipelineRasterizerCullMode cull_mode);
 			PipelineStateBuilder& set_multisample_count(uint16_t count);

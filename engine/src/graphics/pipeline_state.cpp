@@ -39,6 +39,12 @@ namespace Sunset
 		return *this;
 	}
 
+	Sunset::PipelineStateBuilder& PipelineStateBuilder::set_vertex_input_description(PipelineVertexInputDescription vertex_input_description)
+	{
+		pipeline_state->set_vertex_input_description(context, vertex_input_description);
+		return *this;
+	}
+
 	Sunset::PipelineStateBuilder& PipelineStateBuilder::set_primitive_topology_type(PipelinePrimitiveTopologyType topology_type)
 	{
 		pipeline_state->set_primitive_topology(context, topology_type);

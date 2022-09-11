@@ -9,13 +9,14 @@ namespace Sunset
 		glm::vec3 position;
 		glm::vec3 normal;
 		glm::vec3 color;
+
+		static PipelineVertexInputDescription get_description();
 	};
 
 	struct Mesh
 	{
 		std::vector<Vertex> vertices;
 		class Buffer* vertex_buffer;
-		class PipelineState* pipeline_state;
 
 		void upload(class GraphicsContext* const gfx_context);
 	};

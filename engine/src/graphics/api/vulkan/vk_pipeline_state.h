@@ -117,6 +117,35 @@ namespace Sunset
 		return vk_scissors;
 	}
 
+	inline std::vector<VkVertexInputBindingDescription> VK_FROM_SUNSET_VERTEX_BINDING_DESCRIPTION(const std::vector<VertexBinding>& bindings)
+	{
+		std::vector<VkVertexInputBindingDescription> vk_bindings;
+		for (const VertexBinding& binding : bindings)
+		{
+			VkVertexInputBindingDescription binding_desc;
+			binding_desc.binding = static_cast<uint32_t>(binding.index);
+			binding_desc.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+			binding_desc.stride = static_cast<uint32_t>(binding.stride);
+			vk_bindings.push_back(binding_desc);
+		}
+		return vk_bindings;
+	}
+
+	inline std::vector<VkVertexInputAttributeDescription> VK_FROM_SUNSET_VERTEX_ATTRIBUTE_DESCRIPTION(const std::vector<VertexAttribute>& attributes)
+	{
+		std::vector<VkVertexInputAttributeDescription> vk_attributes;
+		for (const VertexAttribute& attribute : attributes)
+		{
+			VkVertexInputAttributeDescription attribute_desc;
+			attribute_desc.binding = static_cast<uint32_t>(attribute.binding);
+			attribute_desc.location = static_cast<uint32_t>(attribute.index);
+			attribute_desc.format = VK_FROM_SUNSET_FORMAT(attribute.format);
+			attribute_desc.offset = static_cast<uint32_t>(attribute.data_offset);
+			vk_attributes.push_back(attribute_desc);
+		}
+		return vk_attributes;
+	}
+
 	class VulkanPipelineState
 	{
 	public:
@@ -133,7 +162,7 @@ namespace Sunset
 	protected:
 		VkPipelineViewportStateCreateInfo new_viewport_state_create_info(const std::vector<VkViewport>& viewports, const std::vector<VkRect2D>& scissors);
 		VkPipelineShaderStageCreateInfo new_shader_stage_create_info(VkShaderStageFlagBits stage, VkShaderModule shader);
-		VkPipelineVertexInputStateCreateInfo new_vertex_input_state_create_info();
+		VkPipelineVertexInputStateCreateInfo new_vertex_input_state_create_info(const std::vector<VkVertexInputBindingDescription>& bindings, const std::vector<VkVertexInputAttributeDescription>& attributes);
 		VkPipelineInputAssemblyStateCreateInfo new_input_assembly_create_info(VkPrimitiveTopology topology);
 		VkPipelineRasterizationStateCreateInfo new_rasterization_state_create_info(VkPolygonMode polygon_draw_mode, float polygon_line_width, VkCullModeFlags cull_mode);
 		VkPipelineMultisampleStateCreateInfo new_multisample_state_create_info(VkSampleCountFlagBits sample_count = VK_SAMPLE_COUNT_1_BIT);

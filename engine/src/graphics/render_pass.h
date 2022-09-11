@@ -43,7 +43,7 @@ namespace Sunset
 
 		void set_output_framebuffers(std::vector<class Framebuffer*>&& framebuffers)
 		{
-			render_pass_policy.set_output_framebuffer(std::forward<std::vector<class Framebuffer*>>(framebuffers));
+			render_pass_policy.set_output_framebuffers(std::forward<std::vector<class Framebuffer*>>(framebuffers));
 		}
 
 		void begin_pass(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, void* command_buffer)
@@ -66,16 +66,16 @@ namespace Sunset
 	public:
 		NoopRenderPass() = default;
 
-		void initialize(class GraphicsContext* const gfx_context, class Swapchain* const swapchain)
+		void initialize(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, class PipelineStateCache* pso_cache)
 		{ }
 
-		void initialize_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain)
+		void initialize_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, class PipelineStateCache* pso_cache)
 		{ }
 
-		void destroy(class GraphicsContext* const gfx_context)
+		void destroy(class GraphicsContext* const gfx_context, class PipelineStateCache* pso_cache)
 		{ }
 
-		void draw(class GraphicsContext* const gfx_context)
+		void draw(class GraphicsContext* const gfx_context, class PipelineStateCache* pso_cache)
 		{ }
 
 		void* get_data()
@@ -91,10 +91,10 @@ namespace Sunset
 		void set_output_framebuffers(std::vector<class Framebuffer*>&& framebuffers)
 		{ }
 
-		void begin_pass(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, void* command_buffer)
+		void begin_pass(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, void* command_buffer, class PipelineStateCache* pso_cache)
 		{ }
 
-		void end_pass(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, void* command_buffer)
+		void end_pass(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, void* command_buffer, class PipelineStateCache* pso_cache)
 		{ }
 	};
 

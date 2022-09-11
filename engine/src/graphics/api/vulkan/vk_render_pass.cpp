@@ -86,6 +86,7 @@ namespace Sunset
 		}
 
 		pso_cache->get(static_cast<int32_t>(pso_index))->bind(gfx_context, command_buffer);
+
 		gfx_context->draw(command_buffer, 3, 1);
 	}
 

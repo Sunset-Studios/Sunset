@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <vertex_types.h>
 
 namespace Sunset
 {
@@ -52,12 +53,20 @@ namespace Sunset
 			PipelineRasterizerCullMode cull_mode{ PipelineRasterizerCullMode::None };
 	};
 
+	struct PipelineVertexInputDescription
+	{
+		public:
+			std::vector<VertexBinding> bindings;
+			std::vector<VertexAttribute> attributes;
+	};
+
 	struct PipelineStateData
 	{
 		public:
 			std::vector<PipelineShaderStage> shader_stages;
 			std::vector<Viewport> viewports;
 			std::vector<Scissor> scissors;
+			PipelineVertexInputDescription vertex_input_description;
 			class ShaderPipelineLayout* layout{ nullptr };
 			PipelinePrimitiveTopologyType primitive_topology_type{ PipelinePrimitiveTopologyType::TriangleList };
 			PipelineRasterizerState rasterizer_state{{}};

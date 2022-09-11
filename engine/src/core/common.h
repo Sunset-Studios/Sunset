@@ -1,6 +1,6 @@
 #pragma once
 
-#define ENGINE_NAME "Sunset"
+#include <minimal.h>
 
 #define USE_VULKAN_GRAPHICS 1
 #define USE_SDL_WINDOWING 1
@@ -20,7 +20,3 @@
 #if USE_SDL_WINDOWING
 #include <vendor/sdl_context.h>
 #endif
-
-#include <glm/glm.hpp>
-
-#include <graphics/viewport.h>

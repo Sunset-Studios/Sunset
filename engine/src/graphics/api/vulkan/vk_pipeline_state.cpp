@@ -42,13 +42,22 @@ namespace Sunset
 			shader_stages.push_back(new_shader_stage_create_info(VK_FROM_SUNSET_SHADER_STAGE_TYPE(shader_stage.stage_type), shader_data->shader_module));
 		}
 
-		VkPipelineVertexInputStateCreateInfo vertex_input_state = new_vertex_input_state_create_info();
+		// TODO: Convert state_data->vertex_input_description from engine repr to vk repr and pass into new_vertex_input_state_create_info()
+		std::vector<VkVertexInputBindingDescription> vertex_bindings(VK_FROM_SUNSET_VERTEX_BINDING_DESCRIPTION(state_data->vertex_input_description.bindings));
+		std::vector<VkVertexInputAttributeDescription> vertex_attributes(VK_FROM_SUNSET_VERTEX_ATTRIBUTE_DESCRIPTION(state_data->vertex_input_description.attributes));
+
+		VkPipelineVertexInputStateCreateInfo vertex_input_state = new_vertex_input_state_create_info(vertex_bindings, vertex_attributes);
+
 		VkPipelineInputAssemblyStateCreateInfo input_assembly_state = new_input_assembly_create_info(VK_FROM_SUNSET_TOPOLOGY_TYPE(state_data->primitive_topology_type));
+
 		VkPipelineRasterizationStateCreateInfo rasterization_state = new_rasterization_state_create_info(
 			VK_FROM_SUNSET_POLYGON_DRAW_TYPE(state_data->rasterizer_state.polygon_draw_mode), state_data->rasterizer_state.line_width, VK_FROM_SUNSET_CULL_MODE_TYPE(state_data->rasterizer_state.cull_mode)
 		);
+
 		VkPipelineMultisampleStateCreateInfo multisample_state = new_multisample_state_create_info(VK_FROM_SUNSET_MULTISAMPLE_COUNT(state_data->multisample_count));
+
 		VkPipelineColorBlendAttachmentState color_blend_attachment_state = new_color_blend_attachment_state();
+
 		VkPipelineColorBlendStateCreateInfo color_blending_state = new_color_blending_state(color_blend_attachment_state);
 
 		VkGraphicsPipelineCreateInfo pipeline_create_info = {};
@@ -106,13 +115,15 @@ namespace Sunset
 	}
 
 
-	VkPipelineVertexInputStateCreateInfo VulkanPipelineState::new_vertex_input_state_create_info()
+	VkPipelineVertexInputStateCreateInfo VulkanPipelineState::new_vertex_input_state_create_info(const std::vector<VkVertexInputBindingDescription>& bindings, const std::vector<VkVertexInputAttributeDescription>& attributes)
 	{
 		VkPipelineVertexInputStateCreateInfo create_info = {};
 		create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 		create_info.pNext = nullptr;
-		create_info.vertexBindingDescriptionCount = 0;
-		create_info.vertexAttributeDescriptionCount = 0;
+		create_info.pVertexBindingDescriptions = bindings.data();
+		create_info.vertexBindingDescriptionCount = static_cast<uint32_t>(bindings.size());
+		create_info.pVertexAttributeDescriptions = attributes.data();
+		create_info.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributes.size());
 		return create_info;
 	}
 

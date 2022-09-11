@@ -75,4 +75,20 @@ namespace Sunset
 		memcpy(mapped_memory, data, buffer_size);
 		vmaUnmapMemory(allocator, allocation);
 	}
+
+	void VulkanBuffer::bind(GraphicsContext* const gfx_context, BufferType type, void* command_buffer)
+	{
+		assert(gfx_context->get_buffer_allocator() != nullptr);
+
+		switch (type)
+		{
+		case BufferType::Vertex:
+			VkDeviceSize offset{ 0 };
+			vkCmdBindVertexBuffers(static_cast<VkCommandBuffer>(command_buffer), 0, 1, &buffer, &offset);
+			break;
+		case BufferType::Generic:
+		default:
+			break;
+		}
+	}
 }
