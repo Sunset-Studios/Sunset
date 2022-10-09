@@ -69,20 +69,32 @@ namespace Sunset
 		return pipeline_state;
 	}
 
-	void PipelineStateCache::add(class PipelineState* pipeline_state)
+	void PipelineStateCache::add(PipelineState* pipeline_state)
 	{
-		cache.push_back(std::make_unique<PipelineState>(pipeline_state));
+		cache.push_back(std::unique_ptr<PipelineState>(pipeline_state));
 	}
 
-	void PipelineStateCache::remove(class PipelineState* pipeline_state)
+	void PipelineStateCache::remove(PipelineState* pipeline_state)
 	{
-		cache.erase(std::remove(cache.begin(), cache.end(), pipeline_state), cache.end());
+		cache.erase(
+			std::remove_if(cache.begin(), cache.end(), 
+				[pipeline_state](const std::unique_ptr<PipelineState>& state) { return state.get() == pipeline_state; }
+			), cache.end()
+		);
 	}
 
-	Sunset::PipelineState* PipelineStateCache::get(uint32_t index)
+	Sunset::PipelineState* PipelineStateCache::fetch(uint32_t index)
 	{
 		assert(index < cache.size());
 		return cache[index].get();
+	}
+
+	void PipelineStateCache::initialize()
+	{
+	}
+
+	void PipelineStateCache::update()
+	{
 	}
 
 	void PipelineStateCache::destroy(GraphicsContext* const gfx_context)

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <singleton.h>
 #include <common.h>
 #include <pipeline_types.h>
 #include <graphics/resource/shader.h>
@@ -167,14 +168,17 @@ namespace Sunset
 			class GraphicsContext* context{ nullptr };
 	};
 
-	class PipelineStateCache
+	class PipelineStateCache : public Singleton<PipelineStateCache>
 	{
+		friend class Singleton;
+
 		public:
-			PipelineStateCache() = default;
+			void initialize();
+			void update();
 
 			void add(class PipelineState* pipeline_state);
 			void remove(class PipelineState* pipeline_state);
-			PipelineState* get(uint32_t index);
+			PipelineState* fetch(uint32_t index);
 			void destroy(class GraphicsContext* const gfx_context);
 			
 			size_t size() const
@@ -184,5 +188,8 @@ namespace Sunset
 
 		protected:
 			std::vector<std::unique_ptr<PipelineState>> cache;
+
+		private:
+			PipelineStateCache() = default;
 	};
 }

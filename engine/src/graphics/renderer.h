@@ -1,6 +1,8 @@
 #pragma once
 
 #include <common.h>
+#include <graphics/command_queue.h>
+#include <graphics/graphics_context.h>
 
 namespace Sunset
 {
@@ -11,6 +13,7 @@ namespace Sunset
 			Renderer(Renderer&& other) = delete;
 			Renderer(const Renderer& other) = delete;
 			Renderer& operator=(const Renderer& other) = delete;
+			~Renderer() = default;
 
 		public:
 			void initialize(class Window* const window);
@@ -19,9 +22,9 @@ namespace Sunset
 
 		protected:
 			class BufferAllocator* buffer_allocator;
-			std::unique_ptr<class GraphicsContext> graphics_context;
+			std::unique_ptr<GraphicsContext> graphics_context;
 			class Swapchain* swapchain;
-			std::unique_ptr<class GraphicsCommandQueue> command_queue;
+			std::unique_ptr<GraphicsCommandQueue> command_queue;
 			class RenderPass* render_pass;
 	};
 

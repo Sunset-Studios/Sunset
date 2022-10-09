@@ -6,6 +6,13 @@
 
 #include <graphics/viewport.h>
 
+#include <memory>
+#include <vector>
+#include <unordered_map>
+#include <chrono>
+#include <typeinfo>
+#include <cassert>
+
 namespace Sunset
 {
 	enum class Format : int16_t
@@ -50,4 +57,8 @@ namespace Sunset
 		Generic,
 		Vertex
 	};
+
+	using ObjectID = uint32_t;
+
+	#define SECONDS_TIME std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count() * 0.001
 }

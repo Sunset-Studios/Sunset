@@ -34,6 +34,21 @@ namespace Sunset
 		}
 	}
 
+
+	void InputContext::set_states(const std::vector<InputState>& states)
+	{
+		action_mappings = std::vector<bool>(input_states.size(), false);
+		state_mappings = std::vector<bool>(input_states.size(), false);
+		range_mappings = std::vector<float>(input_states.size(), 0.0f);
+
+		for (int32_t i = 0; i < input_states.size(); ++i)
+		{
+			const InputState& input_state = input_states[i];
+			raw_to_state_mappings[input_state.raw_input] = i;
+			action_to_state_mappings[input_state.mapped_name] = i;
+		}
+	}
+
 	void InputContext::set_state(int32_t input_state_index, bool b_new_state)
 	{
 		assert(input_state_index < state_mappings.size() && input_state_index >= 0);

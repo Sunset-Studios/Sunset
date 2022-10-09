@@ -82,13 +82,15 @@ namespace Sunset
 
 		switch (type)
 		{
-		case BufferType::Vertex:
-			VkDeviceSize offset{ 0 };
-			vkCmdBindVertexBuffers(static_cast<VkCommandBuffer>(command_buffer), 0, 1, &buffer, &offset);
-			break;
-		case BufferType::Generic:
-		default:
-			break;
+			case BufferType::Vertex:
+			{
+				VkDeviceSize offset{ 0 };
+				vkCmdBindVertexBuffers(static_cast<VkCommandBuffer>(command_buffer), 0, 1, &buffer, &offset);
+				break;
+			}
+			case BufferType::Generic:
+			default:
+				break;
 		}
 	}
 }

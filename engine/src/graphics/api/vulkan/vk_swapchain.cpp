@@ -39,7 +39,7 @@ namespace Sunset
 		}
 	}
 
-	void VulkanSwapchain::request_next_image(class GraphicsContext* const gfx_context)
+	void VulkanSwapchain::request_next_image(GraphicsContext* const gfx_context)
 	{
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
 
@@ -47,7 +47,7 @@ namespace Sunset
 	}
 
 
-	void VulkanSwapchain::present(class GraphicsContext* const gfx_context, class GraphicsCommandQueue* const command_queue)
+	void VulkanSwapchain::present(GraphicsContext* const gfx_context, GraphicsCommandQueue* const command_queue)
 	{
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
 		VulkanCommandQueueData* command_queue_data = static_cast<VulkanCommandQueueData*>(command_queue->get_data());

@@ -3,17 +3,10 @@
 
 namespace Sunset
 {
-	Sunset::InputProvider* InputProvider::get()
-	{
-		static InputProvider* provider = new InputProvider;
-		provider->initialize();
-		return provider;
-	}
-
 	InputContext* InputProvider::default_context()
 	{
-		static InputContext* context{ nullptr };
-		if (context == nullptr)
+		static InputContext context;
+		if (context.num_states() == 0)
 		{
 			std::vector<InputState> input_states;
 			for (int16_t i = 0; i < static_cast<int16_t>(InputKey::NumKeys); ++i)
@@ -22,9 +15,9 @@ namespace Sunset
 				input_states.push_back({ "", static_cast<InputKey>(i), InputType::Action });
 			}
 
-			context = new InputContext(input_states);
+			context.set_states(input_states);
 		}
-		return context;
+		return &context;
 	}
 
 	void InputProvider::initialize()

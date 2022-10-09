@@ -2,9 +2,7 @@
 #include <window/window.h>
 #include <graphics/resource/buffer.h>
 #include <graphics/resource/mesh.h>
-#include <graphics/graphics_context.h>
 #include <graphics/resource/swapchain.h>
-#include <graphics/command_queue.h>
 #include <graphics/pipeline_state.h>
 #include <graphics/render_pass.h>
 #include <graphics/resource/shader_pipeline_layout.h>
@@ -16,13 +14,13 @@ namespace Sunset
 		graphics_context = GraphicsContextFactory::create(window);
 		graphics_context->set_buffer_allocator(BufferAllocatorFactory::create(graphics_context.get()));
 
-		swapchain = SwapchainFactory::create(graphics_context);
-		command_queue = GraphicsCommandQueueFactory::create(graphics_context);
+		swapchain = SwapchainFactory::create(graphics_context.get());
+		command_queue = GraphicsCommandQueueFactory::create(graphics_context.get());
 
 		PipelineState* pipeline_state_colored = PipelineStateBuilder::create(graphics_context.get())
 			.add_viewport(0.0f, 0.0f, static_cast<float>(window->get_extent().x), static_cast<float>(window->get_extent().y), 0.0f, 1.0f)
 			.add_scissor(0, 0, window->get_extent().x, window->get_extent().y)
-			.set_shader_layout(ShaderPipelineLayoutFactory::create(graphics_context))
+			.set_shader_layout(ShaderPipelineLayoutFactory::create(graphics_context.get()))
 			.set_shader_stage(PipelineShaderStageType::Vertex, "../../shaders/basic_colored.vert.spv")
 			.set_shader_stage(PipelineShaderStageType::Fragment, "../../shaders/basic_colored.frag.spv")
 			.set_vertex_input_description(Vertex::get_description())
@@ -34,7 +32,7 @@ namespace Sunset
 		PipelineState* pipeline_state_basic = PipelineStateBuilder::create(graphics_context.get())
 			.add_viewport(0.0f, 0.0f, static_cast<float>(window->get_extent().x), static_cast<float>(window->get_extent().y), 0.0f, 1.0f)
 			.add_scissor(0, 0, window->get_extent().x, window->get_extent().y)
-			.set_shader_layout(ShaderPipelineLayoutFactory::create(graphics_context))
+			.set_shader_layout(ShaderPipelineLayoutFactory::create(graphics_context.get()))
 			.set_shader_stage(PipelineShaderStageType::Vertex, "../../shaders/basic.vert.spv")
 			.set_shader_stage(PipelineShaderStageType::Fragment, "../../shaders/basic.frag.spv")
 			.set_vertex_input_description(Vertex::get_description())

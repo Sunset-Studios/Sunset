@@ -11,9 +11,13 @@ namespace Sunset
 	class InputContext
 	{
 	public:
+		InputContext() = default;
 		InputContext(std::initializer_list<InputState> states);
 		InputContext(const std::vector<InputState>& states);
 
+		inline size_t num_states() const { return input_states.size(); }
+
+		void set_states(const std::vector<InputState>& states);
 		void set_state(int32_t input_state_index, bool b_new_state);
 		void set_action(int32_t input_state_index, bool b_new_action);
 		void set_range(int32_t input_state_index, float new_range);

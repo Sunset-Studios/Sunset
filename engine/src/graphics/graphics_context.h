@@ -116,7 +116,7 @@ namespace Sunset
 		{
 			GraphicsContext* gfx = new GraphicsContext;
 			gfx->initialize(std::forward<Args>(args)...);
-			return std::make_unique<GraphicsContext>(gfx);
+			return std::unique_ptr<GraphicsContext>(gfx);
 		}
 	};
 }

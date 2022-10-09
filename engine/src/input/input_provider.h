@@ -1,15 +1,17 @@
 #pragma once
 
+#include <singleton.h>
 #include <common.h>
 
 #include <input/input_context.h>
 
 namespace Sunset
 {
-	class InputProvider
+	class InputProvider : public Singleton<InputProvider>
 	{
+		friend class Singleton;
+
 		public:
-			static InputProvider* get();
 			static class InputContext* default_context();
 
 		public:

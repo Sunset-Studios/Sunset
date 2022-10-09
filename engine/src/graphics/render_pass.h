@@ -13,22 +13,22 @@ namespace Sunset
 
 		void initialize(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, std::initializer_list<class PipelineState*> pipelines_states = {})
 		{
-			render_pass_policy.initialize(gfx_context, swapchain, &pso_cache, pipelines_states);
+			render_pass_policy.initialize(gfx_context, swapchain, pipelines_states);
 		}
 
 		void initialize_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, std::initializer_list<class PipelineState*> pipelines_states = {})
 		{
-			render_pass_policy.initialize_default(gfx_context, swapchain, &pso_cache, pipelines_states);
+			render_pass_policy.initialize_default(gfx_context, swapchain, pipelines_states);
 		}
 
 		void destroy(class GraphicsContext* const gfx_context)
 		{
-			render_pass_policy.destroy(gfx_context, &pso_cache);
+			render_pass_policy.destroy(gfx_context);
 		}
 
 		void draw(class GraphicsContext* const gfx_context, void* command_buffer)
 		{
-			render_pass_policy.draw(gfx_context, command_buffer, &pso_cache);
+			render_pass_policy.draw(gfx_context, command_buffer);
 		}
 
 		void* get_data()
@@ -48,17 +48,16 @@ namespace Sunset
 
 		void begin_pass(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, void* command_buffer)
 		{
-			render_pass_policy.begin_pass(gfx_context, swapchain, command_buffer, &pso_cache);
+			render_pass_policy.begin_pass(gfx_context, swapchain, command_buffer);
 		}
 
 		void end_pass(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, void* command_buffer)
 		{
-			render_pass_policy.end_pass(gfx_context, swapchain, command_buffer, &pso_cache);
+			render_pass_policy.end_pass(gfx_context, swapchain, command_buffer);
 		}
 
 	private:
 		Policy render_pass_policy;
-		PipelineStateCache pso_cache;
 	};
 
 	class NoopRenderPass
@@ -66,16 +65,16 @@ namespace Sunset
 	public:
 		NoopRenderPass() = default;
 
-		void initialize(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, class PipelineStateCache* pso_cache)
+		void initialize(class GraphicsContext* const gfx_context, class Swapchain* const swapchain)
 		{ }
 
-		void initialize_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, class PipelineStateCache* pso_cache)
+		void initialize_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain)
 		{ }
 
-		void destroy(class GraphicsContext* const gfx_context, class PipelineStateCache* pso_cache)
+		void destroy(class GraphicsContext* const gfx_context)
 		{ }
 
-		void draw(class GraphicsContext* const gfx_context, class PipelineStateCache* pso_cache)
+		void draw(class GraphicsContext* const gfx_context)
 		{ }
 
 		void* get_data()
@@ -91,10 +90,10 @@ namespace Sunset
 		void set_output_framebuffers(std::vector<class Framebuffer*>&& framebuffers)
 		{ }
 
-		void begin_pass(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, void* command_buffer, class PipelineStateCache* pso_cache)
+		void begin_pass(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, void* command_buffer)
 		{ }
 
-		void end_pass(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, void* command_buffer, class PipelineStateCache* pso_cache)
+		void end_pass(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, void* command_buffer)
 		{ }
 	};
 

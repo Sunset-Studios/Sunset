@@ -108,7 +108,7 @@ namespace Sunset
 		{
 			GraphicsCommandQueue* gfx = new GraphicsCommandQueue;
 			gfx->initialize(std::forward<Args>(args)...);
-			return std::make_unique<GraphicsCommandQueue>(gfx);
+			return std::unique_ptr<GraphicsCommandQueue>(gfx);
 		}
 	};
 }
