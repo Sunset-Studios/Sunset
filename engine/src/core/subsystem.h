@@ -8,7 +8,7 @@ namespace Sunset
 		Subsystem() = default;
 		virtual ~Subsystem() = default;
 
-		virtual void initialize() = 0;
-		virtual void update(double delta_time) = 0;
+		virtual void initialize(class Scene* scene) = 0;
+		virtual void update(class Scene* scene, double delta_time) = 0;
 	};
 }

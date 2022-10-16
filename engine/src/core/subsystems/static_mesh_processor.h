@@ -10,7 +10,7 @@ namespace Sunset
 		StaticMeshProcessor() = default;
 		~StaticMeshProcessor() = default;
 
-		virtual void initialize() override { };
-		virtual void update(double delta_time) override { };
+		virtual void initialize(class Scene* scene) override { };
+		virtual void update(class Scene* scene, double delta_time) override;
 	};
 }

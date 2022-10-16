@@ -5,6 +5,8 @@
 #include <core/simulation_core.h>
 #include <core/layers/scene.h>
 
+#include <core/ecs/components/mesh_component.h>
+
 #include <SDL.h>
 #include <SDL_vulkan.h>
 
@@ -18,7 +20,12 @@ namespace Sunset
 
 		InputProvider::get()->push_context(InputProvider::default_context());
 
-		SimulationCore::get()->register_layer(std::make_unique<Scene>());
+		std::unique_ptr<Scene> scene = std::make_unique<Scene>();
+
+		EntityID mesh_ent = scene->make_entity();
+		MeshComponent* const mesh_comp = scene->assign_component<MeshComponent>(mesh_ent);
+
+		SimulationCore::get()->register_layer(std::move(scene));
 	}
 
 	void Application::cleanup()

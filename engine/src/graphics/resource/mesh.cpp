@@ -1,6 +1,7 @@
 #include <graphics/resource/mesh.h>
 #include <graphics/graphics_context.h>
 #include <graphics/resource/buffer.h>
+#include <graphics/asset_pool.h>
 
 namespace Sunset
 {
@@ -28,4 +29,24 @@ namespace Sunset
 
 		return description;
 	}
+
+	Sunset::Mesh* MeshFactory::create_triangle(class GraphicsContext* const gfx_context)
+	{
+		Mesh* mesh = GlobalAssetPools<Mesh>::get()->allocate();
+
+		mesh->vertices.resize(3);
+
+		mesh->vertices[0].position = { 1.0f, 1.0f, 0.0f };
+		mesh->vertices[1].position = { -1.0f, 1.0f, 0.0f };
+		mesh->vertices[2].position = { 0.0f, -1.0f, 0.0f };
+
+		mesh->vertices[0].color = { 0.0f, 1.0f, 0.0f };
+		mesh->vertices[1].color = { 0.0f, 1.0f, 0.0f };
+		mesh->vertices[2].color = { 0.0f, 1.0f, 0.0f };
+
+		mesh->upload(gfx_context);
+
+		return mesh;
+	}
+
 }

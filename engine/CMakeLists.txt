@@ -1,5 +1,5 @@
 MACRO(HEADER_DIRECTORIES return_list)
-    FILE(GLOB_RECURSE new_list src/*.h)
+    FILE(GLOB_RECURSE new_list src/*.h third_party/*.h third_party/*.hpp)
     SET(dir_list "")
     FOREACH(file_path ${new_list})
         GET_FILENAME_COMPONENT(dir_path ${file_path} PATH)
@@ -9,19 +9,20 @@ MACRO(HEADER_DIRECTORIES return_list)
     SET(${return_list} ${dir_list})
 ENDMACRO()
 
-add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/third_party")
-
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS "src/*.h" "src/*.cpp")
 
 HEADER_DIRECTORIES(INCLUDE_DIRS)
+
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/third_party")
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/tests")
 
 add_executable(Sunset ${SOURCES})
 
 set_property(TARGET Sunset PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:Sunset>")
 
 target_include_directories(Sunset PUBLIC ${INCLUDE_DIRS})
-target_link_libraries(Sunset vkbootstrap vma glm tinyobjloader imgui stb_image)
 
+target_link_libraries(Sunset vkbootstrap vma glm tinyobjloader imgui stb_image)
 target_link_libraries(Sunset Vulkan::Vulkan sdl2)
 
 ## find all the shader files under the shaders folder
