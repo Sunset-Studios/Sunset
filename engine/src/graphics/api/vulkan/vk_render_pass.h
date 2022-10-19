@@ -5,6 +5,8 @@
 #include <vk_types.h>
 #include <vk_initializers.h>
 
+#include <graphics/pipeline_types.h>
+
 namespace Sunset
 {
 	struct VulkanRenderPassData
@@ -20,8 +22,8 @@ namespace Sunset
 		~VulkanRenderPass() = default;
 
 	public:
-		void initialize(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, std::initializer_list<class PipelineState*> pipelines_states = {});
-		void initialize_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, std::initializer_list<class PipelineState*> pipelines_states = {});
+		void initialize(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, std::initializer_list<PipelineStateID> pipelines_states = {});
+		void initialize_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, std::initializer_list<PipelineStateID> pipelines_states = {});
 		void destroy(class GraphicsContext* const gfx_context);
 		void draw(class GraphicsContext* const gfx_context, void* command_buffer);
 
@@ -48,6 +50,7 @@ namespace Sunset
 
 	protected:
 		VulkanRenderPassData data;
-		size_t pso_index{ 0 };
+		std::vector<PipelineStateID> pass_pipelines_states;
+		size_t current_pso_index{ 0 };
 	};
 }

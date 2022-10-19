@@ -6,6 +6,7 @@ namespace Sunset
 	Scene::Scene()
 	{
 		subsystems.reserve(MAX_COMPONENTS);
+		component_pools.reserve(MAX_COMPONENTS);
 		entities.reserve(MIN_ENTITIES);
 		free_entities.reserve(MIN_ENTITIES);
 	}

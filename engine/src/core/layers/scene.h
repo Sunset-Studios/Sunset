@@ -14,6 +14,8 @@ namespace Sunset
 	{
 		public:
 			Scene();
+			Scene(const Scene&) = delete;
+			Scene& operator=(const Scene&) = delete;
 			~Scene() = default;
 
 			virtual void initialize() override;
@@ -31,9 +33,11 @@ namespace Sunset
 				std::unique_ptr<T> new_subsystem = std::make_unique<T>();
 				new_subsystem->initialize(this);
 
+				T* new_subsystem_ptr = new_subsystem.get();
+
 				subsystems.push_back(std::move(new_subsystem));
 
-				return subsystems.back().get();
+				return new_subsystem_ptr;
 			}
 
 			template<class T>
@@ -48,7 +52,7 @@ namespace Sunset
 						return typeid(*subsystem.get()) == typeid(T);
 					}
 				);
-				return found != subsystems.cend() ? (*found).get() : nullptr;
+				return found != subsystems.cend() ? static_cast<T*>((*found).get()) : nullptr;
 			}
 
 			template<class T>
@@ -67,14 +71,14 @@ namespace Sunset
 				assert(get_entity_index(entity_id) >= 0 && get_entity_index(entity_id) < entities.size());
 				if (entities[get_entity_index(entity_id)].id != entity_id)
 				{
-					return;
+					return nullptr;
 				}
 
 				int component_id = get_component_id<T>();
 
 				if (component_pools.size() <= component_id)
 				{
-					component_pools.resize(component_id + 1, nullptr);
+					component_pools.resize(component_id + 1);
 				}
 				if (component_pools[component_id] == nullptr)
 				{
@@ -94,11 +98,11 @@ namespace Sunset
 				assert(get_entity_index(entity_id) >= 0 && get_entity_index(entity_id) < entities.size());
 				if (entities[get_entity_index(entity_id)].id != entity_id)
 				{
-					return;
+					return nullptr;
 				}
 
 				int component_id = get_component_id<T>();
-				if (!entities[id].components.test(component_id))
+				if (!entities[entity_id].components.test(component_id))
 				{
 					return nullptr;
 				}
@@ -124,7 +128,7 @@ namespace Sunset
 			EntityID make_entity();
 			void destroy_entity(EntityID entity_id);
 
-		protected:
+		public:
 			std::vector<std::unique_ptr<Subsystem>> subsystems;
 			std::vector<std::unique_ptr<StaticBytePoolAllocator>> component_pools;
 			std::vector<Entity> entities;
@@ -137,7 +141,7 @@ namespace Sunset
 		SceneView(Scene& scene)
 			: scene(&scene)
 		{
-			b_all = sizeof...(ComponentType) == 0;
+			b_all = sizeof...(ComponentTypes) == 0;
 			if (!b_all)
 			{
 				int component_ids[] = { 0, get_component_id<ComponentTypes>()... };
@@ -161,12 +165,12 @@ namespace Sunset
 
 			bool operator==(const Iterator& other) const
 			{
-				index == other.index || index == scene->entities.size();
+				return index == other.index || index == scene->entities.size();
 			}
 
 			bool operator!=(const Iterator& other) const
 			{
-				index != other.index && index != scene->entities.size();
+				return index != other.index && index != scene->entities.size();
 			}
 
 			Iterator& operator++()

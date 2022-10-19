@@ -5,16 +5,25 @@
 
 namespace Sunset
 {
-	template<class T>
+	// Size default
+	template<class T, size_t Size = 512>
 	struct PoolSize
 	{
-		static int value;
+		static constexpr int value = Size;
 	};
 
-	template<class T>
-	int PoolSize<T>::value = 512;
+	// Size specializations
+	template<>
+	struct PoolSize<struct Mesh>
+	{
+		static constexpr int value = 512;
+	};
 
-	template<> int PoolSize<class Mesh>::value = 512;
+	template<>
+	struct PoolSize<class PipelineState>
+	{
+		static constexpr int value = 512;
+	};
 
 	template<class T>
 	class GlobalAssetPools

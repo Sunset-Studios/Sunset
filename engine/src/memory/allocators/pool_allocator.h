@@ -18,17 +18,21 @@ namespace Sunset
 			{ }
 			~StaticPoolAllocator() = default;
 
-			T* allocate()
+			template<typename ...Args>
+			T* allocate(Args&&... args)
 			{
 				assert(total_free > 0 && "There are no more elements in the pool to allocate from! Try increasing the pool size.");
 				--total_free;
-				return allocator.allocate(1);
+				T* obj = allocator.allocate(1);
+				allocator.construct(obj, std::forward<Args>(args)...);
+				return obj;
 			}
 
 			void deallocate(T*& element)
 			{
 				assert(total_free < max_items_in_pool && "This deallocate call is returning an element to the pool that will cause a memory overflow! Make sure your alloc/dealloc calls are balanced while using this allocator.");
 				++total_free;
+				allocator.destroy(element);
 				allocator.deallocate(element, 1);
 				element = nullptr;
 			}

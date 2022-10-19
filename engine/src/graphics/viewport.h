@@ -10,6 +10,13 @@ namespace Sunset
 		float height{ 0.0f };
 		float min_depth{ 0.0f };
 		float max_depth{ 0.0f };
+
+		bool operator==(const Viewport& other) const
+		{
+			return x == other.x && y == other.y
+				&& width == other.width && height == other.height
+				&& min_depth == other.min_depth && max_depth == other.max_depth;
+		}
 	};
 	
 	struct Scissor
@@ -18,5 +25,10 @@ namespace Sunset
 		int y{ 0 };
 		int w{ 0 };
 		int h{ 0 };
+
+		bool operator==(const Scissor& other) const
+		{
+			return x == other.x && y == other.y && w == other.w && h == other.h;
+		}
 	};
 }

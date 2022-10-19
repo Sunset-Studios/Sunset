@@ -17,7 +17,7 @@ namespace Sunset
 		swapchain = SwapchainFactory::create(graphics_context.get());
 		command_queue = GraphicsCommandQueueFactory::create(graphics_context.get());
 
-		PipelineState* pipeline_state_colored = PipelineStateBuilder::create(graphics_context.get())
+		PipelineStateID pipeline_state_colored = PipelineStateBuilder::create(graphics_context.get())
 			.add_viewport(0.0f, 0.0f, static_cast<float>(window->get_extent().x), static_cast<float>(window->get_extent().y), 0.0f, 1.0f)
 			.add_scissor(0, 0, window->get_extent().x, window->get_extent().y)
 			.set_shader_layout(ShaderPipelineLayoutFactory::create(graphics_context.get()))
@@ -27,9 +27,9 @@ namespace Sunset
 			.set_primitive_topology_type(PipelinePrimitiveTopologyType::TriangleList)
 			.set_rasterizer_state(PipelineRasterizerPolygonMode::Fill, 1.0f, PipelineRasterizerCullMode::None)
 			.set_multisample_count(1)
-			.get_state();
+			.finish();
 
-		PipelineState* pipeline_state_basic = PipelineStateBuilder::create(graphics_context.get())
+		PipelineStateID pipeline_state_basic = PipelineStateBuilder::create(graphics_context.get())
 			.add_viewport(0.0f, 0.0f, static_cast<float>(window->get_extent().x), static_cast<float>(window->get_extent().y), 0.0f, 1.0f)
 			.add_scissor(0, 0, window->get_extent().x, window->get_extent().y)
 			.set_shader_layout(ShaderPipelineLayoutFactory::create(graphics_context.get()))
@@ -39,7 +39,7 @@ namespace Sunset
 			.set_primitive_topology_type(PipelinePrimitiveTopologyType::TriangleList)
 			.set_rasterizer_state(PipelineRasterizerPolygonMode::Fill, 1.0f, PipelineRasterizerCullMode::None)
 			.set_multisample_count(1)
-			.get_state();
+			.finish();
 
 		render_pass = RenderPassFactory::create_default(graphics_context.get(), swapchain, { pipeline_state_basic, pipeline_state_colored });
 	}

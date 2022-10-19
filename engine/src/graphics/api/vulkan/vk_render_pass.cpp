@@ -8,21 +8,21 @@
 
 namespace Sunset
 {
-	void VulkanRenderPass::initialize(GraphicsContext* const gfx_context, Swapchain* const swapchain, std::initializer_list<PipelineState*> pipelines_states)
+	void VulkanRenderPass::initialize(GraphicsContext* const gfx_context, Swapchain* const swapchain, std::initializer_list<PipelineStateID> pipelines_states)
 	{
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
 		VulkanSwapchainData* swapchain_data = static_cast<VulkanSwapchainData*>(swapchain->get_data());
 
 		// TODO: More generic create body
 
-		for (PipelineState* const pipeline_state : pipelines_states)
+		pass_pipelines_states = pipelines_states;
+		for (PipelineStateID pipeline_state : pass_pipelines_states)
 		{
-			PipelineStateCache::get()->add(pipeline_state);
-			pipeline_state->build(gfx_context, &data);
+			PipelineStateCache::get()->fetch(pipeline_state)->build(gfx_context, &data);
 		}
 	}
 
-	void VulkanRenderPass::initialize_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, std::initializer_list<PipelineState*> pipelines_states)
+	void VulkanRenderPass::initialize_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, std::initializer_list<PipelineStateID> pipelines_states)
 	{
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
 		VulkanSwapchainData* swapchain_data = static_cast<VulkanSwapchainData*>(swapchain->get_data());
@@ -57,10 +57,10 @@ namespace Sunset
 
 		create_default_output_framebuffers(gfx_context, swapchain);
 
-		for (PipelineState* const pipeline_state : pipelines_states)
+		pass_pipelines_states = pipelines_states;
+		for (PipelineStateID pipeline_state : pass_pipelines_states)
 		{
-			PipelineStateCache::get()->add(pipeline_state);
-			pipeline_state->build(gfx_context, &data);
+			PipelineStateCache::get()->fetch(pipeline_state)->build(gfx_context, &data);
 		}
 	}
 
@@ -82,10 +82,10 @@ namespace Sunset
 	{
 		if (InputProvider::get()->get_action(InputKey::K_Space))
 		{
-			pso_index = (pso_index + 1) % PipelineStateCache::get()->size();
+			current_pso_index = (current_pso_index + 1) % PipelineStateCache::get()->size();
 		}
 
-		PipelineStateCache::get()->fetch(static_cast<int32_t>(pso_index))->bind(gfx_context, command_buffer);
+		PipelineStateCache::get()->fetch(pass_pipelines_states[current_pso_index])->bind(gfx_context, command_buffer);
 
 		gfx_context->draw(command_buffer, 3, 1);
 	}

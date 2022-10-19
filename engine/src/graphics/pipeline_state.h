@@ -19,6 +19,12 @@ namespace Sunset
 			pipeline_state_policy.initialize(gfx_context, &state_data);
 		}
 
+		void initialize(class GraphicsContext* const gfx_context, const PipelineStateData& data)
+		{
+			state_data = data;
+			pipeline_state_policy.initialize(gfx_context, &state_data);
+		}
+
 		void destroy(class GraphicsContext* const gfx_context)
 		{
 			pipeline_state_policy.destroy(gfx_context, &state_data);
@@ -131,14 +137,7 @@ namespace Sunset
 	class PipelineStateBuilder
 	{
 		public:
-			static PipelineStateBuilder create(class GraphicsContext* const gfx_context)
-			{
-				PipelineStateBuilder state_builder;
-				state_builder.context = gfx_context;
-				state_builder.pipeline_state = new PipelineState;
-				state_builder.pipeline_state->initialize(gfx_context);
-				return state_builder;
-			}
+			static PipelineStateBuilder create(class GraphicsContext* const gfx_context);
 
 			PipelineStateBuilder& add_viewport(float x_pos, float y_pos, float width, float height, float min_depth, float max_depth);
 			PipelineStateBuilder& add_scissor(int32_t x_pos, int32_t y_pos, int32_t width, int32_t height);
@@ -151,20 +150,21 @@ namespace Sunset
 			PipelineStateBuilder& set_rasterizer_state(PipelineRasterizerPolygonMode polygon_mode, float line_width, PipelineRasterizerCullMode cull_mode);
 			PipelineStateBuilder& set_multisample_count(uint16_t count);
 
+			PipelineStateID finish();
+
 			PipelineStateBuilder value() const
 			{
 				return *this;
 			}
 
-			PipelineState* get_state() const
+			PipelineStateID get_state() const
 			{
 				return pipeline_state;
 			}
 
-			PipelineState* build(void* render_pass_data);
-
 		protected:
-			class PipelineState* pipeline_state{ nullptr };
+			PipelineStateData state_data;
+			PipelineStateID pipeline_state;
 			class GraphicsContext* context{ nullptr };
 	};
 
@@ -176,9 +176,9 @@ namespace Sunset
 			void initialize();
 			void update();
 
-			void add(class PipelineState* pipeline_state);
-			void remove(class PipelineState* pipeline_state);
-			PipelineState* fetch(uint32_t index);
+			PipelineStateID fetch_or_add(const PipelineStateData& data, class GraphicsContext* const gfx_context = nullptr);
+			void remove(PipelineStateID id);
+			PipelineState* fetch(PipelineStateID id);
 			void destroy(class GraphicsContext* const gfx_context);
 			
 			size_t size() const
@@ -187,7 +187,7 @@ namespace Sunset
 			}
 
 		protected:
-			std::vector<std::unique_ptr<PipelineState>> cache;
+			std::unordered_map<PipelineStateID, PipelineState*> cache;
 
 		private:
 			PipelineStateCache() = default;
