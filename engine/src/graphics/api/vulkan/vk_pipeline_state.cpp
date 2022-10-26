@@ -17,11 +17,6 @@ namespace Sunset
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
 
 		vkDestroyPipeline(context_state->get_device(), pipeline, nullptr);
-
-		for (PipelineShaderStage& shader_stage : state_data->shader_stages)
-		{
-			shader_stage.shader_module->destroy(gfx_context);
-		}
 	}
 
 	void VulkanPipelineState::build(class GraphicsContext* const gfx_context, PipelineStateData* state_data, void* render_pass_data)
@@ -42,7 +37,6 @@ namespace Sunset
 			shader_stages.push_back(new_shader_stage_create_info(VK_FROM_SUNSET_SHADER_STAGE_TYPE(shader_stage.stage_type), shader_data->shader_module));
 		}
 
-		// TODO: Convert state_data->vertex_input_description from engine repr to vk repr and pass into new_vertex_input_state_create_info()
 		std::vector<VkVertexInputBindingDescription> vertex_bindings(VK_FROM_SUNSET_VERTEX_BINDING_DESCRIPTION(state_data->vertex_input_description.bindings));
 		std::vector<VkVertexInputAttributeDescription> vertex_attributes(VK_FROM_SUNSET_VERTEX_ATTRIBUTE_DESCRIPTION(state_data->vertex_input_description.attributes));
 

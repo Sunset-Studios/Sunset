@@ -11,6 +11,7 @@ namespace Sunset
 
 		public:
 			void initialize();
+			void destroy();
 			void update();
 			void register_layer(std::unique_ptr<class SimulationLayer>&& layer);
 

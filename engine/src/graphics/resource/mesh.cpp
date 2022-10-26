@@ -17,6 +17,14 @@ namespace Sunset
 		vertex_buffer->copy_from(gfx_context, vertices.data(), vertex_data_size);
 	}
 
+	void Mesh::destroy(GraphicsContext* const gfx_context)
+	{
+		if (vertex_buffer != nullptr)
+		{
+			vertex_buffer->destroy(gfx_context);
+		}
+	}
+
 	Sunset::PipelineVertexInputDescription Vertex::get_description()
 	{
 		PipelineVertexInputDescription description;
@@ -32,19 +40,22 @@ namespace Sunset
 
 	Sunset::Mesh* MeshFactory::create_triangle(class GraphicsContext* const gfx_context)
 	{
-		Mesh* mesh = GlobalAssetPools<Mesh>::get()->allocate();
+		static Mesh* mesh = GlobalAssetPools<Mesh>::get()->allocate();
 
-		mesh->vertices.resize(3);
+		if (mesh->vertices.size() == 0)
+		{
+			mesh->vertices.resize(3);
 
-		mesh->vertices[0].position = { 1.0f, 1.0f, 0.0f };
-		mesh->vertices[1].position = { -1.0f, 1.0f, 0.0f };
-		mesh->vertices[2].position = { 0.0f, -1.0f, 0.0f };
+			mesh->vertices[0].position = { 1.0f, 1.0f, 0.0f };
+			mesh->vertices[1].position = { -1.0f, 1.0f, 0.0f };
+			mesh->vertices[2].position = { 0.0f, -1.0f, 0.0f };
 
-		mesh->vertices[0].color = { 0.0f, 1.0f, 0.0f };
-		mesh->vertices[1].color = { 0.0f, 1.0f, 0.0f };
-		mesh->vertices[2].color = { 0.0f, 1.0f, 0.0f };
+			mesh->vertices[0].color = { 0.0f, 1.0f, 0.0f };
+			mesh->vertices[1].color = { 0.0f, 1.0f, 0.0f };
+			mesh->vertices[2].color = { 0.0f, 1.0f, 0.0f };
 
-		mesh->upload(gfx_context);
+			mesh->upload(gfx_context);
+		}
 
 		return mesh;
 	}

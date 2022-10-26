@@ -7,6 +7,18 @@ namespace Sunset
 	{
 	}
 
+	void SimulationCore::destroy()
+	{
+		for (auto it = layers.cbegin(); it != layers.cend(); ++it)
+		{
+			if (SimulationLayer* const layer = (*it).get())
+			{
+				layer->destroy();
+			}
+		}
+		layers.clear();
+	}
+
 	void SimulationCore::update()
 	{
 		if (previous_time == 0.0)

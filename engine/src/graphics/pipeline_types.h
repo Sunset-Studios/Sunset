@@ -17,6 +17,8 @@ namespace Sunset
 		Compute
 	};
 
+	using PipelineShaderPathList = std::vector<std::pair<PipelineShaderStageType, const char*>>;
+
 	struct PipelineShaderStage
 	{
 		public:
@@ -118,7 +120,6 @@ struct std::hash<Sunset::PipelineStateData>
 {
 	std::size_t operator()(const Sunset::PipelineStateData& psd) const
 	{
-		// TODO: Figure out a good hash function to minimize collisions and prevent false positives
 		std::size_t ss_seed = psd.shader_stages.size();
 		for (auto& i : psd.shader_stages)
 		{

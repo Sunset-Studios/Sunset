@@ -2,6 +2,8 @@
 
 #include <common.h>
 #include <graphics/pipeline_state.h>
+#include <graphics/render_task.h>
+#include <graphics/render_queue.h>
 
 namespace Sunset
 {
@@ -11,14 +13,14 @@ namespace Sunset
 	public:
 		GenericRenderPass() = default;
 
-		void initialize(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, std::initializer_list<PipelineStateID> pipelines_states = {})
+		void initialize(class GraphicsContext* const gfx_context, class Swapchain* const swapchain)
 		{
-			render_pass_policy.initialize(gfx_context, swapchain, pipelines_states);
+			render_pass_policy.initialize(gfx_context, swapchain);
 		}
 
-		void initialize_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, std::initializer_list<PipelineStateID> pipelines_states = {})
+		void initialize_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain)
 		{
-			render_pass_policy.initialize_default(gfx_context, swapchain, pipelines_states);
+			render_pass_policy.initialize_default(gfx_context, swapchain);
 		}
 
 		void destroy(class GraphicsContext* const gfx_context)
@@ -29,6 +31,7 @@ namespace Sunset
 		void draw(class GraphicsContext* const gfx_context, void* command_buffer)
 		{
 			render_pass_policy.draw(gfx_context, command_buffer);
+			render_queue.submit(gfx_context, command_buffer);
 		}
 
 		void* get_data()
@@ -56,8 +59,14 @@ namespace Sunset
 			render_pass_policy.end_pass(gfx_context, swapchain, command_buffer);
 		}
 
+		void push_task(RenderTask* task)
+		{
+			render_queue.add(task);
+		}
+
 	private:
 		Policy render_pass_policy;
+		RenderQueue render_queue;
 	};
 
 	class NoopRenderPass
@@ -109,18 +118,18 @@ namespace Sunset
 	{
 	public:
 		template<typename ...Args>
-		static RenderPass* create(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, std::initializer_list<PipelineStateID> pipelines_states = {})
+		static RenderPass* create(class GraphicsContext* const gfx_context, class Swapchain* const swapchain)
 		{
 			RenderPass* rp = new RenderPass;
-			rp->initialize(gfx_context, swapchain, pipelines_states);
+			rp->initialize(gfx_context, swapchain);
 			return rp;
 		}
 
 		template<typename ...Args>
-		static RenderPass* create_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, std::initializer_list<PipelineStateID> pipelines_states = {})
+		static RenderPass* create_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain)
 		{
 			RenderPass* rp = new RenderPass;
-			rp->initialize_default(gfx_context, swapchain, pipelines_states);
+			rp->initialize_default(gfx_context, swapchain);
 			return rp;
 		}
 	};

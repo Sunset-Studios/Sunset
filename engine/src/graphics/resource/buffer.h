@@ -122,11 +122,6 @@ namespace Sunset
 	class BufferFactory
 	{
 	public:
-		static Buffer* create(class GraphicsContext* const gfx_context, size_t buffer_size, BufferType type)
-		{
-			Buffer* buffer = new Buffer;
-			buffer->initialize(gfx_context, buffer_size, type);
-			return buffer;
-		}
+		static Buffer* create(class GraphicsContext* const gfx_context, size_t buffer_size, BufferType type);
 	};
 }

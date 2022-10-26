@@ -8,21 +8,11 @@
 
 namespace Sunset
 {
-	void VulkanRenderPass::initialize(GraphicsContext* const gfx_context, Swapchain* const swapchain, std::initializer_list<PipelineStateID> pipelines_states)
+	void VulkanRenderPass::initialize(GraphicsContext* const gfx_context, Swapchain* const swapchain)
 	{
-		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
-		VulkanSwapchainData* swapchain_data = static_cast<VulkanSwapchainData*>(swapchain->get_data());
-
-		// TODO: More generic create body
-
-		pass_pipelines_states = pipelines_states;
-		for (PipelineStateID pipeline_state : pass_pipelines_states)
-		{
-			PipelineStateCache::get()->fetch(pipeline_state)->build(gfx_context, &data);
-		}
 	}
 
-	void VulkanRenderPass::initialize_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, std::initializer_list<PipelineStateID> pipelines_states)
+	void VulkanRenderPass::initialize_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain)
 	{
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
 		VulkanSwapchainData* swapchain_data = static_cast<VulkanSwapchainData*>(swapchain->get_data());
@@ -56,19 +46,11 @@ namespace Sunset
 		VK_CHECK(vkCreateRenderPass(context_state->get_device(), &render_pass_create_info, nullptr, &data.render_pass));
 
 		create_default_output_framebuffers(gfx_context, swapchain);
-
-		pass_pipelines_states = pipelines_states;
-		for (PipelineStateID pipeline_state : pass_pipelines_states)
-		{
-			PipelineStateCache::get()->fetch(pipeline_state)->build(gfx_context, &data);
-		}
 	}
 
 	void VulkanRenderPass::destroy(GraphicsContext* const gfx_context)
 	{
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
-
-		PipelineStateCache::get()->destroy(gfx_context);
 
 		vkDestroyRenderPass(context_state->get_device(), data.render_pass, nullptr);
 
@@ -80,14 +62,6 @@ namespace Sunset
 
 	void VulkanRenderPass::draw(class GraphicsContext* const gfx_context, void* command_buffer)
 	{
-		if (InputProvider::get()->get_action(InputKey::K_Space))
-		{
-			current_pso_index = (current_pso_index + 1) % PipelineStateCache::get()->size();
-		}
-
-		PipelineStateCache::get()->fetch(pass_pipelines_states[current_pso_index])->bind(gfx_context, command_buffer);
-
-		gfx_context->draw(command_buffer, 3, 1);
 	}
 
 	void VulkanRenderPass::begin_pass(GraphicsContext* const gfx_context, Swapchain* const swapchain, void* command_buffer)

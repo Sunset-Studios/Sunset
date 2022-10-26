@@ -4,6 +4,7 @@
 #include <input/input_provider.h>
 #include <core/simulation_core.h>
 #include <core/layers/scene.h>
+#include <graphics/resource/mesh.h>
 
 #include <core/ecs/components/mesh_component.h>
 
@@ -15,8 +16,10 @@ namespace Sunset
 	void Application::init()
 	{
 		bIsInitialized = true;
+
 		window = WindowFactory::create(ENGINE_NAME, glm::ivec2(0), glm::ivec2(1280, 720));
-		renderer = RendererFactory::create(window);
+
+		Renderer::get()->setup(window);
 
 		InputProvider::get()->push_context(InputProvider::default_context());
 
@@ -25,6 +28,14 @@ namespace Sunset
 		EntityID mesh_ent = scene->make_entity();
 		MeshComponent* const mesh_comp = scene->assign_component<MeshComponent>(mesh_ent);
 
+		set_mesh(mesh_comp,
+			MeshFactory::create_triangle(Renderer::get()->context()));
+		set_shaders(mesh_comp,
+			{
+				{PipelineShaderStageType::Vertex, "../../shaders/basic_colored.vert.spv"},
+				{PipelineShaderStageType::Fragment, "../../shaders/basic_colored.frag.spv"}
+			});
+
 		SimulationCore::get()->register_layer(std::move(scene));
 	}
 
@@ -32,7 +43,10 @@ namespace Sunset
 	{	
 		if (bIsInitialized)
 		{
-			renderer->destroy();
+			SimulationCore::get()->destroy();
+
+			Renderer::get()->destroy();
+
 			window->destroy();
 		}
 	}
@@ -51,7 +65,7 @@ namespace Sunset
 
 				SimulationCore::get()->update();
 
-				renderer->draw();
+				Renderer::get()->draw();
 			}
 		}
 	}

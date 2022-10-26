@@ -1,15 +1,41 @@
 #include <graphics/pipeline_state.h>
 #include <graphics/render_pass.h>
 #include <graphics/asset_pool.h>
+#include <graphics/renderer.h>
+#include <window/window.h>
+#include <graphics/resource/mesh.h>
 
 namespace Sunset
 {
 
-	Sunset::PipelineStateBuilder PipelineStateBuilder::create(GraphicsContext* const gfx_context)
+	Sunset::PipelineStateBuilder PipelineStateBuilder::create()
 	{
 		PipelineStateBuilder state_builder;
-		state_builder.context = gfx_context;
+		state_builder.context = Renderer::get()->context();
 		return state_builder;
+	}
+
+	Sunset::PipelineStateBuilder PipelineStateBuilder::create(const PipelineStateData& data)
+	{
+		PipelineStateBuilder state_builder;
+		state_builder.context = Renderer::get()->context();;
+		state_builder.state_data = data;
+		return state_builder;
+	}
+
+	Sunset::PipelineStateBuilder PipelineStateBuilder::create_default(Window* window)
+	{
+		return create()
+			.add_viewport(0.0f, 0.0f, static_cast<float>(window->get_extent().x), static_cast<float>(window->get_extent().y), 0.0f, 1.0f)
+			.add_scissor(0, 0, window->get_extent().x, window->get_extent().y)
+			.set_shader_layout(ShaderPipelineLayoutFactory::create(Renderer::get()->context()))
+			.set_shader_stage(PipelineShaderStageType::Vertex, "../../shaders/basic_colored.vert.spv")
+			.set_shader_stage(PipelineShaderStageType::Fragment, "../../shaders/basic_colored.frag.spv")
+			.set_vertex_input_description(Vertex::get_description())
+			.set_primitive_topology_type(PipelinePrimitiveTopologyType::TriangleList)
+			.set_rasterizer_state(PipelineRasterizerPolygonMode::Fill, 1.0f, PipelineRasterizerCullMode::None)
+			.set_multisample_count(1)
+			.value();
 	}
 
 	Sunset::PipelineStateBuilder& PipelineStateBuilder::add_viewport(float x_pos, float y_pos, float width, float height, float min_depth, float max_depth)
@@ -44,7 +70,10 @@ namespace Sunset
 
 	Sunset::PipelineStateBuilder& PipelineStateBuilder::set_shader_stage(PipelineShaderStageType stage, const char* shader_path)
 	{
-		state_data.shader_stages.emplace_back(stage, ShaderFactory::create(context, shader_path));
+		// TODO: Defer creation of shaders until builder finish is called, and think about creating a separate cache for shaders
+		// so we don't potentially create duplicates
+		const ShaderID new_shader = ShaderCache::get()->fetch_or_add(shader_path, context);
+		state_data.shader_stages.emplace_back(stage, ShaderCache::get()->fetch(new_shader));
 		return *this;
 	}
 
@@ -79,9 +108,12 @@ namespace Sunset
 		return PipelineStateCache::get()->fetch_or_add(state_data, context);
 	}
 
-	void PipelineStateCache::remove(PipelineStateID id)
+	void PipelineStateCache::initialize()
 	{
-		cache.erase(id);
+	}
+
+	void PipelineStateCache::update()
+	{
 	}
 
 	PipelineStateID PipelineStateCache::fetch_or_add(const PipelineStateData& data, class GraphicsContext* const gfx_context)
@@ -96,18 +128,15 @@ namespace Sunset
 		return id;
 	}
 
+	void PipelineStateCache::remove(PipelineStateID id)
+	{
+		cache.erase(id);
+	}
+
 	Sunset::PipelineState* PipelineStateCache::fetch(PipelineStateID id)
 	{
 		assert(cache.find(id) != cache.end());
 		return cache[id];
-	}
-
-	void PipelineStateCache::initialize()
-	{
-	}
-
-	void PipelineStateCache::update()
-	{
 	}
 
 	void PipelineStateCache::destroy(GraphicsContext* const gfx_context)

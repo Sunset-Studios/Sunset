@@ -1,5 +1,7 @@
 #pragma once
 
+#include <utility/execution_queue.h>
+
 #include <vk_types.h>
 #include <vk_initializers.h>
 #include <vk_sync.h>
@@ -49,7 +51,7 @@ namespace Sunset
 
 		public:
 			void initialize(class Window* const window);
-			void destroy();
+			void destroy(ExecutionQueue& deletion_queue);
 			void wait_for_gpu();
 			void draw(void* buffer, uint32_t vertex_count, uint32_t instance_count);
 

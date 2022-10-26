@@ -22,8 +22,8 @@ namespace Sunset
 		~VulkanRenderPass() = default;
 
 	public:
-		void initialize(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, std::initializer_list<PipelineStateID> pipelines_states = {});
-		void initialize_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, std::initializer_list<PipelineStateID> pipelines_states = {});
+		void initialize(class GraphicsContext* const gfx_context, class Swapchain* const swapchain);
+		void initialize_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain);
 		void destroy(class GraphicsContext* const gfx_context);
 		void draw(class GraphicsContext* const gfx_context, void* command_buffer);
 

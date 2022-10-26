@@ -16,6 +16,19 @@ namespace Sunset
 		add_subsystem<StaticMeshProcessor>();
 	}
 
+	void Scene::destroy()
+	{
+		for (auto it = subsystems.begin(); it != subsystems.end(); ++it)
+		{
+			(*it)->destroy(this);
+		}
+
+		subsystems.clear();
+		component_pools.clear();
+		entities.clear();;
+		free_entities.clear();
+	}
+
 	void Scene::update(double delta_time)
 	{
 		for (auto it = subsystems.begin(); it != subsystems.end(); ++it)

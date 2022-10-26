@@ -7,6 +7,10 @@ namespace Sunset
 	{
 	}
 
+	void SimulationLayer::destroy()
+	{
+	}
+
 	void SimulationLayer::update(double delta_time)
 	{
 	}

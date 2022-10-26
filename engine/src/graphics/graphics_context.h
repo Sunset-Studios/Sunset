@@ -1,6 +1,6 @@
 #pragma once
 
-#include <utility>
+#include <utility/execution_queue.h>
 
 #include <common.h>
 
@@ -19,7 +19,7 @@ namespace Sunset
 
 			void destroy()
 			{
-				graphics_policy.destroy();
+				graphics_policy.destroy(resource_deletion_queue);
 			}
 
 			void wait_for_gpu()
@@ -57,8 +57,14 @@ namespace Sunset
 				graphics_policy.advance_frame();
 			}
 
+			void add_resource_deletion_execution(const std::function<void()>& execution)
+			{
+				resource_deletion_queue.push_execution(execution);
+			}
+
 		private:
 			Policy graphics_policy;
+			ExecutionQueue resource_deletion_queue;
 	};
 
 	class NoopGraphicsContext
@@ -69,7 +75,7 @@ namespace Sunset
 			void initialize(class Window* const window)
 			{ }
 
-			void destroy()
+			void destroy(ExecutionQueue& deletion_queue)
 			{ }
 
 			void wait_for_gpu()

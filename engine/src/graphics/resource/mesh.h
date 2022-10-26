@@ -15,10 +15,14 @@ namespace Sunset
 
 	struct Mesh
 	{
+		Mesh() = default;
+		~Mesh();
+
 		std::vector<Vertex> vertices;
 		class Buffer* vertex_buffer;
 
 		void upload(class GraphicsContext* const gfx_context);
+		void destroy(class GraphicsContext* const gfx_context);
 	};
 
 	class MeshFactory

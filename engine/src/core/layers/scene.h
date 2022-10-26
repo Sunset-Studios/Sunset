@@ -19,6 +19,7 @@ namespace Sunset
 			~Scene() = default;
 
 			virtual void initialize() override;
+			virtual void destroy() override;
 			virtual void update(double delta_time) override;
 
 			template<class T>

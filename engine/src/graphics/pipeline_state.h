@@ -3,6 +3,7 @@
 #include <singleton.h>
 #include <common.h>
 #include <pipeline_types.h>
+#include <graphics/render_pass_types.h>
 #include <graphics/resource/shader.h>
 #include <graphics/resource/shader_pipeline_layout.h>
 
@@ -78,7 +79,8 @@ namespace Sunset
 
 		void set_shader_stage(class GraphicsContext* const gfx_context, PipelineShaderStageType stage, const char* shader_path)
 		{
-			state_data.shader_stages.emplace_back(stage, ShaderFactory::create(gfx_context, shader_path));
+			const ShaderID new_shader = ShaderCache::get()->fetch_or_add(shader_path, gfx_context);
+			state_data.shader_stages.emplace_back(stage, ShaderCache::get()->fetch(new_shader));
 		}
 
 		void set_primitive_topology(class GraphicsContext* const gfx_context, PipelinePrimitiveTopologyType topology_type)
@@ -137,7 +139,9 @@ namespace Sunset
 	class PipelineStateBuilder
 	{
 		public:
-			static PipelineStateBuilder create(class GraphicsContext* const gfx_context);
+			static PipelineStateBuilder create();
+			static PipelineStateBuilder create(const PipelineStateData& data);
+			static PipelineStateBuilder create_default(class Window* window);
 
 			PipelineStateBuilder& add_viewport(float x_pos, float y_pos, float width, float height, float min_depth, float max_depth);
 			PipelineStateBuilder& add_scissor(int32_t x_pos, int32_t y_pos, int32_t width, int32_t height);

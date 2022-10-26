@@ -40,8 +40,10 @@ namespace Sunset
 		state.render_fence = state.sync_pool.new_fence(&state); 
 	}
 
-	void VulkanContext::destroy()
+	void VulkanContext::destroy(ExecutionQueue& deletion_queue)
 	{
+		deletion_queue.flush();
+
 		state.buffer_allocator->destroy();
 
 		state.sync_pool.release_fence(&state, state.render_fence);
