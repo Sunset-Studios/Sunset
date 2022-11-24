@@ -29,5 +29,6 @@ namespace Sunset
 	{
 	public:
 		static Mesh* create_triangle(class GraphicsContext* const gfx_context);
+		static Mesh* load_obj(class GraphicsContext* const gfx_context, const char* path);
 	};
 }

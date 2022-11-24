@@ -62,6 +62,11 @@ namespace Sunset
 				resource_deletion_queue.push_execution(execution);
 			}
 
+			void push_constants(void* buffer, PipelineStateID pipeline_state, const PushConstantPipelineData& push_constant_data)
+			{
+				graphics_policy.push_constants(buffer, pipeline_state, push_constant_data);
+			}
+
 		private:
 			Policy graphics_policy;
 			ExecutionQueue resource_deletion_queue;
@@ -103,6 +108,9 @@ namespace Sunset
 			}
 
 			void advance_frame()
+			{ }
+
+			void push_constants(void* buffer, PipelineStateID pipeline_state, const PushConstantPipelineData& push_constant_data)
 			{ }
 	};
 

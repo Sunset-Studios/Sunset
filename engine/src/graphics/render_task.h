@@ -3,6 +3,7 @@
 #include <graphics/pipeline_types.h>
 #include <graphics/resource_types.h>
 #include <graphics/render_pass_types.h>
+#include <graphics/push_constants.h>
 #include <memory/allocators/stack_allocator.h>
 
 namespace Sunset
@@ -19,7 +20,7 @@ namespace Sunset
 		~RenderTaskExecutor() = default;
 
 		void reset();
-		void operator()(class GraphicsContext* const gfx_context, void* command_buffer, PipelineStateID pipeline_state, ResourceStateID resource_state, const DrawCall& draw_call);
+		void operator()(class GraphicsContext* const gfx_context, void* command_buffer, PipelineStateID pipeline_state, ResourceStateID resource_state, const DrawCall& draw_call, const PushConstantPipelineData& push_constants = {});
 
 	private:
 		PipelineStateID cached_pipeline_state{ 0 };
@@ -35,12 +36,19 @@ namespace Sunset
 		RenderTask* setup(PipelineStateID new_pipeline_state, ResourceStateID new_resource_state, DrawCall new_draw_call, uint32_t new_render_depth = 0, RenderPassFlags new_render_pass_flags = RenderPassFlags::Depth);
 		void submit(class RenderPass* pass);
 
+		RenderTask* set_push_constants(PushConstantPipelineData&& push_constant_data)
+		{
+			push_constants = push_constant_data;
+			return this;
+		}
+
 	public:
 		RenderPassFlags render_pass_flags{ RenderPassFlags::Depth };
 		PipelineStateID pipeline_state{ 0 };
 		ResourceStateID resource_state{ 0 };
 		uint32_t render_depth{ 0 };
 		DrawCall draw_call;
+		PushConstantPipelineData push_constants;
 	};
 
 	using RenderTaskFrameAllocator = StaticFrameAllocator<RenderTask>;

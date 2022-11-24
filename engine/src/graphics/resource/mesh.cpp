@@ -2,6 +2,7 @@
 #include <graphics/graphics_context.h>
 #include <graphics/resource/buffer.h>
 #include <graphics/asset_pool.h>
+#include <tiny_obj_loader.h>
 
 namespace Sunset
 {
@@ -60,4 +61,70 @@ namespace Sunset
 		return mesh;
 	}
 
+	Sunset::Mesh* MeshFactory::load_obj(class GraphicsContext* const gfx_context, const char* path)
+	{
+		Mesh* mesh = GlobalAssetPools<Mesh>::get()->allocate();
+
+		tinyobj::attrib_t attrib;
+		std::vector<tinyobj::shape_t> shapes;
+		std::vector<tinyobj::material_t> materials;
+
+		std::string warn;
+		std::string err;
+
+		tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, path, nullptr);
+
+		if (!warn.empty())
+		{
+			// TODO: Need some custom logging
+		}
+
+		if (!err.empty())
+		{
+			// TODO: Need some custom logging
+			return nullptr;
+		}
+
+		const int32_t face_vertices = 3;
+		for (size_t s = 0; s < shapes.size(); ++s)
+		{
+			size_t index_offset = 0;
+			for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); ++f)
+			{
+				for (size_t v = 0; v < face_vertices; ++v)
+				{
+					tinyobj::index_t index = shapes[s].mesh.indices[index_offset + v];
+
+					// Position
+					tinyobj::real_t vx = attrib.vertices[3 * index.vertex_index + 0];
+					tinyobj::real_t vy = attrib.vertices[3 * index.vertex_index + 1];
+					tinyobj::real_t vz = attrib.vertices[3 * index.vertex_index + 2];
+
+					// Normal
+					tinyobj::real_t nx = attrib.normals[3 * index.normal_index + 0];
+					tinyobj::real_t ny = attrib.vertices[3 * index.normal_index + 1];
+					tinyobj::real_t nz = attrib.vertices[3 * index.normal_index + 2];
+
+					Vertex new_vertex;
+
+					new_vertex.position.x = vx;
+					new_vertex.position.y = vy;
+					new_vertex.position.z = vz;
+
+					new_vertex.normal.x = nx;
+					new_vertex.normal.y = ny;
+					new_vertex.normal.z = nz;
+
+					new_vertex.color = new_vertex.normal;
+
+					mesh->vertices.push_back(new_vertex);
+				}
+				index_offset += face_vertices;
+			}
+		}
+
+		mesh->upload(gfx_context);
+
+		return mesh;
+	}
 }

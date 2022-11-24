@@ -47,6 +47,11 @@ namespace Sunset
 			return pipeline_state_policy.get_handle();
 		}
 
+		PipelineStateData& get_state_data()
+		{
+			return state_data;
+		}
+
 		void add_viewport(class GraphicsContext* const gfx_context, float x_pos, float y_pos, float width, float height, float min_depth, float max_depth)
 		{
 			state_data.viewports.emplace_back(x_pos, y_pos, width, height, min_depth, max_depth);

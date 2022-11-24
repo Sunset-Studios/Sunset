@@ -23,7 +23,7 @@ namespace Sunset
 	{
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
 		VulkanRenderPassData* render_pass = static_cast<VulkanRenderPassData*>(render_pass_data);
-		VulkanShaderPipelineLayoutData* pipeline_layout_data = static_cast<VulkanShaderPipelineLayoutData*>(state_data->layout->get_data());
+		VkPipelineLayout pipeline_layout = static_cast<VkPipelineLayout>(state_data->layout->get_data());
 
 		std::vector<VkViewport> viewports(VK_FROM_SUNSET_VIEWPORT_LIST(state_data->viewports));
 		std::vector<VkRect2D> scissors(VK_FROM_SUNSET_SCISSORS_LIST(state_data->scissors));
@@ -65,7 +65,7 @@ namespace Sunset
 		pipeline_create_info.pRasterizationState = &rasterization_state;
 		pipeline_create_info.pMultisampleState = &multisample_state;
 		pipeline_create_info.pColorBlendState = &color_blending_state;
-		pipeline_create_info.layout = pipeline_layout_data->layout;
+		pipeline_create_info.layout = pipeline_layout;
 		pipeline_create_info.renderPass = render_pass->render_pass;
 		pipeline_create_info.subpass = 0;
 		pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE;

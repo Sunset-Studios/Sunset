@@ -34,6 +34,6 @@ namespace Sunset
 
 	void RenderQueue::execute(class GraphicsContext* const gfx_context, RenderTask* const task, void* command_buffer)
 	{
-		executor(gfx_context, command_buffer, task->pipeline_state, task->resource_state, task->draw_call);
+		executor(gfx_context, command_buffer, task->pipeline_state, task->resource_state, task->draw_call, task->push_constants);
 	}
 }

@@ -1,5 +1,6 @@
 #include <graphics/api/vulkan/vk_context.h>
 #include <graphics/resource/buffer.h>
+#include <graphics/pipeline_state.h>
 #include <core/common.h>
 #include <window/window.h>
 
@@ -65,6 +66,18 @@ namespace Sunset
 	void VulkanContext::draw(void* buffer, uint32_t vertex_count, uint32_t instance_count)
 	{
 		vkCmdDraw(static_cast<VkCommandBuffer>(buffer), vertex_count, instance_count, 0, 0);
+	}
+
+	void VulkanContext::push_constants(void* buffer, PipelineStateID pipeline_state, const PushConstantPipelineData& push_constant_data)
+	{
+		VkCommandBuffer command_buffer = static_cast<VkCommandBuffer>(buffer);
+		PipelineState* const pso = PipelineStateCache::get()->fetch(pipeline_state);
+		assert(pso != nullptr && "Cannot push constants to a null pipeline state");
+
+		VkPipelineLayout pipeline_layout = static_cast<VkPipelineLayout>(pso->get_state_data().layout->get_data());
+		assert(pipeline_layout != nullptr && "Cannot push constants to a pipeline state with a null pipeline layout object");
+
+		vkCmdPushConstants(command_buffer, pipeline_layout, VK_FROM_SUNSET_SHADER_STAGE_TYPE(push_constant_data.shader_stage), push_constant_data.offset, static_cast<uint32_t>(push_constant_data.size), push_constant_data.data);
 	}
 
 	void create_surface(VulkanContext* const vulkan_context, Window* const window)

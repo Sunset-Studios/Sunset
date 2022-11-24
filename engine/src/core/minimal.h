@@ -49,13 +49,28 @@ namespace Sunset
 		Uint4x16,
 		Float4x32,
 		Int4x32,
-		Uint4x32
+		Uint4x32,
+		FloatDepth32
 	};
 
 	enum class BufferType : int16_t
 	{
 		Generic,
 		Vertex
+	};
+
+	enum class ImageType : int16_t
+	{
+		I_2D,
+		I_3D
+	};
+
+	enum class ImageUsage : int16_t
+	{
+		Color,
+		DepthStencil,
+		TransferSrc,
+		TransferDst
 	};
 
 	using ObjectID = uint32_t;

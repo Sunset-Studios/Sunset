@@ -15,6 +15,7 @@
 #include <graphics/api/vulkan/vk_pipeline_state.h>
 #include <graphics/api/vulkan/vk_shader_pipeline_layout.h>
 #include <graphics/api/vulkan/vk_buffer.h>
+#include <graphics/api/vulkan/vk_image.h>
 #endif
 
 #if USE_SDL_WINDOWING

@@ -28,7 +28,6 @@ namespace Sunset
 		return create()
 			.add_viewport(0.0f, 0.0f, static_cast<float>(window->get_extent().x), static_cast<float>(window->get_extent().y), 0.0f, 1.0f)
 			.add_scissor(0, 0, window->get_extent().x, window->get_extent().y)
-			.set_shader_layout(ShaderPipelineLayoutFactory::create(Renderer::get()->context()))
 			.set_shader_stage(PipelineShaderStageType::Vertex, "../../shaders/basic_colored.vert.spv")
 			.set_shader_stage(PipelineShaderStageType::Fragment, "../../shaders/basic_colored.frag.spv")
 			.set_vertex_input_description(Vertex::get_description())
@@ -105,6 +104,10 @@ namespace Sunset
 
 	Sunset::PipelineStateID PipelineStateBuilder::finish()
 	{
+		if (state_data.layout == nullptr)
+		{
+			state_data.layout = ShaderPipelineLayoutFactory::get_default(Renderer::get()->context());
+		}
 		return PipelineStateCache::get()->fetch_or_add(state_data, context);
 	}
 

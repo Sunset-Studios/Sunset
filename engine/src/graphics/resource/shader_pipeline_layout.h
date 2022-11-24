@@ -1,6 +1,7 @@
 #pragma once
 
 #include <common.h>
+#include <push_constants.h>
 
 namespace Sunset
 {
@@ -10,9 +11,13 @@ namespace Sunset
 	public:
 		GenericShaderPipelineLayout() = default;
 
-		void initialize(class GraphicsContext* const gfx_context)
+		void initialize(class GraphicsContext* const gfx_context, const PushConstantPipelineData& push_constant_data = {})
 		{
-			shader_layout_policy.initialize(gfx_context);
+			if (!b_initialized)
+			{
+				shader_layout_policy.initialize(gfx_context, push_constant_data);
+				b_initialized = true;
+			}
 		}
 
 		void destroy(class GraphicsContext* const gfx_context)
@@ -27,6 +32,7 @@ namespace Sunset
 
 	private:
 		Policy shader_layout_policy;
+		bool b_initialized{ false };
 	};
 
 	class NoopShaderPipelineLayout
@@ -34,7 +40,7 @@ namespace Sunset
 	public:
 		NoopShaderPipelineLayout() = default;
 
-		void initialize(class GraphicsContext* const gfx_context)
+		void initialize(class GraphicsContext* const gfx_context, const PushConstantPipelineData& push_constant_data = {})
 		{ }
 
 		void destroy(class GraphicsContext* const gfx_context)
@@ -57,12 +63,7 @@ namespace Sunset
 	class ShaderPipelineLayoutFactory
 	{
 	public:
-		template<typename ...Args>
-		static ShaderPipelineLayout* create(Args&&... args)
-		{
-			ShaderPipelineLayout* layout = new ShaderPipelineLayout;
-			layout->initialize(std::forward<Args>(args)...);
-			return layout;
-		}
+		static ShaderPipelineLayout* get_default(class GraphicsContext* const gfx_context);
+		static ShaderPipelineLayout* create(class GraphicsContext* const gfx_context, const PushConstantPipelineData& push_constant_data = {});
 	};
 }

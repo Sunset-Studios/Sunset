@@ -7,6 +7,9 @@
 #include <graphics/resource/buffer.h>
 #include <graphics/resource/mesh.h>
 #include <graphics/render_pass.h>
+#include <graphics/push_constants.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 namespace Sunset
 {
@@ -16,11 +19,14 @@ namespace Sunset
 		{
 			MeshComponent* const mesh_comp = scene->get_component<MeshComponent>(entity);
 
-			// Some stuff in code for switching the pipeline state on a mesh based on current input
-			//if (InputProvider::get()->get_action(InputKey::K_Space))
-			//{
-			//	current_pso_index = (current_pso_index + 1) % PipelineStateCache::get()->size();
-			//}
+			// Transform Calcs
+			glm::vec3 cam_pos = { 0.0f, 0.0f, glm::sin(SECONDS_TIME) * 0.5f - 2.0f};
+			glm::mat4 view = glm::translate(glm::mat4(1.0f), cam_pos);
+			glm::mat4 projection = glm::perspective(glm::radians(90.0f), 1280.0f / 720.0f, 0.1f, 200.0f);
+			glm::mat4 model = glm::rotate(glm::mat4{ 1.0f }, glm::radians(Renderer::get()->context()->get_frame_number() * 0.4f), glm::vec3(0, 1, 0));
+
+			mesh_comp->uniform_data.transform_matrix = projection * view * model;
+			// Transform Calcs
 
 			if (mesh_comp->resource_state == 0)
 			{
@@ -29,10 +35,13 @@ namespace Sunset
 					.finish();
 			}
 
+			PushConstantPipelineData push_constants_data = PushConstantPipelineData::create(&mesh_comp->uniform_data);
+
 			if (mesh_comp->pipeline_state == 0)
 			{
 				PipelineStateBuilder state_builder = PipelineStateBuilder::create_default(Renderer::get()->window())
 					.clear_shader_stages()
+					.set_shader_layout(ShaderPipelineLayoutFactory::create(Renderer::get()->context(), push_constants_data))
 					.value();
 
 				for (const std::pair<PipelineShaderStageType, const char*>& shader : mesh_comp->shaders)
@@ -48,6 +57,7 @@ namespace Sunset
 			Renderer::get()
 				->fresh_rendertask()
 				->setup(mesh_comp->pipeline_state, mesh_comp->resource_state, DrawCall{ mesh_vertex_count(mesh_comp) })
+				->set_push_constants(std::move(push_constants_data))
 				->submit(Renderer::get()->master_pass());
 		}
 	}

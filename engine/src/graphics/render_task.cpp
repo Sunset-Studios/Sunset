@@ -28,7 +28,7 @@ namespace Sunset
 		cached_resource_state = 0;
 	}
 
-	void RenderTaskExecutor::operator()(GraphicsContext* const gfx_context, void* command_buffer, PipelineStateID pipeline_state, ResourceStateID resource_state, const DrawCall& draw_call)
+	void RenderTaskExecutor::operator()(GraphicsContext* const gfx_context, void* command_buffer, PipelineStateID pipeline_state, ResourceStateID resource_state, const DrawCall& draw_call, const PushConstantPipelineData& push_constants)
 	{
 		if (cached_pipeline_state != pipeline_state)
 		{
@@ -40,6 +40,11 @@ namespace Sunset
 		{
 			ResourceStateCache::get()->fetch(resource_state)->bind(gfx_context, command_buffer);
 			cached_resource_state = resource_state;
+		}
+
+		if (push_constants.data != nullptr)
+		{
+			gfx_context->push_constants(command_buffer, pipeline_state, push_constants);
 		}
 
 		gfx_context->draw(command_buffer, static_cast<uint32_t>(draw_call.vertex_count), 1);

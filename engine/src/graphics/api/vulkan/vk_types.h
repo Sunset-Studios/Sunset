@@ -90,7 +90,36 @@ inline VkFormat VK_FROM_SUNSET_FORMAT(Sunset::Format format)
 		case Sunset::Format::Uint4x32:
 			return VK_FORMAT_R32G32B32A32_UINT;
 
+		case Sunset::Format::FloatDepth32:
+			return VK_FORMAT_D32_SFLOAT;
+
 		default:
 			return VK_FORMAT_UNDEFINED;
+	}
+}
+
+inline VkImageType VK_FROM_SUNSET_IMAGE_TYPE(Sunset::ImageType image_type)
+{
+	switch (image_type)
+	{
+	case Sunset::ImageType::I_2D:
+		return VK_IMAGE_TYPE_2D;
+	case Sunset::ImageType::I_3D:
+		return VK_IMAGE_TYPE_3D;
+	default:
+		return VK_IMAGE_TYPE_2D;
+	}
+}
+
+inline VkImageViewType VK_FROM_SUNSET_IMAGE_VIEW_TYPE(Sunset::ImageType image_type)
+{
+	switch (image_type)
+	{
+	case Sunset::ImageType::I_2D:
+		return VK_IMAGE_VIEW_TYPE_2D;
+	case Sunset::ImageType::I_3D:
+		return VK_IMAGE_VIEW_TYPE_3D;
+	default:
+		return VK_IMAGE_VIEW_TYPE_2D;
 	}
 }

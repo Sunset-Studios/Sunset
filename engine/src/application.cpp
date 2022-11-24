@@ -29,7 +29,7 @@ namespace Sunset
 		MeshComponent* const mesh_comp = scene->assign_component<MeshComponent>(mesh_ent);
 
 		set_mesh(mesh_comp,
-			MeshFactory::create_triangle(Renderer::get()->context()));
+			MeshFactory::load_obj(Renderer::get()->context(), "../../assets/monkey_smooth.obj"));
 		set_shaders(mesh_comp,
 			{
 				{PipelineShaderStageType::Vertex, "../../shaders/basic_colored.vert.spv"},

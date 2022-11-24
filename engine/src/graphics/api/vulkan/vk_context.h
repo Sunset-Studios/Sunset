@@ -1,6 +1,8 @@
 #pragma once
 
 #include <utility/execution_queue.h>
+#include <graphics/pipeline_types.h>
+#include <graphics/push_constants.h>
 
 #include <vk_types.h>
 #include <vk_initializers.h>
@@ -79,6 +81,8 @@ namespace Sunset
 			{
 				++state.frame_number;
 			}
+
+			void push_constants(void* buffer, PipelineStateID pipeline_state, const PushConstantPipelineData& push_constant_data);
 
 		public:
 			VulkanContextState state;
