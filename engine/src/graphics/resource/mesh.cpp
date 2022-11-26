@@ -20,10 +20,6 @@ namespace Sunset
 
 	void Mesh::destroy(GraphicsContext* const gfx_context)
 	{
-		if (vertex_buffer != nullptr)
-		{
-			vertex_buffer->destroy(gfx_context);
-		}
 	}
 
 	Sunset::PipelineVertexInputDescription Vertex::get_description()
@@ -63,68 +59,112 @@ namespace Sunset
 
 	Sunset::Mesh* MeshFactory::load_obj(class GraphicsContext* const gfx_context, const char* path)
 	{
-		Mesh* mesh = GlobalAssetPools<Mesh>::get()->allocate();
+		const MeshID mesh_id = MeshCache::get()->fetch_or_add(path, gfx_context);
+		Mesh* const mesh = MeshCache::get()->fetch(mesh_id);
 
-		tinyobj::attrib_t attrib;
-		std::vector<tinyobj::shape_t> shapes;
-		std::vector<tinyobj::material_t> materials;
-
-		std::string warn;
-		std::string err;
-
-		tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, path, nullptr);
-
-		if (!warn.empty())
+		if (mesh->vertex_buffer == nullptr)
 		{
-			// TODO: Need some custom logging
-		}
+			tinyobj::attrib_t attrib;
+			std::vector<tinyobj::shape_t> shapes;
+			std::vector<tinyobj::material_t> materials;
 
-		if (!err.empty())
-		{
-			// TODO: Need some custom logging
-			return nullptr;
-		}
+			std::string warn;
+			std::string err;
 
-		const int32_t face_vertices = 3;
-		for (size_t s = 0; s < shapes.size(); ++s)
-		{
-			size_t index_offset = 0;
-			for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); ++f)
+			tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, path, nullptr);
+
+			if (!warn.empty())
 			{
-				for (size_t v = 0; v < face_vertices; ++v)
-				{
-					tinyobj::index_t index = shapes[s].mesh.indices[index_offset + v];
-
-					// Position
-					tinyobj::real_t vx = attrib.vertices[3 * index.vertex_index + 0];
-					tinyobj::real_t vy = attrib.vertices[3 * index.vertex_index + 1];
-					tinyobj::real_t vz = attrib.vertices[3 * index.vertex_index + 2];
-
-					// Normal
-					tinyobj::real_t nx = attrib.normals[3 * index.normal_index + 0];
-					tinyobj::real_t ny = attrib.vertices[3 * index.normal_index + 1];
-					tinyobj::real_t nz = attrib.vertices[3 * index.normal_index + 2];
-
-					Vertex new_vertex;
-
-					new_vertex.position.x = vx;
-					new_vertex.position.y = vy;
-					new_vertex.position.z = vz;
-
-					new_vertex.normal.x = nx;
-					new_vertex.normal.y = ny;
-					new_vertex.normal.z = nz;
-
-					new_vertex.color = new_vertex.normal;
-
-					mesh->vertices.push_back(new_vertex);
-				}
-				index_offset += face_vertices;
+				// TODO: Need some custom logging
 			}
-		}
 
-		mesh->upload(gfx_context);
+			if (!err.empty())
+			{
+				// TODO: Need some custom logging
+				return nullptr;
+			}
+
+			const int32_t face_vertices = 3;
+			for (size_t s = 0; s < shapes.size(); ++s)
+			{
+				size_t index_offset = 0;
+				for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); ++f)
+				{
+					for (size_t v = 0; v < face_vertices; ++v)
+					{
+						tinyobj::index_t index = shapes[s].mesh.indices[index_offset + v];
+
+						// Position
+						tinyobj::real_t vx = attrib.vertices[3 * index.vertex_index + 0];
+						tinyobj::real_t vy = attrib.vertices[3 * index.vertex_index + 1];
+						tinyobj::real_t vz = attrib.vertices[3 * index.vertex_index + 2];
+
+						// Normal
+						tinyobj::real_t nx = attrib.normals[3 * index.normal_index + 0];
+						tinyobj::real_t ny = attrib.normals[3 * index.normal_index + 1];
+						tinyobj::real_t nz = attrib.normals[3 * index.normal_index + 2];
+
+						Vertex new_vertex;
+
+						new_vertex.position.x = vx;
+						new_vertex.position.y = vy;
+						new_vertex.position.z = vz;
+
+						new_vertex.normal.x = nx;
+						new_vertex.normal.y = ny;
+						new_vertex.normal.z = nz;
+
+						new_vertex.color = new_vertex.normal;
+
+						mesh->vertices.push_back(new_vertex);
+					}
+					index_offset += face_vertices;
+				}
+			}
+
+			mesh->upload(gfx_context);
+		}
 
 		return mesh;
+	}
+
+	void MeshCache::initialize()
+	{
+	}
+
+	void MeshCache::update()
+	{
+	}
+
+	Sunset::MeshID MeshCache::fetch_or_add(const char* file_path, class GraphicsContext* const gfx_context /*= nullptr*/)
+	{
+		MeshID id = std::hash<std::string>{}(file_path);
+		if (cache.find(id) == cache.end())
+		{
+			Mesh* const new_mesh = GlobalAssetPools<Mesh>::get()->allocate();
+			gfx_context->add_resource_deletion_execution([new_mesh, gfx_context]() { new_mesh->destroy(gfx_context); });
+			cache.insert({ id, new_mesh });
+		}
+		return id;
+	}
+
+	Sunset::Mesh* MeshCache::fetch(MeshID id)
+	{
+		assert(cache.find(id) != cache.end());
+		return cache[id];
+	}
+
+	void MeshCache::remove(MeshID id)
+	{
+		cache.erase(id);
+	}
+
+	void MeshCache::destroy(class GraphicsContext* const gfx_context)
+	{
+		for (const std::pair<size_t, Mesh*>& pair : cache)
+		{
+			pair.second->destroy(gfx_context);
+		}
+		cache.clear();
 	}
 }

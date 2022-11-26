@@ -7,6 +7,7 @@
 #include <graphics/resource/mesh.h>
 
 #include <core/ecs/components/mesh_component.h>
+#include <core/ecs/components/transform_component.h>
 
 #include <SDL.h>
 #include <SDL_vulkan.h>
@@ -23,20 +24,33 @@ namespace Sunset
 
 		InputProvider::get()->push_context(InputProvider::default_context());
 
-		std::unique_ptr<Scene> scene = std::make_unique<Scene>();
+		{ // Test Scene
+			std::unique_ptr<Scene> scene = std::make_unique<Scene>();
 
-		EntityID mesh_ent = scene->make_entity();
-		MeshComponent* const mesh_comp = scene->assign_component<MeshComponent>(mesh_ent);
-
-		set_mesh(mesh_comp,
-			MeshFactory::load_obj(Renderer::get()->context(), "../../assets/monkey_smooth.obj"));
-		set_shaders(mesh_comp,
+			for (int i = -10; i < 10; ++i)
 			{
-				{PipelineShaderStageType::Vertex, "../../shaders/basic_colored.vert.spv"},
-				{PipelineShaderStageType::Fragment, "../../shaders/basic_colored.frag.spv"}
-			});
+				for (int j = -10; j < 10; ++j)
+				{
+					EntityID mesh_ent = scene->make_entity();
+				
+					TransformComponent* const transform_comp = scene->assign_component<TransformComponent>(mesh_ent);
 
-		SimulationCore::get()->register_layer(std::move(scene));
+					set_position(transform_comp, glm::vec3(i * 2.0f + 1.0f, j * 2.0f, -10.0f));
+					set_scale(transform_comp, glm::vec3(1.0f));
+
+					MeshComponent* const mesh_comp = scene->assign_component<MeshComponent>(mesh_ent);
+
+					set_mesh(mesh_comp, MeshFactory::load_obj(Renderer::get()->context(), "../../assets/monkey_smooth.obj"));
+					set_shaders(mesh_comp,
+						{
+							{PipelineShaderStageType::Vertex, "../../shaders/basic_colored.vert.spv"},
+							{PipelineShaderStageType::Fragment, "../../shaders/basic_colored.frag.spv"}
+						});
+				}
+			}
+
+			SimulationCore::get()->register_layer(std::move(scene));
+		}
 	}
 
 	void Application::cleanup()

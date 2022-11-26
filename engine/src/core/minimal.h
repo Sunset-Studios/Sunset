@@ -59,18 +59,47 @@ namespace Sunset
 		Vertex
 	};
 
-	enum class ImageType : int16_t
+	enum class ImageFlags : int32_t
 	{
-		I_2D,
-		I_3D
+		None = 0x00000000,
+		Color = 0x00000001,
+		Depth = 0x00000002,
+		Stencil = 0x00000004,
+		TransferSrc = 0x00000008,
+		TransferDst = 0x00000010,
+		Image2D = 0x00000020,
+		Image3D = 0x00000040
 	};
 
-	enum class ImageUsage : int16_t
+	inline ImageFlags operator|(ImageFlags lhs, ImageFlags rhs)
 	{
-		Color,
-		DepthStencil,
-		TransferSrc,
-		TransferDst
+		return static_cast<ImageFlags>(static_cast<int16_t>(lhs) | static_cast<int16_t>(rhs));
+	}
+
+	inline ImageFlags operator&(ImageFlags lhs, ImageFlags rhs)
+	{
+		return static_cast<ImageFlags>(static_cast<int16_t>(lhs) & static_cast<int16_t>(rhs));
+	}
+
+	inline ImageFlags& operator|=(ImageFlags& lhs, ImageFlags rhs)
+	{
+		return lhs = lhs | rhs;
+	}
+
+	inline ImageFlags& operator&=(ImageFlags& lhs, ImageFlags rhs)
+	{
+		return lhs = lhs & rhs;
+	}
+
+	enum class CompareOperation : int16_t
+	{
+		Always,
+		Equal,
+		NotEqual,
+		Less,
+		LessOrEqual,
+		Greater,
+		GreaterOrEqual
 	};
 
 	using ObjectID = uint32_t;

@@ -96,6 +96,9 @@ namespace Sunset
 			PipelinePrimitiveTopologyType primitive_topology_type{ PipelinePrimitiveTopologyType::TriangleList };
 			PipelineRasterizerState rasterizer_state{{}};
 			uint16_t multisample_count{ 1 };
+			bool b_depth_test_enabled{ false };
+			bool b_depth_write_enabled{ false };
+			CompareOperation compare_op{ CompareOperation::Always };
 
 			bool operator==(const PipelineStateData& other) const
 			{
@@ -106,7 +109,10 @@ namespace Sunset
 					&& layout == other.layout
 					&& primitive_topology_type == other.primitive_topology_type
 					&& rasterizer_state == other.rasterizer_state
-					&& multisample_count == other.multisample_count;
+					&& multisample_count == other.multisample_count
+					&& b_depth_test_enabled == other.b_depth_test_enabled
+					&& b_depth_write_enabled == other.b_depth_write_enabled
+					&& compare_op == other.compare_op;
 			}
 	};
 }
@@ -176,6 +182,12 @@ struct std::hash<Sunset::PipelineStateData>
 
 		std::size_t multisample_seed = static_cast<int32_t>(psd.multisample_count);
 
+		std::size_t depth_test_seed = static_cast<int32_t>(psd.b_depth_test_enabled);
+
+		std::size_t depth_write_seed = static_cast<int32_t>(psd.b_depth_write_enabled);
+
+		std::size_t compare_op_seed = static_cast<int32_t>(psd.compare_op);
+
 		std::size_t final_hash = Sunset::Maths::cantor_pair_hash(static_cast<int32_t>(ss_seed), static_cast<int32_t>(viewport_seed));
 		final_hash = Sunset::Maths::cantor_pair_hash(final_hash, static_cast<int32_t>(scissors_seed));
 		final_hash = Sunset::Maths::cantor_pair_hash(final_hash, static_cast<int32_t>(vertex_input_seed));
@@ -183,6 +195,9 @@ struct std::hash<Sunset::PipelineStateData>
 		final_hash = Sunset::Maths::cantor_pair_hash(final_hash, static_cast<int32_t>(topology_seed));
 		final_hash = Sunset::Maths::cantor_pair_hash(final_hash, static_cast<int32_t>(rasterizer_state_seed));
 		final_hash = Sunset::Maths::cantor_pair_hash(final_hash, static_cast<int32_t>(multisample_seed));
+		final_hash = Sunset::Maths::cantor_pair_hash(final_hash, static_cast<int32_t>(depth_test_seed));
+		final_hash = Sunset::Maths::cantor_pair_hash(final_hash, static_cast<int32_t>(depth_write_seed));
+		final_hash = Sunset::Maths::cantor_pair_hash(final_hash, static_cast<int32_t>(compare_op_seed));
 
 		return final_hash;
 	}

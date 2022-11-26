@@ -54,6 +54,8 @@ namespace Sunset
 
 		VkPipelineColorBlendStateCreateInfo color_blending_state = new_color_blending_state(color_blend_attachment_state);
 
+		VkPipelineDepthStencilStateCreateInfo depth_stencil_state = new_depth_stencil_state(state_data->b_depth_test_enabled, state_data->b_depth_write_enabled, VK_FROM_SUNSET_COMPARE_OP(state_data->compare_op));
+
 		VkGraphicsPipelineCreateInfo pipeline_create_info = {};
 		pipeline_create_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 		pipeline_create_info.pNext = nullptr;
@@ -65,6 +67,7 @@ namespace Sunset
 		pipeline_create_info.pRasterizationState = &rasterization_state;
 		pipeline_create_info.pMultisampleState = &multisample_state;
 		pipeline_create_info.pColorBlendState = &color_blending_state;
+		pipeline_create_info.pDepthStencilState = &depth_stencil_state;
 		pipeline_create_info.layout = pipeline_layout;
 		pipeline_create_info.renderPass = render_pass->render_pass;
 		pipeline_create_info.subpass = 0;
@@ -183,4 +186,19 @@ namespace Sunset
 		return color_blending_state;
 	}
 
+
+	VkPipelineDepthStencilStateCreateInfo VulkanPipelineState::new_depth_stencil_state(bool b_depth_test, bool b_depth_write, VkCompareOp compare_op)
+	{
+		VkPipelineDepthStencilStateCreateInfo depth_stencil_info = {};
+		depth_stencil_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+		depth_stencil_info.pNext = nullptr;
+		depth_stencil_info.depthTestEnable = b_depth_test ? VK_TRUE : VK_FALSE;
+		depth_stencil_info.depthWriteEnable = b_depth_write ? VK_TRUE : VK_FALSE;
+		depth_stencil_info.depthCompareOp = b_depth_test ? compare_op : VK_COMPARE_OP_ALWAYS;
+		depth_stencil_info.depthBoundsTestEnable = VK_FALSE;
+		depth_stencil_info.minDepthBounds = 0.0f;
+		depth_stencil_info.maxDepthBounds = 1.0f;
+		depth_stencil_info.stencilTestEnable = VK_FALSE;
+		return depth_stencil_info;
+	}
 }

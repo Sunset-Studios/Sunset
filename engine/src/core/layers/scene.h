@@ -103,7 +103,7 @@ namespace Sunset
 				}
 
 				int component_id = get_component_id<T>();
-				if (!entities[entity_id].components.test(component_id))
+				if (!entities[get_entity_index(entity_id)].components.test(component_id))
 				{
 					return nullptr;
 				}

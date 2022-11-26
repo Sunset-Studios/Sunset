@@ -34,6 +34,7 @@ namespace Sunset
 			.set_primitive_topology_type(PipelinePrimitiveTopologyType::TriangleList)
 			.set_rasterizer_state(PipelineRasterizerPolygonMode::Fill, 1.0f, PipelineRasterizerCullMode::None)
 			.set_multisample_count(1)
+			.set_depth_stencil_state(true, true, CompareOperation::LessOrEqual)
 			.value();
 	}
 
@@ -99,6 +100,15 @@ namespace Sunset
 	Sunset::PipelineStateBuilder& PipelineStateBuilder::set_multisample_count(uint16_t count)
 	{
 		state_data.multisample_count = count;
+		return *this;
+	}
+
+
+	Sunset::PipelineStateBuilder& PipelineStateBuilder::set_depth_stencil_state(bool b_depth_test_enabled, bool b_depth_write_enabled, CompareOperation compare_op)
+	{
+		state_data.b_depth_test_enabled = b_depth_test_enabled;
+		state_data.b_depth_write_enabled = b_depth_write_enabled;
+		state_data.compare_op = compare_op;
 		return *this;
 	}
 

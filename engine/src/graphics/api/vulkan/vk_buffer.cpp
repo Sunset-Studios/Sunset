@@ -62,6 +62,8 @@ namespace Sunset
 		VmaAllocator allocator = static_cast<VmaAllocator>(gfx_context->get_buffer_allocator()->get_handle());
 
 		vmaDestroyBuffer(allocator, buffer, allocation);
+
+		buffer = nullptr;
 	}
 
 	void VulkanBuffer::copy_from(GraphicsContext* const gfx_context, void* data, size_t buffer_size)

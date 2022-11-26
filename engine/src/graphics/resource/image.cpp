@@ -3,10 +3,10 @@
 
 namespace Sunset
 {
-	Sunset::Image* ImageFactory::create(class GraphicsContext* const gfx_context, Format format, ImageType image_type, const glm::vec3& extent, ImageUsage usage)
+	Sunset::Image* ImageFactory::create(class GraphicsContext* const gfx_context, const AttachmentConfig& config)
 	{
 		Image* image = GlobalAssetPools<Image>::get()->allocate();
-		image->initialize(gfx_context, format, image_type, extent, usage);
+		image->initialize(gfx_context, config);
 		return image;
 	}
 }

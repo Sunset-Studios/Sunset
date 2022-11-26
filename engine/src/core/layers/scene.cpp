@@ -1,5 +1,6 @@
 #include <core/layers/scene.h>
 #include <core/subsystems/static_mesh_processor.h>
+#include <core/subsystems/transform_processor.h>
 
 namespace Sunset
 {
@@ -13,6 +14,7 @@ namespace Sunset
 
 	void Scene::initialize()
 	{
+		add_subsystem<TransformProcessor>();
 		add_subsystem<StaticMeshProcessor>();
 	}
 

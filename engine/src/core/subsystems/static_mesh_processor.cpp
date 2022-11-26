@@ -1,5 +1,6 @@
 #include <core/subsystems/static_mesh_processor.h>
 #include <core/ecs/components/mesh_component.h>
+#include <core/ecs/components/transform_component.h>
 #include <core/layers/scene.h>
 #include <graphics/resource_state.h>
 #include <graphics/pipeline_state.h>
@@ -15,17 +16,18 @@ namespace Sunset
 {
 	void StaticMeshProcessor::update(class Scene* scene, double delta_time)
 	{
-		for (EntityID entity : SceneView<MeshComponent>(*scene))
+		for (EntityID entity : SceneView<MeshComponent, TransformComponent>(*scene))
 		{
 			MeshComponent* const mesh_comp = scene->get_component<MeshComponent>(entity);
+			TransformComponent* const transform_comp = scene->get_component<TransformComponent>(entity);
 
 			// Transform Calcs
-			glm::vec3 cam_pos = { 0.0f, 0.0f, glm::sin(SECONDS_TIME) * 0.5f - 2.0f};
+			glm::vec3 cam_pos = { 0.0f, 0.0f, glm::sin(SECONDS_TIME) * 0.15f - 2.0f};
 			glm::mat4 view = glm::translate(glm::mat4(1.0f), cam_pos);
 			glm::mat4 projection = glm::perspective(glm::radians(90.0f), 1280.0f / 720.0f, 0.1f, 200.0f);
-			glm::mat4 model = glm::rotate(glm::mat4{ 1.0f }, glm::radians(Renderer::get()->context()->get_frame_number() * 0.4f), glm::vec3(0, 1, 0));
+			projection[1][1] *= -1;
 
-			mesh_comp->uniform_data.transform_matrix = projection * view * model;
+			mesh_comp->uniform_data.transform_matrix = projection * view * transform_comp->transform.local_matrix;;
 			// Transform Calcs
 
 			if (mesh_comp->resource_state == 0)

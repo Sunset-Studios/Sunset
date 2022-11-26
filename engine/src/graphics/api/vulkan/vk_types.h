@@ -98,28 +98,28 @@ inline VkFormat VK_FROM_SUNSET_FORMAT(Sunset::Format format)
 	}
 }
 
-inline VkImageType VK_FROM_SUNSET_IMAGE_TYPE(Sunset::ImageType image_type)
+inline VkImageType VK_FROM_SUNSET_IMAGE_TYPE(Sunset::ImageFlags image_type)
 {
-	switch (image_type)
+	if (static_cast<int32_t>(image_type & Sunset::ImageFlags::Image2D) > 0)
 	{
-	case Sunset::ImageType::I_2D:
-		return VK_IMAGE_TYPE_2D;
-	case Sunset::ImageType::I_3D:
-		return VK_IMAGE_TYPE_3D;
-	default:
 		return VK_IMAGE_TYPE_2D;
 	}
+	else if (static_cast<int32_t>(image_type & Sunset::ImageFlags::Image3D) > 0)
+	{
+		return VK_IMAGE_TYPE_3D;
+	}
+	return VK_IMAGE_TYPE_2D;
 }
 
-inline VkImageViewType VK_FROM_SUNSET_IMAGE_VIEW_TYPE(Sunset::ImageType image_type)
+inline VkImageViewType VK_FROM_SUNSET_IMAGE_VIEW_TYPE(Sunset::ImageFlags image_type)
 {
-	switch (image_type)
+	if (static_cast<int32_t>(image_type & Sunset::ImageFlags::Image2D) > 0)
 	{
-	case Sunset::ImageType::I_2D:
-		return VK_IMAGE_VIEW_TYPE_2D;
-	case Sunset::ImageType::I_3D:
-		return VK_IMAGE_VIEW_TYPE_3D;
-	default:
 		return VK_IMAGE_VIEW_TYPE_2D;
 	}
+	else if (static_cast<int32_t>(image_type & Sunset::ImageFlags::Image3D) > 0)
+	{
+		return VK_IMAGE_VIEW_TYPE_3D;
+	}
+	return VK_IMAGE_VIEW_TYPE_2D;
 }

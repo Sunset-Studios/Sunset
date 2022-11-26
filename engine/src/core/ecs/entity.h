@@ -5,7 +5,7 @@
 
 namespace Sunset
 {
-	const int MIN_ENTITIES = 200;
+	const int MIN_ENTITIES = 2000;
 
 	using EntityIndex = uint32_t;
 	using EntityVersion = uint32_t;

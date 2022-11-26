@@ -13,14 +13,14 @@ namespace Sunset
 	public:
 		GenericRenderPass() = default;
 
-		void initialize(class GraphicsContext* const gfx_context, class Swapchain* const swapchain)
+		void initialize(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, const std::initializer_list<class Image*>& attachments)
 		{
-			render_pass_policy.initialize(gfx_context, swapchain);
+			render_pass_policy.initialize(gfx_context, swapchain, attachments);
 		}
 
-		void initialize_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain)
+		void initialize_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, const std::initializer_list<class Image*>& attachments)
 		{
-			render_pass_policy.initialize_default(gfx_context, swapchain);
+			render_pass_policy.initialize_default(gfx_context, swapchain, attachments);
 		}
 
 		void destroy(class GraphicsContext* const gfx_context)
@@ -74,10 +74,10 @@ namespace Sunset
 	public:
 		NoopRenderPass() = default;
 
-		void initialize(class GraphicsContext* const gfx_context, class Swapchain* const swapchain)
+		void initialize(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, const std::initializer_list<class Image*>& attachments)
 		{ }
 
-		void initialize_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain)
+		void initialize_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, const std::initializer_list<class Image*>& attachments)
 		{ }
 
 		void destroy(class GraphicsContext* const gfx_context)
@@ -117,19 +117,17 @@ namespace Sunset
 	class RenderPassFactory
 	{
 	public:
-		template<typename ...Args>
-		static RenderPass* create(class GraphicsContext* const gfx_context, class Swapchain* const swapchain)
+		static RenderPass* create(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, const std::initializer_list<class Image*>& attachments)
 		{
 			RenderPass* rp = new RenderPass;
-			rp->initialize(gfx_context, swapchain);
+			rp->initialize(gfx_context, swapchain, attachments);
 			return rp;
 		}
 
-		template<typename ...Args>
-		static RenderPass* create_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain)
+		static RenderPass* create_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, const std::initializer_list<class Image*>& attachments)
 		{
 			RenderPass* rp = new RenderPass;
-			rp->initialize_default(gfx_context, swapchain);
+			rp->initialize_default(gfx_context, swapchain, attachments);
 			return rp;
 		}
 	};

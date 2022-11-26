@@ -105,6 +105,13 @@ namespace Sunset
 			state_data.multisample_count = count;
 		}
 
+		void set_depth_stencil_state(class GraphicsContext* const gfx_context, bool b_depth_test_enabled, bool b_depth_write_enabled, CompareOperation compare_op)
+		{
+			state_data.b_depth_test_enabled = b_depth_test_enabled;
+			state_data.b_depth_write_enabled = b_depth_write_enabled;
+			state_data.compare_op = compare_op;
+		}
+
 	private:
 		Policy pipeline_state_policy;
 		PipelineStateData state_data;
@@ -158,6 +165,7 @@ namespace Sunset
 			PipelineStateBuilder& set_primitive_topology_type(PipelinePrimitiveTopologyType topology_type);
 			PipelineStateBuilder& set_rasterizer_state(PipelineRasterizerPolygonMode polygon_mode, float line_width, PipelineRasterizerCullMode cull_mode);
 			PipelineStateBuilder& set_multisample_count(uint16_t count);
+			PipelineStateBuilder& set_depth_stencil_state(bool b_depth_test_enabled, bool b_depth_write_enabled, CompareOperation compare_op);
 
 			PipelineStateID finish();
 

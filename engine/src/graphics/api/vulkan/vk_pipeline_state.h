@@ -146,6 +146,25 @@ namespace Sunset
 		return vk_attributes;
 	}
 
+	inline VkCompareOp VK_FROM_SUNSET_COMPARE_OP(CompareOperation compare_op)
+	{
+		switch (compare_op)
+		{
+			case CompareOperation::Equal:
+				return VK_COMPARE_OP_EQUAL;
+			case CompareOperation::Greater:
+				return VK_COMPARE_OP_GREATER;
+			case CompareOperation::GreaterOrEqual:
+				return VK_COMPARE_OP_GREATER_OR_EQUAL;
+			case CompareOperation::Less:
+				return VK_COMPARE_OP_LESS;
+			case CompareOperation::LessOrEqual:
+				return VK_COMPARE_OP_LESS_OR_EQUAL;
+			default:
+				return VK_COMPARE_OP_ALWAYS;
+		}
+	}
+
 	class VulkanPipelineState
 	{
 	public:
@@ -168,6 +187,7 @@ namespace Sunset
 		VkPipelineMultisampleStateCreateInfo new_multisample_state_create_info(VkSampleCountFlagBits sample_count = VK_SAMPLE_COUNT_1_BIT);
 		VkPipelineColorBlendAttachmentState  new_color_blend_attachment_state();
 		VkPipelineColorBlendStateCreateInfo new_color_blending_state(VkPipelineColorBlendAttachmentState& color_blend_attachment_state);
+		VkPipelineDepthStencilStateCreateInfo new_depth_stencil_state(bool b_depth_test = true, bool b_depth_write = true, VkCompareOp compare_op = VK_COMPARE_OP_LESS_OR_EQUAL);
 
 	protected:
 		VkPipeline pipeline{ nullptr };
