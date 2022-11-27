@@ -71,10 +71,21 @@ enum class InputKey : uint16_t
 	K_x,
 	K_y,
 	K_z,
+	B_mouse_left,
+	B_mouse_right,
+	B_mouse_middle,
 	NumKeys
 };
 
+enum class InputRange : uint16_t
+{
+	M_x = 0,
+	M_y,
+	NumRanges
+};
+
 constexpr size_t NUM_AVAILABLE_KEYS = static_cast<size_t>(InputKey::NumKeys);
+constexpr size_t NUM_AVAILABLE_RANGES = static_cast<size_t>(InputRange::NumRanges);
 
 enum class InputType : int8_t
 {
@@ -87,5 +98,7 @@ struct InputState
 {
 	const char* mapped_name;
 	InputKey raw_input;
+	InputRange raw_range;
 	InputType input_type;
+	float range_value{ 0.0f };
 };

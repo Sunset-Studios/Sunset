@@ -37,6 +37,8 @@ namespace Sunset
 
 	void InputContext::set_states(const std::vector<InputState>& states)
 	{
+		input_states = states;
+
 		action_mappings = std::vector<bool>(input_states.size(), false);
 		state_mappings = std::vector<bool>(input_states.size(), false);
 		range_mappings = std::vector<float>(input_states.size(), 0.0f);
@@ -76,6 +78,7 @@ namespace Sunset
 		if (range_mappings[input_state_index] != new_range)
 		{
 			range_mappings[input_state_index] = new_range;
+			input_states[input_state_index].range_value = new_range;
 			dirty_states.insert(input_state_index);
 		}
 	}

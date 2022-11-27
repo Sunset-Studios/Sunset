@@ -27,6 +27,9 @@ namespace Sunset
 			bool get_action(const InputKey& key);
 			bool get_action(const char* name);
 
+			float get_range(const InputRange& range);
+			float get_range(const char* name);
+
 		private:
 			InputProvider() = default;
 

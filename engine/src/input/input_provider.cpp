@@ -11,8 +11,12 @@ namespace Sunset
 			std::vector<InputState> input_states;
 			for (int16_t i = 0; i < static_cast<int16_t>(InputKey::NumKeys); ++i)
 			{
-				input_states.push_back({ "", static_cast<InputKey>(i), InputType::State });
-				input_states.push_back({ "", static_cast<InputKey>(i), InputType::Action });
+				input_states.push_back({ "", static_cast<InputKey>(i), InputRange::NumRanges, InputType::State });
+				input_states.push_back({ "", static_cast<InputKey>(i), InputRange::NumRanges, InputType::Action });
+			}
+			for (int16_t i = 0; i < static_cast<int16_t>(InputRange::NumRanges); ++i)
+			{
+				input_states.push_back({ "", InputKey::NumKeys, static_cast<InputRange>(i), InputType::Range });
 			}
 
 			context.set_states(input_states);
@@ -91,5 +95,23 @@ namespace Sunset
 			{
 				return state.mapped_name == name && state.input_type == InputType::Action;
 			}) != current_dirty_states.cend();
+	}
+
+	float InputProvider::get_range(const InputRange& range)
+	{
+		auto it = std::find_if(current_dirty_states.cbegin(), current_dirty_states.cend(), [range](const InputState& state)
+			{
+				return state.raw_range == range && state.input_type == InputType::Range;
+			});
+		return (it != current_dirty_states.cend()) ? (*it).range_value : 0.0f;
+	}
+
+	float InputProvider::get_range(const char* name)
+	{
+		auto it = std::find_if(current_dirty_states.cbegin(), current_dirty_states.cend(), [name](const InputState& state)
+			{
+				return state.mapped_name == name && state.input_type == InputType::Range;
+			});
+		return (it != current_dirty_states.cend()) ? (*it).range_value : 0.0f;
 	}
 }

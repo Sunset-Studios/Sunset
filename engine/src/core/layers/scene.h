@@ -129,11 +129,15 @@ namespace Sunset
 			EntityID make_entity();
 			void destroy_entity(EntityID entity_id);
 
+		protected:
+			void add_default_camera();
+
 		public:
 			std::vector<std::unique_ptr<Subsystem>> subsystems;
 			std::vector<std::unique_ptr<StaticBytePoolAllocator>> component_pools;
 			std::vector<Entity> entities;
 			std::vector<EntityIndex> free_entities;
+			EntityID active_camera{ 0 };
 	};
 
 	template<typename... ComponentTypes>

@@ -1,6 +1,7 @@
 #include <core/subsystems/static_mesh_processor.h>
 #include <core/ecs/components/mesh_component.h>
 #include <core/ecs/components/transform_component.h>
+#include <core/ecs/components/camera_control_component.h>
 #include <core/layers/scene.h>
 #include <graphics/resource_state.h>
 #include <graphics/pipeline_state.h>
@@ -21,14 +22,13 @@ namespace Sunset
 			MeshComponent* const mesh_comp = scene->get_component<MeshComponent>(entity);
 			TransformComponent* const transform_comp = scene->get_component<TransformComponent>(entity);
 
-			// Transform Calcs
-			glm::vec3 cam_pos = { 0.0f, 0.0f, glm::sin(SECONDS_TIME) * 0.15f - 2.0f};
-			glm::mat4 view = glm::translate(glm::mat4(1.0f), cam_pos);
-			glm::mat4 projection = glm::perspective(glm::radians(90.0f), 1280.0f / 720.0f, 0.1f, 200.0f);
-			projection[1][1] *= -1;
+			glm::mat4 view_projection_matrix;
+			if (CameraControlComponent* const camera_comp = scene->get_component<CameraControlComponent>(scene->active_camera))
+			{
+				view_projection_matrix = camera_comp->data.view_projection_matrix;
+			}
 
-			mesh_comp->uniform_data.transform_matrix = projection * view * transform_comp->transform.local_matrix;;
-			// Transform Calcs
+			mesh_comp->uniform_data.transform_matrix = view_projection_matrix * transform_comp->transform.local_matrix;;
 
 			if (mesh_comp->resource_state == 0)
 			{

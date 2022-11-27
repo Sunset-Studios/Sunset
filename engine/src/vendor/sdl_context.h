@@ -2,6 +2,7 @@
 
 #include <bitset>
 #include <unordered_map>
+#include <array>
 
 #include <glm/glm.hpp>
 #include <SDL.h>
@@ -13,6 +14,8 @@ namespace Sunset
 	extern bool B_SDL_INITIALIZED;
 	extern SDL_Event sdl_event;
 	extern std::unordered_map<SDL_Keycode, InputKey> SDL_TO_SUNSET_KEY_MAP;
+	extern std::unordered_map<Uint8, InputKey> SDL_TO_SUNSET_BUTTON_MAP;
+	extern std::unordered_map<Uint8, InputRange> SDL_TO_SUNSET_RANGE_MAP;
 
 	extern void lazy_SDL_init();
 
@@ -57,5 +60,6 @@ namespace Sunset
 
 		protected:
 			std::bitset<NUM_AVAILABLE_KEYS> key_bitmap;
+			std::array<float, NUM_AVAILABLE_RANGES> ranges_array;
 	};
 }

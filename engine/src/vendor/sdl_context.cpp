@@ -80,6 +80,13 @@ namespace Sunset
 		{ SDLK_z, InputKey::K_z },
 	};
 
+	std::unordered_map<Uint8, InputKey> SDL_TO_SUNSET_BUTTON_MAP
+	{
+		{ SDL_BUTTON_LEFT, InputKey::B_mouse_left },
+		{ SDL_BUTTON_MIDDLE, InputKey::B_mouse_middle },
+		{ SDL_BUTTON_RIGHT, InputKey::B_mouse_right }
+	};
+
 	void lazy_SDL_init()
 	{
 		if (!B_SDL_INITIALIZED)
@@ -148,19 +155,53 @@ namespace Sunset
 			}
 		}
 
+		if (sdl_event.type == SDL_MOUSEBUTTONDOWN)
+		{
+			if (SDL_TO_SUNSET_BUTTON_MAP.find(sdl_event.button.button) != SDL_TO_SUNSET_BUTTON_MAP.end())
+			{
+				InputKey key = SDL_TO_SUNSET_BUTTON_MAP[sdl_event.button.button];
+				key_bitmap.set(static_cast<int16_t>(key));
+			}
+		}
+		else if (sdl_event.type == SDL_MOUSEBUTTONUP)
+		{
+			if (SDL_TO_SUNSET_BUTTON_MAP.find(sdl_event.button.button) != SDL_TO_SUNSET_BUTTON_MAP.end())
+			{
+				InputKey key = SDL_TO_SUNSET_BUTTON_MAP[sdl_event.button.button];
+				key_bitmap.set(static_cast<int16_t>(key), 0);
+			}
+		}
+
+		if (sdl_event.type == SDL_MOUSEMOTION)
+		{
+			ranges_array[static_cast<int16_t>(InputRange::M_x)] = static_cast<float>(sdl_event.motion.xrel);
+			ranges_array[static_cast<int16_t>(InputRange::M_y)] = static_cast<float>(sdl_event.motion.yrel);
+		}
+
 		// Use the now updated bitset to update the passed in input context
 		for (int32_t i = 0; i < context->input_states.size(); ++i)
 		{
 			const InputState& state = context->input_states[i];
-			const bool b_input_is_active = key_bitmap.test(static_cast<int16_t>(state.raw_input));
 			switch (state.input_type)
 			{
 				case InputType::State:
+				{
+					const bool b_input_is_active = key_bitmap.test(static_cast<int16_t>(state.raw_input));
 					context->set_state(i, b_input_is_active);
 					break;
+				}
 				case InputType::Action:
+				{
+					const bool b_input_is_active = key_bitmap.test(static_cast<int16_t>(state.raw_input));
 					context->set_action(i, b_input_is_active);
 					break;
+				}
+				case InputType::Range:
+				{
+					const float b_range_value = ranges_array[static_cast<int16_t>(state.raw_range)];
+					context->set_range(i, b_range_value);
+					break;
+				}
 				default: break;
 			}
 		}
