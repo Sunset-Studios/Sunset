@@ -91,10 +91,10 @@ namespace Sunset
 		if (descriptor_data.descriptor_set == nullptr)
 		{
 			DescriptorSetBuilder builder = DescriptorSetBuilder::begin(context());
-			for (const DescriptorBuildData& descriptor_data : descriptor_build_datas)
+			for (const DescriptorBuildData& descriptor_build_data : descriptor_build_datas)
 			{
 				// TODO: Switch on descriptor type to determine whether to bind buffer or image
-				builder.bind_buffer(descriptor_data);
+				builder.bind_buffer(descriptor_build_data);
 			}
 			builder.build(descriptor_data.descriptor_set, descriptor_data.descriptor_layout);
 		}

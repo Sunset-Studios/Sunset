@@ -129,7 +129,7 @@ namespace Sunset
 			}
 		}
 
-		vkUpdateDescriptorSets(state.get_device(), vk_writes.size(), vk_writes.data(), 0, nullptr);
+		vkUpdateDescriptorSets(state.get_device(), static_cast<uint32_t>(vk_writes.size()), vk_writes.data(), 0, nullptr);
 	}
 
 	void create_surface(VulkanContext* const vulkan_context, Window* const window)

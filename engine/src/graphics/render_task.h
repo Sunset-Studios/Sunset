@@ -3,6 +3,7 @@
 #include <graphics/pipeline_types.h>
 #include <graphics/resource_types.h>
 #include <graphics/render_pass_types.h>
+#include <graphics/descriptor_types.h>
 #include <graphics/push_constants.h>
 #include <memory/allocators/stack_allocator.h>
 

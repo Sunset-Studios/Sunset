@@ -48,7 +48,7 @@ namespace Sunset
 
 		for (int i = 0; i < MAX_BOUND_DESCRIPTOR_SETS; ++i)
 		{
-			if (cached_descriptor_datas[i].descriptor_set != descriptor_datas[i].descriptor_set)
+			if (descriptor_datas[i].descriptor_set != nullptr && cached_descriptor_datas[i].descriptor_set != descriptor_datas[i].descriptor_set)
 			{
 				descriptor_datas[i].descriptor_set->bind(gfx_context, command_buffer, pipeline_state);
 				cached_descriptor_datas[i].descriptor_set = descriptor_datas[i].descriptor_set;

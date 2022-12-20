@@ -91,10 +91,15 @@ namespace Sunset
 	{
 		for (int i = 0; i < MAX_BUFFERED_FRAMES; ++i)
 		{
+			if (CameraControlComponent::gpu_cam_buffers[i] == nullptr)
+			{
+				CameraControlComponent::gpu_cam_buffers[i] = BufferFactory::create(Renderer::get()->context(), sizeof(CameraMatrices), BufferType::UniformBuffer);
+			}
+
 			Renderer::get()->inject_global_descriptor(i,
-				{
-					{.binding = 0, .buffer = CameraControlComponent::gpu_cam_buffers[i], .type = DescriptorType::UniformBuffer, .shader_stages = PipelineShaderStageType::Vertex }
-				});
+			{
+				{.binding = 0, .buffer = CameraControlComponent::gpu_cam_buffers[i], .type = DescriptorType::UniformBuffer, .shader_stages = PipelineShaderStageType::Vertex }
+			});
 		}
 	}
 }

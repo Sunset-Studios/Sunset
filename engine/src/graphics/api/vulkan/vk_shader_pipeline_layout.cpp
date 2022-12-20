@@ -37,7 +37,7 @@ namespace Sunset
 				set_layouts.push_back(static_cast<VkDescriptorSetLayout>(layout->get()));
 			}
 
-			create_info.setLayoutCount = set_layouts.size();
+			create_info.setLayoutCount = static_cast<uint32_t>(set_layouts.size());
 			create_info.pSetLayouts = set_layouts.data();
 		}
 

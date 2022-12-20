@@ -34,14 +34,6 @@ namespace Sunset
 
 				camera_control_comp->data.b_dirty = false;
 
-				for (int i = 0; i < MAX_BUFFERED_FRAMES; ++i)
-				{
-					if (CameraControlComponent::gpu_cam_buffers[i] == nullptr)
-					{
-						CameraControlComponent::gpu_cam_buffers[i] = BufferFactory::create(Renderer::get()->context(), sizeof(CameraMatrices), BufferType::UniformBuffer);
-					}
-				}
-
 				{
 					const uint32_t current_buffer_idx = Renderer::get()->context()->get_buffered_frame_number();
 					CameraControlComponent::gpu_cam_buffers[current_buffer_idx]->copy_from(Renderer::get()->context(), &camera_control_comp->data.matrices, sizeof(CameraMatrices));

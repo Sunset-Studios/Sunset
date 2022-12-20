@@ -219,7 +219,7 @@ namespace Sunset
 		DescriptorSetBuilder& bind_image(uint16_t binding, class Image* image, DescriptorType type, PipelineShaderStageType shader_stages);
 		DescriptorSetBuilder& bind_image(const DescriptorBuildData& build_data);
 
-		bool build(DescriptorSet* out_descriptor_set, DescriptorLayout* out_descriptor_layout);
+		bool build(DescriptorSet*& out_descriptor_set, DescriptorLayout*& out_descriptor_layout);
 
 	private:
 		class GraphicsContext* gfx_context{ nullptr };

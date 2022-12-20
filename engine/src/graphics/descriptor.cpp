@@ -60,7 +60,7 @@ namespace Sunset
 		return bind_image(build_data.binding, build_data.image, build_data.type, build_data.shader_stages);
 	}
 
-	bool DescriptorSetBuilder::build(DescriptorSet* out_descriptor_set, DescriptorLayout* out_descriptor_layout)
+	bool DescriptorSetBuilder::build(DescriptorSet*& out_descriptor_set, DescriptorLayout*& out_descriptor_layout)
 	{
 		DescriptorLayoutID layout_id = DescriptorLayoutCache::get()->fetch_or_add(bindings, gfx_context);
 		out_descriptor_layout = DescriptorLayoutCache::get()->fetch(layout_id);
