@@ -56,6 +56,16 @@ namespace Sunset
 			buffer_policy.destroy(gfx_context);
 		}
 
+		void* get()
+		{
+			return buffer_policy.get();
+		}
+
+		size_t get_size() const
+		{
+			return buffer_policy.get_size();
+		}
+
 	private:
 		Policy buffer_policy;
 		BufferType buffer_type;
@@ -94,6 +104,16 @@ namespace Sunset
 
 		void bind(class GraphicsContext* const gfx_context, BufferType type, void* command_buffer)
 		{ }
+
+		void* get()
+		{
+			return nullptr;
+		}
+
+		size_t get_size() const
+		{
+			return 0;
+		}
 	};
 
 #if USE_VULKAN_GRAPHICS

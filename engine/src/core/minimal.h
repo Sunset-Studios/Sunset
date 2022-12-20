@@ -56,7 +56,8 @@ namespace Sunset
 	enum class BufferType : int16_t
 	{
 		Generic,
-		Vertex
+		Vertex,
+		UniformBuffer
 	};
 
 	enum class ImageFlags : int32_t
@@ -107,4 +108,6 @@ namespace Sunset
 	#define SECONDS_TIME std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count() * 0.001
 	#define WORLD_UP glm::vec3(0.0f, 1.0f, 0.0f)
 	#define WORLD_FORWARD glm::vec3(0.0f, 0.0f, -1.0f)
+
+	#define MAX_BUFFERED_FRAMES 2
 }

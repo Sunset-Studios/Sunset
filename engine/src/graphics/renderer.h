@@ -34,7 +34,24 @@ namespace Sunset
 				return graphics_master_pass;
 			}
 
+			class DescriptorData get_global_descriptor_data(uint16_t buffered_frame) const
+			{
+				return global_descriptor_data[buffered_frame];
+			}
+
+			class DescriptorSet* global_descriptor_set(uint16_t buffered_frame) const
+			{
+				return global_descriptor_data[buffered_frame].descriptor_set;
+			}
+
+			class DescriptorLayout* global_descriptor_layout(uint16_t buffered_frame) const
+			{
+				return global_descriptor_data[buffered_frame].descriptor_layout;
+			}
+
 			RenderTask* fresh_rendertask();
+
+			void inject_global_descriptor(uint16_t buffered_frame, const std::initializer_list<DescriptorBuildData>& descriptor_build_datas);
 
 		private:
 			Renderer() = default;
@@ -44,12 +61,12 @@ namespace Sunset
 			~Renderer() = default;
 
 		protected:
-			class BufferAllocator* buffer_allocator;
 			RenderTaskFrameAllocator rendertask_allocator;
 			std::unique_ptr<GraphicsContext> graphics_context;
 			class Swapchain* swapchain;
 			std::unique_ptr<GraphicsCommandQueue> command_queue;
 			class RenderPass* graphics_master_pass;
 			Window* graphics_window;
+			DescriptorData global_descriptor_data[MAX_BUFFERED_FRAMES];
 	};
 }

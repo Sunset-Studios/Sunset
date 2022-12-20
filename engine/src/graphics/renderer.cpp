@@ -7,6 +7,7 @@
 #include <graphics/resource_state.h>
 #include <graphics/render_pass.h>
 #include <graphics/resource/shader_pipeline_layout.h>
+#include <graphics/descriptor.h>
 
 namespace Sunset
 {
@@ -16,6 +17,12 @@ namespace Sunset
 
 		graphics_context = GraphicsContextFactory::create(window);
 		graphics_context->set_buffer_allocator(BufferAllocatorFactory::create(graphics_context.get()));
+
+		graphics_context->set_descriptor_set_allocator(DescriptorSetAllocatorFactory::create(graphics_context.get()));
+		graphics_context->get_descriptor_set_allocator()->configure_pool_sizes({
+			{ DescriptorType::UniformBuffer, 1000 },
+			{ DescriptorType::Image, 1000 }
+		});
 
 		swapchain = SwapchainFactory::create(graphics_context.get());
 		command_queue = GraphicsCommandQueueFactory::create(graphics_context.get());
@@ -52,7 +59,11 @@ namespace Sunset
 
 	void Renderer::destroy()
 	{
-		graphics_context->wait_for_gpu();
+		for (int16_t frame_number = 0; frame_number < MAX_BUFFERED_FRAMES; ++frame_number)
+		{
+			graphics_context->wait_for_gpu();
+			graphics_context->advance_frame();
+		}
 
 		graphics_master_pass->destroy(graphics_context.get());
 
@@ -69,5 +80,23 @@ namespace Sunset
 	RenderTask* Renderer::fresh_rendertask()
 	{
 		return rendertask_allocator.get_new();
+	}
+
+	void Renderer::inject_global_descriptor(uint16_t buffered_frame, const std::initializer_list<DescriptorBuildData>& descriptor_build_datas)
+	{
+		assert(buffered_frame >= 0 && buffered_frame < MAX_BUFFERED_FRAMES);
+
+		DescriptorData& descriptor_data = global_descriptor_data[buffered_frame];
+
+		if (descriptor_data.descriptor_set == nullptr)
+		{
+			DescriptorSetBuilder builder = DescriptorSetBuilder::begin(context());
+			for (const DescriptorBuildData& descriptor_data : descriptor_build_datas)
+			{
+				// TODO: Switch on descriptor type to determine whether to bind buffer or image
+				builder.bind_buffer(descriptor_data);
+			}
+			builder.build(descriptor_data.descriptor_set, descriptor_data.descriptor_layout);
+		}
 	}
 }

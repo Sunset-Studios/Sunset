@@ -43,7 +43,9 @@ namespace Sunset
 	{
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
 
-		VK_CHECK(vkAcquireNextImageKHR(context_state->get_device(), data.swapchain, 1000000000, context_state->sync_pool.get_semaphore(context_state->present_semaphore), nullptr, &data.current_image_index));
+		const int16_t current_buffered_frame = gfx_context->get_buffered_frame_number();
+
+		VK_CHECK(vkAcquireNextImageKHR(context_state->get_device(), data.swapchain, 1000000000, context_state->sync_pool.get_semaphore(context_state->frame_sync_primitives[current_buffered_frame].present_semaphore), nullptr, &data.current_image_index));
 	}
 
 
@@ -52,7 +54,9 @@ namespace Sunset
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
 		VulkanCommandQueueData* command_queue_data = static_cast<VulkanCommandQueueData*>(command_queue->get_data());
 
-		VkSemaphore render_semaphore = context_state->sync_pool.get_semaphore(context_state->render_semaphore);
+		const int16_t current_buffered_frame = gfx_context->get_buffered_frame_number();
+
+		VkSemaphore render_semaphore = context_state->sync_pool.get_semaphore(context_state->frame_sync_primitives[current_buffered_frame].render_semaphore);
 
 		VkPresentInfoKHR present_info = {};
 		present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;

@@ -20,11 +20,12 @@ namespace Sunset
 		~RenderTaskExecutor() = default;
 
 		void reset();
-		void operator()(class GraphicsContext* const gfx_context, void* command_buffer, PipelineStateID pipeline_state, ResourceStateID resource_state, const DrawCall& draw_call, const PushConstantPipelineData& push_constants = {});
+		void operator()(class GraphicsContext* const gfx_context, void* command_buffer, PipelineStateID pipeline_state, ResourceStateID resource_state, const DrawCall& draw_call, const PushConstantPipelineData& push_constants = {}, DescriptorData descriptor_datas[MAX_BOUND_DESCRIPTOR_SETS] = {});
 
 	private:
 		PipelineStateID cached_pipeline_state{ 0 };
 		ResourceStateID cached_resource_state{ 0 };
+		DescriptorData cached_descriptor_datas[MAX_BOUND_DESCRIPTOR_SETS];
 	};
 
 	class RenderTask
@@ -42,6 +43,14 @@ namespace Sunset
 			return this;
 		}
 
+		RenderTask* set_descriptor_data(DescriptorSetType type, const DescriptorData& descriptor_data)
+		{
+			uint32_t descriptor_type_idx = static_cast<uint32_t>(type);
+			assert(descriptor_type_idx >= 0 && descriptor_type_idx < MAX_BOUND_DESCRIPTOR_SETS);
+			descriptor_datas[descriptor_type_idx] = descriptor_data;
+			return this;
+		}
+
 	public:
 		RenderPassFlags render_pass_flags{ RenderPassFlags::Depth };
 		PipelineStateID pipeline_state{ 0 };
@@ -49,6 +58,7 @@ namespace Sunset
 		uint32_t render_depth{ 0 };
 		DrawCall draw_call;
 		PushConstantPipelineData push_constants;
+		DescriptorData descriptor_datas[MAX_BOUND_DESCRIPTOR_SETS];
 	};
 
 	using RenderTaskFrameAllocator = StaticFrameAllocator<RenderTask>;

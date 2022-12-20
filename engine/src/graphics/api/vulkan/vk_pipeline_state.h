@@ -10,23 +10,6 @@
 
 namespace Sunset
 {
-	inline VkShaderStageFlagBits VK_FROM_SUNSET_SHADER_STAGE_TYPE(PipelineShaderStageType shader_stage_type)
-	{
-		switch (shader_stage_type)
-		{
-		case PipelineShaderStageType::Vertex:
-			return VK_SHADER_STAGE_VERTEX_BIT;
-		case PipelineShaderStageType::Fragment:
-			return VK_SHADER_STAGE_FRAGMENT_BIT;
-		case PipelineShaderStageType::Geometry:
-			return VK_SHADER_STAGE_GEOMETRY_BIT;
-		case PipelineShaderStageType::Compute:
-			return VK_SHADER_STAGE_COMPUTE_BIT;
-		default:
-			return VK_SHADER_STAGE_VERTEX_BIT;
-		}
-	}
-
 	inline VkPrimitiveTopology VK_FROM_SUNSET_TOPOLOGY_TYPE(PipelinePrimitiveTopologyType topology_type)
 	{
 		switch (topology_type)

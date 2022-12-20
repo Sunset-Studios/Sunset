@@ -5,8 +5,18 @@
 
 #include <core/ecs/entity.h>
 
+#include <array>
+
 namespace Sunset
 {
+	struct CameraMatrices
+	{
+		glm::mat4 view_matrix;
+		glm::mat4 projection_matrix;
+		glm::mat4 view_projection_matrix;
+		glm::mat4 inverse_view_projection_matrix;
+	};
+
 	struct CameraTransformData
 	{
 		float fov;
@@ -17,10 +27,7 @@ namespace Sunset
 		float pitch{ 0.0f };
 		glm::vec3 position;
 		glm::vec3 forward{ 0.0f, 0.0f, -1.0f };
-		glm::mat4 view_matrix;
-		glm::mat4 projection_matrix;
-		glm::mat4 view_projection_matrix;
-		glm::mat4 inverse_view_projection_matrix;
+		CameraMatrices matrices;
 		bool b_dirty{ false };
 	};
 
@@ -34,6 +41,7 @@ namespace Sunset
 	{
 		CameraTransformData data;
 		CameraInputData input;
+		static std::array<class Buffer*, MAX_BUFFERED_FRAMES> gpu_cam_buffers;
 	};
 
 	void set_fov(CameraControlComponent* camera_comp, float new_fov);

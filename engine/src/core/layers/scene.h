@@ -131,6 +131,7 @@ namespace Sunset
 
 		protected:
 			void add_default_camera();
+			void setup_renderer_data();
 
 		public:
 			std::vector<std::unique_ptr<Subsystem>> subsystems;

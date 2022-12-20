@@ -13,7 +13,8 @@ namespace Sunset
 		{
 			case BufferType::Vertex:
 				return VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-				break;
+			case BufferType::UniformBuffer:
+				return VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
 			case BufferType::Generic:
 			default:
 				return VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
@@ -53,6 +54,8 @@ namespace Sunset
 		allocation_create_info.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
 
 		VK_CHECK(vmaCreateBuffer(allocator, &buffer_create_info, &allocation_create_info, &buffer, &allocation, nullptr));
+
+		size = buffer_size;
 	}
 
 	void VulkanBuffer::destroy(class GraphicsContext* const gfx_context)

@@ -5,6 +5,8 @@
 #include <vulkan/vulkan.h>
 
 #include <minimal.h>
+#include <descriptor_types.h>
+#include <pipeline_types.h>
 
 inline void VK_CHECK(VkResult result)
 {
@@ -122,4 +124,58 @@ inline VkImageViewType VK_FROM_SUNSET_IMAGE_VIEW_TYPE(Sunset::ImageFlags image_t
 		return VK_IMAGE_VIEW_TYPE_3D;
 	}
 	return VK_IMAGE_VIEW_TYPE_2D;
+}
+
+inline VkDescriptorType VK_FROM_SUNSET_DESCRIPTOR_TYPE(Sunset::DescriptorType descriptor_type)
+{
+	switch (descriptor_type)
+	{
+	case Sunset::DescriptorType::UniformBuffer:
+		return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	case Sunset::DescriptorType::Image:
+		return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	default:
+		return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	}
+}
+
+inline VkShaderStageFlagBits VK_FROM_SUNSET_SHADER_STAGE_TYPE(Sunset::PipelineShaderStageType shader_stage_type)
+{
+	uint32_t sunset_shader_stages{ static_cast<uint32_t>(shader_stage_type) };
+	uint32_t vk_shader_stages{ 0 };
+	if (sunset_shader_stages & static_cast<uint32_t>(Sunset::PipelineShaderStageType::Vertex))
+	{
+		vk_shader_stages |= VK_SHADER_STAGE_VERTEX_BIT;
+	}
+	if (sunset_shader_stages & static_cast<uint32_t>(Sunset::PipelineShaderStageType::Fragment))
+	{
+		vk_shader_stages |= VK_SHADER_STAGE_FRAGMENT_BIT;
+	}
+	if (sunset_shader_stages & static_cast<uint32_t>(Sunset::PipelineShaderStageType::Geometry))
+	{
+		vk_shader_stages |= VK_SHADER_STAGE_GEOMETRY_BIT;
+	}
+	if (sunset_shader_stages & static_cast<uint32_t>(Sunset::PipelineShaderStageType::Compute))
+	{
+		vk_shader_stages |= VK_SHADER_STAGE_COMPUTE_BIT;
+	}
+	return static_cast<VkShaderStageFlagBits>(vk_shader_stages);
+}
+
+inline std::vector<VkDescriptorSetLayoutBinding> VK_FROM_SUNSET_DESCRIPTOR_BINDINGS(const std::vector<Sunset::DescriptorBinding>& bindings)
+{
+	std::vector<VkDescriptorSetLayoutBinding> vk_bindings;
+	vk_bindings.reserve(bindings.size());
+
+	for (const Sunset::DescriptorBinding& binding : bindings)
+	{
+		VkDescriptorSetLayoutBinding new_vk_binding = {};
+		new_vk_binding.binding = binding.slot;
+		new_vk_binding.descriptorCount = binding.count;
+		new_vk_binding.descriptorType = VK_FROM_SUNSET_DESCRIPTOR_TYPE(binding.type);
+		new_vk_binding.stageFlags = VK_FROM_SUNSET_SHADER_STAGE_TYPE(binding.pipeline_stages);
+		vk_bindings.push_back(new_vk_binding);
+	}
+
+	return vk_bindings;
 }

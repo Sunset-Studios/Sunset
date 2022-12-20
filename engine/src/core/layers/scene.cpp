@@ -3,8 +3,10 @@
 #include <core/subsystems/transform_processor.h>
 #include <core/subsystems/camera_control_processor.h>
 #include <core/subsystems/camera_input_controller.h>
-
 #include <core/ecs/components/camera_control_component.h>
+
+#include <graphics/renderer.h>
+#include <graphics/resource/buffer.h>
 
 namespace Sunset
 {
@@ -23,6 +25,7 @@ namespace Sunset
 		add_subsystem<CameraInputController>();
 		add_subsystem<TransformProcessor>();
 		add_subsystem<StaticMeshProcessor>();
+		setup_renderer_data();
 	}
 
 	void Scene::destroy()
@@ -81,6 +84,17 @@ namespace Sunset
 			set_position(camera_control_comp, glm::vec3(0.0f, 0.0f, 0.0f));
 			set_move_speed(camera_control_comp, 1.0f);
 			set_look_speed(camera_control_comp, 0.1f);
+		}
+	}
+
+	void Scene::setup_renderer_data()
+	{
+		for (int i = 0; i < MAX_BUFFERED_FRAMES; ++i)
+		{
+			Renderer::get()->inject_global_descriptor(i,
+				{
+					{.binding = 0, .buffer = CameraControlComponent::gpu_cam_buffers[i], .type = DescriptorType::UniformBuffer, .shader_stages = PipelineShaderStageType::Vertex }
+				});
 		}
 	}
 }

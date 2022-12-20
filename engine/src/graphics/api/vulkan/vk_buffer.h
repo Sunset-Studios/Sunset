@@ -32,8 +32,17 @@ namespace Sunset
 		void destroy(class GraphicsContext* const gfx_context);
 		void copy_from(class GraphicsContext* const gfx_context, void* data, size_t buffer_size);
 		void bind(class GraphicsContext* const gfx_context, BufferType type, void* command_buffer);
+		void* get()
+		{
+			return buffer;
+		}
+		size_t get_size() const
+		{
+			return size;
+		}
 
 	protected:
+		size_t size;
 		VkBuffer buffer;
 		VmaAllocation allocation;
 	};

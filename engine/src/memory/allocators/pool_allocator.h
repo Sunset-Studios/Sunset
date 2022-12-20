@@ -32,7 +32,7 @@ namespace Sunset
 			{
 				assert(total_free < max_items_in_pool && "This deallocate call is returning an element to the pool that will cause a memory overflow! Make sure your alloc/dealloc calls are balanced while using this allocator.");
 				++total_free;
-				allocator.destroy(element);
+				std::destroy_at(element);
 				allocator.deallocate(element, 1);
 				element = nullptr;
 			}

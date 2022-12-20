@@ -5,13 +5,17 @@
 
 namespace Sunset
 {
+	struct VulkanFrameCommandPoolData
+	{
+		VkCommandPool command_pool;
+		VkCommandBuffer command_buffer;
+	};
+
 	struct VulkanCommandQueueData
 	{
 		VkQueue graphics_queue;
 		uint32_t graphics_queue_family;
-		// TODO: Add support for multiple command queues and buffers
-		VkCommandPool command_pool;
-		VkCommandBuffer command_buffer;
+		VulkanFrameCommandPoolData frame_command_pool_data[MAX_BUFFERED_FRAMES];
 	};
 
 	class VulkanCommandQueue
@@ -29,8 +33,8 @@ namespace Sunset
 			return &data;
 		}
 
-		void new_command_pool(class GraphicsContext* const gfx_context, void* command_pool_ptr);
-		void new_command_buffers(class GraphicsContext* const gfx_context, void* command_buffer_ptr, uint16_t count = 1);
+		void new_command_pool(class GraphicsContext* const gfx_context, void* command_pool_ptr, uint16_t buffered_frame_number = 0);
+		void new_command_buffers(class GraphicsContext* const gfx_context, void* command_buffer_ptr, uint16_t count = 1, uint16_t buffered_frame_number = 0);
 		void* begin_one_time_buffer_record(class GraphicsContext* const gfx_context);
 		void end_one_time_buffer_record(class GraphicsContext* const gfx_context);
 		void submit(class GraphicsContext* const gfx_context);

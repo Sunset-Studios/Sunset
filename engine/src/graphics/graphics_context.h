@@ -42,14 +42,29 @@ namespace Sunset
 				return graphics_policy.get_frame_number();
 			}
 
+			uint16_t get_buffered_frame_number() const
+			{
+				return graphics_policy.get_buffered_frame_number();
+			}
+
 			void set_buffer_allocator(class BufferAllocator* allocator)
 			{
 				graphics_policy.set_buffer_allocator(allocator);
 			}
 
+			void set_descriptor_set_allocator(class DescriptorSetAllocator* allocator)
+			{
+				graphics_policy.set_descriptor_set_allocator(allocator);
+			}
+
 			class BufferAllocator* get_buffer_allocator()
 			{
 				return graphics_policy.get_buffer_allocator();
+			}
+
+			class DescriptorSetAllocator* get_descriptor_set_allocator()
+			{
+				return graphics_policy.get_descriptor_set_allocator();
 			}
 
 			void advance_frame()
@@ -65,6 +80,11 @@ namespace Sunset
 			void push_constants(void* buffer, PipelineStateID pipeline_state, const PushConstantPipelineData& push_constant_data)
 			{
 				graphics_policy.push_constants(buffer, pipeline_state, push_constant_data);
+			}
+
+			void push_descriptor_writes(const std::vector<DescriptorWrite>& descriptor_writes)
+			{
+				graphics_policy.push_descriptor_writes(descriptor_writes);
 			}
 
 		private:
@@ -97,7 +117,15 @@ namespace Sunset
 			void set_buffer_allocator(class BufferAllocator* allocator)
 			{ }
 
+			void set_descriptor_set_allocator(class DescriptorSetAllocator* allocator)
+			{ }
+
 			class BufferAllocator* get_buffer_allocator()
+			{
+				return nullptr;
+			}
+
+			class DescriptorSetAllocator* get_descriptor_set_allocator()
 			{
 				return nullptr;
 			}
@@ -107,10 +135,18 @@ namespace Sunset
 				return 0;
 			}
 
+			uint16_t get_buffered_frame_number() const
+			{
+				return 0;
+			}
+
 			void advance_frame()
 			{ }
 
 			void push_constants(void* buffer, PipelineStateID pipeline_state, const PushConstantPipelineData& push_constant_data)
+			{ }
+
+			void push_descriptor_writes(const std::vector<DescriptorWrite>& descriptor_writes)
 			{ }
 	};
 

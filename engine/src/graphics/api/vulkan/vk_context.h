@@ -12,6 +12,13 @@
 
 namespace Sunset
 {
+	struct VulkanFrameSyncPrimitives
+	{
+		VulkanSemaphoreHandle present_semaphore{ -1 };
+		VulkanSemaphoreHandle render_semaphore{ -1 };
+		VulkanFenceHandle render_fence{ -1 };
+	};
+
 	struct VulkanContextState
 	{
 		public:
@@ -20,12 +27,11 @@ namespace Sunset
 			VkSurfaceKHR surface{ nullptr };
 			class Window* window{ nullptr };
 			class BufferAllocator* buffer_allocator{ nullptr };
+			class DescriptorSetAllocator* descriptor_set_allocator{ nullptr };
 			vkb::Device device;
 			vkb::PhysicalDevice physical_device;
 			VulkanSyncPool sync_pool;
-			VulkanSemaphoreHandle present_semaphore{ -1 };
-			VulkanSemaphoreHandle render_semaphore{ -1 };
-			VulkanFenceHandle render_fence{ -1 };
+			VulkanFrameSyncPrimitives frame_sync_primitives[MAX_BUFFERED_FRAMES];
 			uint32_t frame_number{ 0 };
 
 		public:
@@ -67,14 +73,29 @@ namespace Sunset
 				state.buffer_allocator = allocator;
 			}
 
+			void set_descriptor_set_allocator(class DescriptorSetAllocator* allocator)
+			{
+				state.descriptor_set_allocator = allocator;
+			}
+
 			class BufferAllocator* get_buffer_allocator()
 			{
 				return state.buffer_allocator;
 			}
 
+			class DescriptorSetAllocator* get_descriptor_set_allocator()
+			{
+				return state.descriptor_set_allocator;
+			}
+
 			uint32_t get_frame_number() const
 			{
 				return state.frame_number;
+			}
+
+			uint16_t get_buffered_frame_number() const
+			{
+				return state.frame_number % MAX_BUFFERED_FRAMES;
 			}
 
 			void advance_frame()
@@ -83,6 +104,7 @@ namespace Sunset
 			}
 
 			void push_constants(void* buffer, PipelineStateID pipeline_state, const PushConstantPipelineData& push_constant_data);
+			void push_descriptor_writes(const std::vector<DescriptorWrite>& descriptor_writes);
 
 		public:
 			VulkanContextState state;

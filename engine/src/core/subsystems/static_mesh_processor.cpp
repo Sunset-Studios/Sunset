@@ -19,16 +19,12 @@ namespace Sunset
 	{
 		for (EntityID entity : SceneView<MeshComponent, TransformComponent>(*scene))
 		{
+			uint32_t current_buffered_frame = Renderer::get()->context()->get_buffered_frame_number();
+
 			MeshComponent* const mesh_comp = scene->get_component<MeshComponent>(entity);
 			TransformComponent* const transform_comp = scene->get_component<TransformComponent>(entity);
 
-			glm::mat4 view_projection_matrix;
-			if (CameraControlComponent* const camera_comp = scene->get_component<CameraControlComponent>(scene->active_camera))
-			{
-				view_projection_matrix = camera_comp->data.view_projection_matrix;
-			}
-
-			mesh_comp->uniform_data.transform_matrix = view_projection_matrix * transform_comp->transform.local_matrix;;
+			mesh_comp->uniform_data.transform_matrix = transform_comp->transform.local_matrix;;
 
 			if (mesh_comp->resource_state == 0)
 			{
@@ -43,7 +39,13 @@ namespace Sunset
 			{
 				PipelineStateBuilder state_builder = PipelineStateBuilder::create_default(Renderer::get()->window())
 					.clear_shader_stages()
-					.set_shader_layout(ShaderPipelineLayoutFactory::create(Renderer::get()->context(), push_constants_data))
+					.set_shader_layout(
+						ShaderPipelineLayoutFactory::create(
+							Renderer::get()->context(),
+							push_constants_data,
+							{ Renderer::get()->global_descriptor_layout(current_buffered_frame) }
+						)
+					)
 					.value();
 
 				for (const std::pair<PipelineShaderStageType, const char*>& shader : mesh_comp->shaders)
@@ -60,6 +62,7 @@ namespace Sunset
 				->fresh_rendertask()
 				->setup(mesh_comp->pipeline_state, mesh_comp->resource_state, DrawCall{ mesh_vertex_count(mesh_comp) })
 				->set_push_constants(std::move(push_constants_data))
+				->set_descriptor_data(DescriptorSetType::Global, Renderer::get()->get_global_descriptor_data(current_buffered_frame))
 				->submit(Renderer::get()->master_pass());
 		}
 	}

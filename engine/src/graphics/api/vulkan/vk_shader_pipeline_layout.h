@@ -14,7 +14,7 @@ namespace Sunset
 	class VulkanShaderPipelineLayout
 	{
 		public:
-			void initialize(class GraphicsContext* const gfx_context, const PushConstantPipelineData& push_constant_data = {});
+			void initialize(class GraphicsContext* const gfx_context, const PushConstantPipelineData& push_constant_data = {}, const std::vector<DescriptorLayout*> descriptor_layouts = {});
 			void destroy(class GraphicsContext* const gfx_context);
 
 			void* get_data()

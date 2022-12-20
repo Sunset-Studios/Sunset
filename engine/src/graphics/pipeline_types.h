@@ -9,12 +9,12 @@ namespace Sunset
 {
 	using PipelineStateID = size_t;
 
-	enum class PipelineShaderStageType
+	enum class PipelineShaderStageType : uint16_t
 	{
-		Vertex,
-		Fragment,
-		Geometry,
-		Compute
+		Vertex = 1,
+		Fragment = 2,
+		Geometry = 4,
+		Compute = 8
 	};
 
 	using PipelineShaderPathList = std::vector<std::pair<PipelineShaderStageType, const char*>>;
