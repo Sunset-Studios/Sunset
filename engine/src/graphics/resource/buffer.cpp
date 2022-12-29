@@ -8,7 +8,7 @@ namespace Sunset
 	{
 		Buffer* buffer = GlobalAssetPools<Buffer>::get()->allocate();
 		buffer->initialize(gfx_context, buffer_size, type);
-		gfx_context->add_resource_deletion_execution([&buffer, gfx_context]()
+		gfx_context->add_resource_deletion_execution([buffer, gfx_context]()
 		{
 			buffer->destroy(gfx_context);
 			GlobalAssetPools<Buffer>::get()->deallocate(buffer);
