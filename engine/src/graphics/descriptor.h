@@ -90,9 +90,9 @@ namespace Sunset
 			return descriptor_set_policy.build(gfx_context, descriptor_layout, descriptor_pool);
 		}
 
-		void bind(class GraphicsContext* const gfx_context, void* cmd_buffer, PipelineStateID pipeline_state)
+		void bind(class GraphicsContext* const gfx_context, void* cmd_buffer, PipelineStateID pipeline_state, const std::vector<uint32_t>& dynamic_buffer_offsets = {})
 		{
-			descriptor_set_policy.bind(gfx_context, cmd_buffer, pipeline_state);
+			descriptor_set_policy.bind(gfx_context, cmd_buffer, pipeline_state, dynamic_buffer_offsets);
 		}
 
 		void* get() const
@@ -112,7 +112,7 @@ namespace Sunset
 		bool build(class GraphicsContext* const gfx_context, class DescriptorLayout* descriptor_layout, void* descriptor_pool)
 		{ }
 
-		void bind(class GraphicsContext* const gfx_context, void* cmd_buffer, PipelineStateID pipeline_state)
+		void bind(class GraphicsContext* const gfx_context, void* cmd_buffer, PipelineStateID pipeline_state, const std::vector<uint32_t>& dynamic_buffer_offsets = {})
 		{ }
 
 		void* get() const
@@ -214,9 +214,9 @@ namespace Sunset
 
 		static DescriptorSetBuilder begin(class GraphicsContext* const context);
 
-		DescriptorSetBuilder& bind_buffer(uint16_t binding, class Buffer* buffer, DescriptorType type, PipelineShaderStageType shader_stages);
+		DescriptorSetBuilder& bind_buffer(uint16_t binding, class Buffer* buffer, size_t range_size, DescriptorType type, PipelineShaderStageType shader_stages);
 		DescriptorSetBuilder& bind_buffer(const DescriptorBuildData& build_data);
-		DescriptorSetBuilder& bind_image(uint16_t binding, class Image* image, DescriptorType type, PipelineShaderStageType shader_stages);
+		DescriptorSetBuilder& bind_image(uint16_t binding, class Image* image, size_t range_size, DescriptorType type, PipelineShaderStageType shader_stages);
 		DescriptorSetBuilder& bind_image(const DescriptorBuildData& build_data);
 
 		bool build(DescriptorSet*& out_descriptor_set, DescriptorLayout*& out_descriptor_layout);

@@ -44,7 +44,7 @@ namespace Sunset
 					set_shaders(mesh_comp,
 						{
 							{PipelineShaderStageType::Vertex, "../../shaders/basic_colored.vert.spv"},
-							{PipelineShaderStageType::Fragment, "../../shaders/basic_colored.frag.spv"}
+							{PipelineShaderStageType::Fragment, "../../shaders/default_lit.frag.spv"}
 						});
 				}
 			}

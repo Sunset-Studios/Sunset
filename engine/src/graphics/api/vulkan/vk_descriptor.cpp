@@ -53,7 +53,7 @@ namespace Sunset
 		}
 	}
 
-	void VulkanDescriptorSet::bind(class GraphicsContext* const gfx_context, void* cmd_buffer, PipelineStateID pipeline_state)
+	void VulkanDescriptorSet::bind(class GraphicsContext* const gfx_context, void* cmd_buffer, PipelineStateID pipeline_state, const std::vector<uint32_t>& dynamic_buffer_offsets)
 	{
 		assert(pipeline_state != 0);
 
@@ -64,7 +64,7 @@ namespace Sunset
 		assert(layout != nullptr);
 		assert(buffer != nullptr);
 
-		vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0, 1, &descriptor_set, 0, nullptr);
+		vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0, 1, &descriptor_set, static_cast<uint32_t>(dynamic_buffer_offsets.size()), dynamic_buffer_offsets.data());
 	}
 
 	void VulkanDescriptorSetAllocator::configure_pool_sizes(const std::initializer_list<std::pair<DescriptorType, uint32_t>>& sizes)

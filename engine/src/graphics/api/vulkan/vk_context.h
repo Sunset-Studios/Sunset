@@ -105,6 +105,7 @@ namespace Sunset
 
 			void push_constants(void* buffer, PipelineStateID pipeline_state, const PushConstantPipelineData& push_constant_data);
 			void push_descriptor_writes(const std::vector<DescriptorWrite>& descriptor_writes);
+			size_t get_min_ubo_offset_alignment();
 
 		public:
 			VulkanContextState state;

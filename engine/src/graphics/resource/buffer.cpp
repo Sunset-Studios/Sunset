@@ -15,4 +15,14 @@ namespace Sunset
 		});
 		return buffer;
 	}
+
+	size_t BufferHelpers::pad_ubo_size(size_t ubo_size, size_t min_ubo_alignment)
+	{
+		size_t aligned_size = ubo_size;
+		if (min_ubo_alignment > 0)
+		{
+			aligned_size = (aligned_size + min_ubo_alignment - 1) & ~(min_ubo_alignment - 1);
+		}
+		return aligned_size;
+	}
 }

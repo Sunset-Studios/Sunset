@@ -13,7 +13,8 @@ namespace Sunset
 	enum class DescriptorType : int16_t
 	{
 		UniformBuffer,
-		Image
+		Image,
+		DynamicUniformBuffer
 	};
 
 	enum class DescriptorSetType : int16_t
@@ -30,6 +31,7 @@ namespace Sunset
 	{
 		class DescriptorSet* descriptor_set;
 		class DescriptorLayout* descriptor_layout;
+		std::vector<uint32_t> dynamic_buffer_offsets;
 	};
 
 	struct DescriptorBuildData
@@ -40,6 +42,8 @@ namespace Sunset
 			class Buffer* buffer{ nullptr };
 			class Image* image;
 		};
+		uint32_t buffer_offset{ 0 };
+		size_t buffer_range{ 0 };
 		DescriptorType type;
 		PipelineShaderStageType shader_stages;
 	};
@@ -51,6 +55,7 @@ namespace Sunset
 		DescriptorType type;
 		void* buffer{ nullptr };
 		size_t buffer_size{ 0 };
+		size_t buffer_range{ 0 };
 		class DescriptorSet* set{ nullptr };
 	};
 

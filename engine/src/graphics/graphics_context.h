@@ -87,6 +87,11 @@ namespace Sunset
 				graphics_policy.push_descriptor_writes(descriptor_writes);
 			}
 
+			size_t get_min_ubo_offset_alignment()
+			{
+				return graphics_policy.get_min_ubo_offset_alignment();
+			}
+
 		private:
 			Policy graphics_policy;
 			ExecutionQueue resource_deletion_queue;
@@ -148,6 +153,11 @@ namespace Sunset
 
 			void push_descriptor_writes(const std::vector<DescriptorWrite>& descriptor_writes)
 			{ }
+
+			size_t get_min_ubo_offset_alignment()
+			{
+				return 0;
+			}
 	};
 
 #if USE_VULKAN_GRAPHICS

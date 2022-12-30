@@ -10,6 +10,21 @@
 
 namespace Sunset
 {
+	struct SceneLightingData
+	{
+		glm::vec4 fog_color;
+		glm::vec4 fog_distance;
+		glm::vec4 ambient_color;
+		glm::vec4 sunlight_direction;
+		glm::vec4 sunlight_color;
+	};
+
+	struct SceneLighting
+	{
+		SceneLightingData data;
+		class Buffer* buffer{ nullptr };
+	};
+
 	class Scene : public SimulationLayer
 	{
 		public:
@@ -139,6 +154,7 @@ namespace Sunset
 			std::vector<Entity> entities;
 			std::vector<EntityIndex> free_entities;
 			EntityID active_camera{ 0 };
+			SceneLighting scene_lighting;
 	};
 
 	template<typename... ComponentTypes>

@@ -17,6 +17,16 @@ namespace Sunset
 		Compute = 8
 	};
 
+	inline PipelineShaderStageType operator|(PipelineShaderStageType a, PipelineShaderStageType b)
+	{
+		return static_cast<PipelineShaderStageType>(static_cast<uint16_t>(a) | static_cast<uint16_t>(b));
+	}
+
+	inline PipelineShaderStageType operator&(PipelineShaderStageType a, PipelineShaderStageType b)
+	{
+		return static_cast<PipelineShaderStageType>(static_cast<uint16_t>(a) & static_cast<uint16_t>(b));
+	}
+
 	using PipelineShaderPathList = std::vector<std::pair<PipelineShaderStageType, const char*>>;
 
 	struct PipelineShaderStage

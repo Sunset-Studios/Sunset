@@ -96,14 +96,17 @@ namespace Sunset
 		std::vector<VkDescriptorImageInfo> vk_image_infos;
 		std::vector<VkWriteDescriptorSet> vk_writes;
 
+		vk_buffer_infos.reserve(descriptor_writes.size());
+		vk_image_infos.reserve(descriptor_writes.size());
+
 		for (const DescriptorWrite& write : descriptor_writes)
 		{
-			if (write.type == DescriptorType::UniformBuffer)
+			if (write.type == DescriptorType::UniformBuffer || write.type == DescriptorType::DynamicUniformBuffer)
 			{
 				VkDescriptorBufferInfo& buffer_info = vk_buffer_infos.emplace_back();
 				buffer_info.buffer = static_cast<VkBuffer>(write.buffer);
 				buffer_info.offset = 0;
-				buffer_info.range = write.buffer_size;
+				buffer_info.range = write.buffer_range;
 
 				VkWriteDescriptorSet& new_vk_write = vk_writes.emplace_back();
 				new_vk_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -130,6 +133,11 @@ namespace Sunset
 		}
 
 		vkUpdateDescriptorSets(state.get_device(), static_cast<uint32_t>(vk_writes.size()), vk_writes.data(), 0, nullptr);
+	}
+
+	size_t VulkanContext::get_min_ubo_offset_alignment()
+	{
+		return state.device.physical_device.properties.limits.minUniformBufferOffsetAlignment;
 	}
 
 	void create_surface(VulkanContext* const vulkan_context, Window* const window)

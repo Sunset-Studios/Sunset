@@ -69,14 +69,15 @@ namespace Sunset
 		buffer = nullptr;
 	}
 
-	void VulkanBuffer::copy_from(GraphicsContext* const gfx_context, void* data, size_t buffer_size)
+	void VulkanBuffer::copy_from(GraphicsContext* const gfx_context, void* data, size_t buffer_size, size_t buffer_offset)
 	{
 		assert(gfx_context->get_buffer_allocator() != nullptr);
 
 		VmaAllocator allocator = static_cast<VmaAllocator>(gfx_context->get_buffer_allocator()->get_handle());
 
-		void* mapped_memory;
-		vmaMapMemory(allocator, allocation, &mapped_memory);
+		char* mapped_memory;
+		vmaMapMemory(allocator, allocation, (void**)&mapped_memory);
+		mapped_memory += buffer_offset;
 		memcpy(mapped_memory, data, buffer_size);
 		vmaUnmapMemory(allocator, allocation);
 	}

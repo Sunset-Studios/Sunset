@@ -20,8 +20,9 @@ namespace Sunset
 
 		graphics_context->set_descriptor_set_allocator(DescriptorSetAllocatorFactory::create(graphics_context.get()));
 		graphics_context->get_descriptor_set_allocator()->configure_pool_sizes({
-			{ DescriptorType::UniformBuffer, 1000 },
-			{ DescriptorType::Image, 1000 }
+			{ DescriptorType::UniformBuffer, 128 },
+			{ DescriptorType::DynamicUniformBuffer, 128 },
+			{ DescriptorType::Image, 1048 }
 		});
 
 		swapchain = SwapchainFactory::create(graphics_context.get());
@@ -95,6 +96,11 @@ namespace Sunset
 			{
 				// TODO: Switch on descriptor type to determine whether to bind buffer or image
 				builder.bind_buffer(descriptor_build_data);
+				
+				if (descriptor_build_data.type == DescriptorType::DynamicUniformBuffer)
+				{
+					descriptor_data.dynamic_buffer_offsets.push_back(descriptor_build_data.buffer_offset);
+				}
 			}
 			builder.build(descriptor_data.descriptor_set, descriptor_data.descriptor_layout);
 		}

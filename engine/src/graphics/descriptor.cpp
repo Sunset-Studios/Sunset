@@ -36,28 +36,28 @@ namespace Sunset
 		return builder;
 	}
 
-	Sunset::DescriptorSetBuilder& DescriptorSetBuilder::bind_buffer(uint16_t binding, Buffer* buffer, DescriptorType type, PipelineShaderStageType shader_stages)
+	Sunset::DescriptorSetBuilder& DescriptorSetBuilder::bind_buffer(uint16_t binding, Buffer* buffer, size_t range_size, DescriptorType type, PipelineShaderStageType shader_stages)
 	{
 		bindings.push_back({ .slot = binding, .count = 1, .type = type, .pipeline_stages = shader_stages });
-		descriptor_writes.push_back({ .slot = binding, .count = 1, .type = type, .buffer = buffer->get(), .buffer_size = buffer->get_size(), .set = nullptr });
+		descriptor_writes.push_back({ .slot = binding, .count = 1, .type = type, .buffer = buffer->get(), .buffer_size = buffer->get_size(), .buffer_range = range_size, .set = nullptr });
 		return *this;
 	}
 
 	Sunset::DescriptorSetBuilder& DescriptorSetBuilder::bind_buffer(const DescriptorBuildData& build_data)
 	{
-		return bind_buffer(build_data.binding, build_data.buffer, build_data.type, build_data.shader_stages);
+		return bind_buffer(build_data.binding, build_data.buffer, build_data.buffer_range, build_data.type, build_data.shader_stages);
 	}
 
-	Sunset::DescriptorSetBuilder& DescriptorSetBuilder::bind_image(uint16_t binding, Image* image, DescriptorType type, PipelineShaderStageType shader_stages)
+	Sunset::DescriptorSetBuilder& DescriptorSetBuilder::bind_image(uint16_t binding, Image* image, size_t range_size, DescriptorType type, PipelineShaderStageType shader_stages)
 	{
 		bindings.push_back({ .slot = binding, .count = 1, .type = type, .pipeline_stages = shader_stages });
-		descriptor_writes.push_back({ .slot = binding, .count = 1, .type = type, .buffer = image->get_image(), .buffer_size = 0, .set = nullptr });
+		descriptor_writes.push_back({ .slot = binding, .count = 1, .type = type, .buffer = image->get_image(), .buffer_size = 0, .buffer_range = range_size, .set = nullptr });
 		return *this;
 	}
 
 	Sunset::DescriptorSetBuilder& DescriptorSetBuilder::bind_image(const DescriptorBuildData& build_data)
 	{
-		return bind_image(build_data.binding, build_data.image, build_data.type, build_data.shader_stages);
+		return bind_image(build_data.binding, build_data.image, build_data.buffer_range, build_data.type, build_data.shader_stages);
 	}
 
 	bool DescriptorSetBuilder::build(DescriptorSet*& out_descriptor_set, DescriptorLayout*& out_descriptor_layout)

@@ -3,6 +3,7 @@
 #include <core/subsystems/transform_processor.h>
 #include <core/subsystems/camera_control_processor.h>
 #include <core/subsystems/camera_input_controller.h>
+#include <core/subsystems/scene_lighting_processor.h>
 #include <core/ecs/components/camera_control_component.h>
 
 #include <graphics/renderer.h>
@@ -25,6 +26,7 @@ namespace Sunset
 		add_subsystem<CameraInputController>();
 		add_subsystem<TransformProcessor>();
 		add_subsystem<StaticMeshProcessor>();
+		add_subsystem<SceneLightingProcessor>();
 		setup_renderer_data();
 	}
 
@@ -89,6 +91,14 @@ namespace Sunset
 
 	void Scene::setup_renderer_data()
 	{
+		const size_t min_ubo_alignment = Renderer::get()->context()->get_min_ubo_offset_alignment();
+
+		if (scene_lighting.buffer == nullptr)
+		{
+			const size_t scene_lighting_buffer_size = MAX_BUFFERED_FRAMES * BufferHelpers::pad_ubo_size(sizeof(SceneLightingData), min_ubo_alignment);
+			scene_lighting.buffer = BufferFactory::create(Renderer::get()->context(), scene_lighting_buffer_size, BufferType::UniformBuffer);
+		}
+
 		for (int i = 0; i < MAX_BUFFERED_FRAMES; ++i)
 		{
 			if (CameraControlComponent::gpu_cam_buffers[i] == nullptr)
@@ -98,7 +108,8 @@ namespace Sunset
 
 			Renderer::get()->inject_global_descriptor(i,
 			{
-				{.binding = 0, .buffer = CameraControlComponent::gpu_cam_buffers[i], .type = DescriptorType::UniformBuffer, .shader_stages = PipelineShaderStageType::Vertex }
+				{.binding = 0, .buffer = CameraControlComponent::gpu_cam_buffers[i], .buffer_offset = 0, .buffer_range = sizeof(CameraMatrices), .type = DescriptorType::UniformBuffer, .shader_stages = PipelineShaderStageType::Vertex },
+				{.binding = 1, .buffer = scene_lighting.buffer, .buffer_offset = static_cast<uint32_t>(BufferHelpers::pad_ubo_size(sizeof(SceneLightingData), min_ubo_alignment) * i), .buffer_range = sizeof(SceneLightingData), .type = DescriptorType::DynamicUniformBuffer, .shader_stages = PipelineShaderStageType::Vertex | PipelineShaderStageType::Fragment }
 			});
 		}
 	}

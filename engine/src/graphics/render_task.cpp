@@ -50,7 +50,7 @@ namespace Sunset
 		{
 			if (descriptor_datas[i].descriptor_set != nullptr && cached_descriptor_datas[i].descriptor_set != descriptor_datas[i].descriptor_set)
 			{
-				descriptor_datas[i].descriptor_set->bind(gfx_context, command_buffer, pipeline_state);
+				descriptor_datas[i].descriptor_set->bind(gfx_context, command_buffer, pipeline_state, descriptor_datas[i].dynamic_buffer_offsets);
 				cached_descriptor_datas[i].descriptor_set = descriptor_datas[i].descriptor_set;
 			}
 		}

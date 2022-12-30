@@ -132,6 +132,8 @@ inline VkDescriptorType VK_FROM_SUNSET_DESCRIPTOR_TYPE(Sunset::DescriptorType de
 	{
 	case Sunset::DescriptorType::UniformBuffer:
 		return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	case Sunset::DescriptorType::DynamicUniformBuffer:
+		return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
 	case Sunset::DescriptorType::Image:
 		return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	default:
