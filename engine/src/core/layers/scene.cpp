@@ -1,4 +1,5 @@
 #include <core/layers/scene.h>
+#include <core/data_globals.h>
 #include <core/subsystems/static_mesh_processor.h>
 #include <core/subsystems/transform_processor.h>
 #include <core/subsystems/camera_control_processor.h>
@@ -22,11 +23,7 @@ namespace Sunset
 	void Scene::initialize()
 	{
 		add_default_camera();
-		add_subsystem<CameraControlProcessor>();
-		add_subsystem<CameraInputController>();
-		add_subsystem<TransformProcessor>();
-		add_subsystem<StaticMeshProcessor>();
-		add_subsystem<SceneLightingProcessor>();
+		setup_subsystems();
 		setup_renderer_data();
 	}
 
@@ -89,27 +86,62 @@ namespace Sunset
 		}
 	}
 
+	void Scene::setup_subsystems()
+	{
+		// TODO: Potentially look for a more extensible way to add arbitrary subsystems
+		add_subsystem<CameraControlProcessor>();
+		add_subsystem<CameraInputController>();
+		add_subsystem<TransformProcessor>();
+		add_subsystem<StaticMeshProcessor>();
+		add_subsystem<SceneLightingProcessor>();
+	}
+
 	void Scene::setup_renderer_data()
 	{
 		const size_t min_ubo_alignment = Renderer::get()->context()->get_min_ubo_offset_alignment();
+		const size_t aligned_cam_data_size = BufferHelpers::pad_ubo_size(sizeof(CameraMatrices), min_ubo_alignment);
+		const size_t aligned_lighting_data_size = BufferHelpers::pad_ubo_size(sizeof(SceneLightingData), min_ubo_alignment);
 
-		if (scene_lighting.buffer == nullptr)
+		if (scene_data.buffer == nullptr)
 		{
-			const size_t scene_lighting_buffer_size = MAX_BUFFERED_FRAMES * BufferHelpers::pad_ubo_size(sizeof(SceneLightingData), min_ubo_alignment);
-			scene_lighting.buffer = BufferFactory::create(Renderer::get()->context(), scene_lighting_buffer_size, BufferType::UniformBuffer);
+			scene_data.buffer = BufferFactory::create(Renderer::get()->context(), (aligned_cam_data_size + aligned_lighting_data_size) * MAX_BUFFERED_FRAMES, BufferType::UniformBuffer);
 		}
+
+		scene_data.cam_data_buffer_start = 0;
+		scene_data.lighting_data_buffer_start = aligned_cam_data_size * MAX_BUFFERED_FRAMES;
 
 		for (int i = 0; i < MAX_BUFFERED_FRAMES; ++i)
 		{
-			if (CameraControlComponent::gpu_cam_buffers[i] == nullptr)
-			{
-				CameraControlComponent::gpu_cam_buffers[i] = BufferFactory::create(Renderer::get()->context(), sizeof(CameraMatrices), BufferType::UniformBuffer);
-			}
-
 			Renderer::get()->inject_global_descriptor(i,
 			{
-				{.binding = 0, .buffer = CameraControlComponent::gpu_cam_buffers[i], .buffer_offset = 0, .buffer_range = sizeof(CameraMatrices), .type = DescriptorType::UniformBuffer, .shader_stages = PipelineShaderStageType::Vertex },
-				{.binding = 1, .buffer = scene_lighting.buffer, .buffer_offset = static_cast<uint32_t>(BufferHelpers::pad_ubo_size(sizeof(SceneLightingData), min_ubo_alignment) * i), .buffer_range = sizeof(SceneLightingData), .type = DescriptorType::DynamicUniformBuffer, .shader_stages = PipelineShaderStageType::Vertex | PipelineShaderStageType::Fragment }
+				{
+					.binding = 0,
+					.buffer = scene_data.buffer,
+					.buffer_offset = static_cast<uint32_t>(scene_data.cam_data_buffer_start + aligned_cam_data_size * i),
+					.buffer_range = sizeof(CameraMatrices),
+					.type = DescriptorType::DynamicUniformBuffer,
+					.shader_stages = PipelineShaderStageType::Vertex
+				},
+				{
+					.binding = 1,
+					.buffer = scene_data.buffer,
+					.buffer_offset = static_cast<uint32_t>(scene_data.lighting_data_buffer_start + aligned_lighting_data_size * i),
+					.buffer_range = sizeof(SceneLightingData),
+					.type = DescriptorType::DynamicUniformBuffer,
+					.shader_stages = PipelineShaderStageType::Vertex | PipelineShaderStageType::Fragment
+				}
+			});
+
+			Renderer::get()->inject_object_descriptor(i,
+			{
+				{
+					.binding = 0,
+					.buffer = EntityGlobals::get()->transforms.transform_buffer[i],
+					.buffer_offset = 0,
+					.buffer_range = sizeof(glm::mat4) * MIN_ENTITIES,
+					.type = DescriptorType::StorageBuffer,
+					.shader_stages = PipelineShaderStageType::Vertex
+				}
 			});
 		}
 	}

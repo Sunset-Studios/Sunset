@@ -30,7 +30,7 @@ namespace Sunset
 		VulkanDescriptorSet() = default;
 
 		bool build(class GraphicsContext* const gfx_context, class DescriptorLayout* descriptor_layout, void* descriptor_pool);
-		void bind(class GraphicsContext* const gfx_context, void* cmd_buffer, PipelineStateID pipeline_state, const std::vector<uint32_t>& dynamic_buffer_offsets = {});
+		void bind(class GraphicsContext* const gfx_context, void* cmd_buffer, PipelineStateID pipeline_state, const std::vector<uint32_t>& dynamic_buffer_offsets = {}, uint32_t set_index = 0);
 
 		void* get() const
 		{

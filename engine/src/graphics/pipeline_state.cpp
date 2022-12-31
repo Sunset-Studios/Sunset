@@ -28,8 +28,8 @@ namespace Sunset
 		return create()
 			.add_viewport(0.0f, 0.0f, static_cast<float>(window->get_extent().x), static_cast<float>(window->get_extent().y), 0.0f, 1.0f)
 			.add_scissor(0, 0, window->get_extent().x, window->get_extent().y)
-			.set_shader_stage(PipelineShaderStageType::Vertex, "../../shaders/basic_colored.vert.spv")
-			.set_shader_stage(PipelineShaderStageType::Fragment, "../../shaders/basic_colored.frag.spv")
+			.set_shader_stage(PipelineShaderStageType::Vertex, "../../shaders/default_mesh.vert.spv")
+			.set_shader_stage(PipelineShaderStageType::Fragment, "../../shaders/default_lit.frag.spv")
 			.set_vertex_input_description(Vertex::get_description())
 			.set_primitive_topology_type(PipelinePrimitiveTopologyType::TriangleList)
 			.set_rasterizer_state(PipelineRasterizerPolygonMode::Fill, 1.0f, PipelineRasterizerCullMode::None)
@@ -42,7 +42,7 @@ namespace Sunset
 	{
 		state_data.viewports.emplace_back(x_pos, y_pos, width, height, min_depth, max_depth);
 		return *this;
-	}
+	}	
 
 	Sunset::PipelineStateBuilder& PipelineStateBuilder::add_scissor(int32_t x_pos, int32_t y_pos, int32_t width, int32_t height)
 	{

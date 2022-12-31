@@ -15,6 +15,8 @@ namespace Sunset
 				return VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
 			case BufferType::UniformBuffer:
 				return VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+			case BufferType::StorageBuffer:
+				return VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 			case BufferType::Generic:
 			default:
 				return VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;

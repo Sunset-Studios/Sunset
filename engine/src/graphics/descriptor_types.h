@@ -14,14 +14,15 @@ namespace Sunset
 	{
 		UniformBuffer,
 		Image,
-		DynamicUniformBuffer
+		DynamicUniformBuffer,
+		StorageBuffer
 	};
 
 	enum class DescriptorSetType : int16_t
 	{
 		Global = 0,
-		Material,
 		Object,
+		Material,
 		MaxSets
 	};
 

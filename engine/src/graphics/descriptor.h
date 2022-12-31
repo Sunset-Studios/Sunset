@@ -90,9 +90,9 @@ namespace Sunset
 			return descriptor_set_policy.build(gfx_context, descriptor_layout, descriptor_pool);
 		}
 
-		void bind(class GraphicsContext* const gfx_context, void* cmd_buffer, PipelineStateID pipeline_state, const std::vector<uint32_t>& dynamic_buffer_offsets = {})
+		void bind(class GraphicsContext* const gfx_context, void* cmd_buffer, PipelineStateID pipeline_state, const std::vector<uint32_t>& dynamic_buffer_offsets = {}, uint32_t set_index = 0)
 		{
-			descriptor_set_policy.bind(gfx_context, cmd_buffer, pipeline_state, dynamic_buffer_offsets);
+			descriptor_set_policy.bind(gfx_context, cmd_buffer, pipeline_state, dynamic_buffer_offsets, set_index);
 		}
 
 		void* get() const
@@ -112,7 +112,7 @@ namespace Sunset
 		bool build(class GraphicsContext* const gfx_context, class DescriptorLayout* descriptor_layout, void* descriptor_pool)
 		{ }
 
-		void bind(class GraphicsContext* const gfx_context, void* cmd_buffer, PipelineStateID pipeline_state, const std::vector<uint32_t>& dynamic_buffer_offsets = {})
+		void bind(class GraphicsContext* const gfx_context, void* cmd_buffer, PipelineStateID pipeline_state, const std::vector<uint32_t>& dynamic_buffer_offsets = {}, uint32_t set_index = 0)
 		{ }
 
 		void* get() const
@@ -227,4 +227,12 @@ namespace Sunset
 		std::vector<DescriptorWrite> descriptor_writes;
 	};
 	// END - Descriptor Set Builder
+
+	// BEGIN - Descriptor Helpers
+	class DescriptorHelpers
+	{
+	public:
+		static void inject_descriptors(class GraphicsContext* const context, DescriptorData& out_descriptor_data, const std::initializer_list<DescriptorBuildData>& descriptor_build_datas);
+	};
+	// END - Descriptor Helpers
 }

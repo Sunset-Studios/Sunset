@@ -21,6 +21,6 @@ FetchContent_MakeAvailable(googletest googlebenchmark)
 
 find_package(Vulkan REQUIRED)
 
-add_subdirectory("${ENGINE_DIR}")
-
 find_program(GLSL_VALIDATOR glslangValidator HINTS /usr/bin /usr/local/bin $ENV{VULKAN_SDK}/Bin/ $ENV{VULKAN_SDK}/Bin32/)
+
+add_subdirectory("${ENGINE_DIR}")

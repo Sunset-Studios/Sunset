@@ -80,4 +80,23 @@ namespace Sunset
 
 		return true;
 	}
+
+	void DescriptorHelpers::inject_descriptors(GraphicsContext* const context, DescriptorData& out_descriptor_data, const std::initializer_list<DescriptorBuildData>& descriptor_build_datas)
+	{
+		if (out_descriptor_data.descriptor_set == nullptr)
+		{
+			DescriptorSetBuilder builder = DescriptorSetBuilder::begin(context);
+			for (const DescriptorBuildData& descriptor_build_data : descriptor_build_datas)
+			{
+				// TODO: Switch on descriptor type to determine whether to bind buffer or image
+				builder.bind_buffer(descriptor_build_data);
+
+				if (descriptor_build_data.type == DescriptorType::DynamicUniformBuffer)
+				{
+					out_descriptor_data.dynamic_buffer_offsets.push_back(descriptor_build_data.buffer_offset);
+				}
+			}
+			builder.build(out_descriptor_data.descriptor_set, out_descriptor_data.descriptor_layout);
+		}
+	}
 }

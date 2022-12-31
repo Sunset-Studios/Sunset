@@ -26,6 +26,12 @@ namespace Sunset
 		return *this;
 	}
 
+	Sunset::ResourceStateBuilder& ResourceStateBuilder::set_instance_index(uint32_t index)
+	{
+		state_data.instance_index = index;
+		return *this;
+	}
+
 	Sunset::ResourceStateID ResourceStateBuilder::finish()
 	{
 		return ResourceStateCache::get()->fetch_or_add(state_data, context);

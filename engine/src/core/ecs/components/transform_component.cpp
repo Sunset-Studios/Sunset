@@ -9,7 +9,6 @@ namespace Sunset
 		transform_comp->transform.b_dirty = true;
 	}
 
-
 	void set_position(Scene* scene, EntityID entity, const glm::vec3& new_position)
 	{
 		if (TransformComponent* const transform_comp = scene->get_component<TransformComponent>(entity))

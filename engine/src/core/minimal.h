@@ -8,6 +8,7 @@
 
 #include <memory>
 #include <vector>
+#include <array>
 #include <unordered_map>
 #include <chrono>
 #include <typeinfo>
@@ -57,7 +58,8 @@ namespace Sunset
 	{
 		Generic,
 		Vertex,
-		UniformBuffer
+		UniformBuffer,
+		StorageBuffer
 	};
 
 	enum class ImageFlags : int32_t

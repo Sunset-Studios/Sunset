@@ -6,9 +6,8 @@
 
 namespace Sunset
 {
-	struct MeshUniformData
+	struct MeshAdditionalData
 	{
-		glm::mat4 transform_matrix;
 		glm::vec4 user_data;
 	};
 
@@ -18,7 +17,7 @@ namespace Sunset
 		ResourceStateID resource_state;
 		PipelineStateID pipeline_state;
 		PipelineShaderPathList shaders;
-		MeshUniformData uniform_data;
+		MeshAdditionalData additional_data;
 	};
 
 	void set_mesh(MeshComponent* mesh_comp, struct Mesh* const mesh);

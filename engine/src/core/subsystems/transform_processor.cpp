@@ -1,9 +1,23 @@
 #include <core/subsystems/transform_processor.h>
 #include <core/ecs/components/transform_component.h>
 #include <core/layers/scene.h>
+#include <graphics/renderer.h>
+#include <core/data_globals.h>
+#include <graphics/resource/buffer.h>
 
 namespace Sunset
 {
+	void TransformProcessor::initialize(class Scene* scene)
+	{
+		for (int i = 0; i < MAX_BUFFERED_FRAMES; ++i)
+		{
+			if (EntityGlobals::get()->transforms.transform_buffer[i] == nullptr)
+			{
+				EntityGlobals::get()->transforms.transform_buffer[i] = BufferFactory::create(Renderer::get()->context(), sizeof(glm::mat4) * MIN_ENTITIES, BufferType::StorageBuffer);
+			}
+		}
+	}
+
 	void TransformProcessor::update(class Scene* scene, double delta_time)
 	{
 		for (EntityID entity : SceneView<TransformComponent>(*scene))

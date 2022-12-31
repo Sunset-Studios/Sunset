@@ -34,7 +34,12 @@ namespace Sunset
 
 		vkb::DeviceBuilder device_builder{ state.physical_device };
 
-		state.device = device_builder.build().value();
+		VkPhysicalDeviceShaderDrawParametersFeatures shader_draw_parameters_features = {};
+		shader_draw_parameters_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DRAW_PARAMETERS_FEATURES;
+		shader_draw_parameters_features.pNext = nullptr;
+		shader_draw_parameters_features.shaderDrawParameters = VK_TRUE;
+
+		state.device = device_builder.add_pNext(&shader_draw_parameters_features).build().value();
 		state.window = window;
 
 		for (int16_t frame_number = 0; frame_number < MAX_BUFFERED_FRAMES; ++frame_number)
@@ -73,9 +78,9 @@ namespace Sunset
 		VK_CHECK(vkResetFences(state.get_device(), 1, &state.sync_pool.get_fence(state.frame_sync_primitives[current_buffered_frame].render_fence)));
 	}
 
-	void VulkanContext::draw(void* buffer, uint32_t vertex_count, uint32_t instance_count)
+	void VulkanContext::draw(void* buffer, uint32_t vertex_count, uint32_t instance_count, uint32_t instance_index)
 	{
-		vkCmdDraw(static_cast<VkCommandBuffer>(buffer), vertex_count, instance_count, 0, 0);
+		vkCmdDraw(static_cast<VkCommandBuffer>(buffer), vertex_count, instance_count, 0, instance_index);
 	}
 
 	void VulkanContext::push_constants(void* buffer, PipelineStateID pipeline_state, const PushConstantPipelineData& push_constant_data)
@@ -101,7 +106,20 @@ namespace Sunset
 
 		for (const DescriptorWrite& write : descriptor_writes)
 		{
-			if (write.type == DescriptorType::UniformBuffer || write.type == DescriptorType::DynamicUniformBuffer)
+			if (write.type == DescriptorType::Image)
+			{
+				VkDescriptorImageInfo& image_info = vk_image_infos.emplace_back();
+
+				VkWriteDescriptorSet& new_vk_write = vk_writes.emplace_back();
+				new_vk_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+				new_vk_write.pNext = nullptr;
+				new_vk_write.descriptorCount = write.count;
+				new_vk_write.descriptorType = VK_FROM_SUNSET_DESCRIPTOR_TYPE(write.type);
+				new_vk_write.pImageInfo = &image_info;
+				new_vk_write.dstBinding = write.slot;
+				new_vk_write.dstSet = static_cast<VkDescriptorSet>(write.set->get());
+			}
+			else
 			{
 				VkDescriptorBufferInfo& buffer_info = vk_buffer_infos.emplace_back();
 				buffer_info.buffer = static_cast<VkBuffer>(write.buffer);
@@ -114,19 +132,6 @@ namespace Sunset
 				new_vk_write.descriptorCount = write.count;
 				new_vk_write.descriptorType = VK_FROM_SUNSET_DESCRIPTOR_TYPE(write.type);
 				new_vk_write.pBufferInfo = &buffer_info;
-				new_vk_write.dstBinding = write.slot;
-				new_vk_write.dstSet = static_cast<VkDescriptorSet>(write.set->get());
-			}
-			else
-			{
-				VkDescriptorImageInfo& image_info = vk_image_infos.emplace_back();
-
-				VkWriteDescriptorSet& new_vk_write = vk_writes.emplace_back();
-				new_vk_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-				new_vk_write.pNext = nullptr;
-				new_vk_write.descriptorCount = write.count;
-				new_vk_write.descriptorType = VK_FROM_SUNSET_DESCRIPTOR_TYPE(write.type);
-				new_vk_write.pImageInfo = &image_info;
 				new_vk_write.dstBinding = write.slot;
 				new_vk_write.dstSet = static_cast<VkDescriptorSet>(write.set->get());
 			}

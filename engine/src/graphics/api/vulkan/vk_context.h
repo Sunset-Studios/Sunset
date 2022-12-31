@@ -61,7 +61,7 @@ namespace Sunset
 			void initialize(class Window* const window);
 			void destroy(ExecutionQueue& deletion_queue);
 			void wait_for_gpu();
-			void draw(void* buffer, uint32_t vertex_count, uint32_t instance_count);
+			void draw(void* buffer, uint32_t vertex_count, uint32_t instance_count, uint32_t instance_index = 0);
 
 			void* get_state()
 			{

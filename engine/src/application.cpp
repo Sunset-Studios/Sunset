@@ -43,7 +43,7 @@ namespace Sunset
 					set_mesh(mesh_comp, MeshFactory::load_obj(Renderer::get()->context(), "../../assets/monkey_smooth.obj"));
 					set_shaders(mesh_comp,
 						{
-							{PipelineShaderStageType::Vertex, "../../shaders/basic_colored.vert.spv"},
+							{PipelineShaderStageType::Vertex, "../../shaders/default_mesh.vert.spv"},
 							{PipelineShaderStageType::Fragment, "../../shaders/default_lit.frag.spv"}
 						});
 				}

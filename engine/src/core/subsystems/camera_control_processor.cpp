@@ -10,6 +10,8 @@ namespace Sunset
 {
 	void CameraControlProcessor::update(class Scene* scene, double delta_time)
 	{
+		const size_t min_ubo_alignment = Renderer::get()->context()->get_min_ubo_offset_alignment();
+
 		for (EntityID entity : SceneView<CameraControlComponent>(*scene))
 		{
 			CameraControlComponent* const camera_control_comp = scene->get_component<CameraControlComponent>(entity);
@@ -36,7 +38,12 @@ namespace Sunset
 
 				for (int i = 0; i < MAX_BUFFERED_FRAMES; ++i)
 				{
-					CameraControlComponent::gpu_cam_buffers[i]->copy_from(Renderer::get()->context(), &camera_control_comp->data.matrices, sizeof(CameraMatrices));
+					scene->scene_data.buffer->copy_from(
+						Renderer::get()->context(),
+						&camera_control_comp->data.matrices,
+						sizeof(CameraMatrices),
+						scene->scene_data.cam_data_buffer_start + BufferHelpers::pad_ubo_size(sizeof(CameraMatrices), min_ubo_alignment) * i
+					);
 				}
 			}
 		}

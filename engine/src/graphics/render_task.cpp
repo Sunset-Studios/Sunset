@@ -50,7 +50,7 @@ namespace Sunset
 		{
 			if (descriptor_datas[i].descriptor_set != nullptr && cached_descriptor_datas[i].descriptor_set != descriptor_datas[i].descriptor_set)
 			{
-				descriptor_datas[i].descriptor_set->bind(gfx_context, command_buffer, pipeline_state, descriptor_datas[i].dynamic_buffer_offsets);
+				descriptor_datas[i].descriptor_set->bind(gfx_context, command_buffer, pipeline_state, descriptor_datas[i].dynamic_buffer_offsets, i);
 				cached_descriptor_datas[i].descriptor_set = descriptor_datas[i].descriptor_set;
 			}
 		}
@@ -60,6 +60,6 @@ namespace Sunset
 			gfx_context->push_constants(command_buffer, pipeline_state, push_constants);
 		}
 
-		gfx_context->draw(command_buffer, static_cast<uint32_t>(draw_call.vertex_count), 1);
+		gfx_context->draw(command_buffer, static_cast<uint32_t>(draw_call.vertex_count), 1, ResourceStateCache::get()->fetch(resource_state)->state_data.instance_index);
 	}
 }

@@ -19,9 +19,11 @@ namespace Sunset
 		glm::vec4 sunlight_color;
 	};
 
-	struct SceneLighting
+	struct SceneData
 	{
-		SceneLightingData data;
+		SceneLightingData lighting;
+		uint32_t cam_data_buffer_start{ 0 };
+		uint32_t lighting_data_buffer_start{ 0 };
 		class Buffer* buffer{ nullptr };
 	};
 
@@ -146,6 +148,7 @@ namespace Sunset
 
 		protected:
 			void add_default_camera();
+			void setup_subsystems();
 			void setup_renderer_data();
 
 		public:
@@ -154,7 +157,7 @@ namespace Sunset
 			std::vector<Entity> entities;
 			std::vector<EntityIndex> free_entities;
 			EntityID active_camera{ 0 };
-			SceneLighting scene_lighting;
+			SceneData scene_data;
 	};
 
 	template<typename... ComponentTypes>

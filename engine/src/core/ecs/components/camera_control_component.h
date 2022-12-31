@@ -41,7 +41,6 @@ namespace Sunset
 	{
 		CameraTransformData data;
 		CameraInputData input;
-		static std::array<class Buffer*, MAX_BUFFERED_FRAMES> gpu_cam_buffers;
 	};
 
 	void set_fov(CameraControlComponent* camera_comp, float new_fov);
