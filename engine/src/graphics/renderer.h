@@ -34,6 +34,11 @@ namespace Sunset
 				return graphics_master_pass;
 			}
 
+			GraphicsCommandQueue* graphics_command_queue() const
+			{
+				return command_queue.get();
+			}
+
 			DescriptorData get_global_descriptor_data(uint16_t buffered_frame) const
 			{
 				return global_descriptor_data[buffered_frame];

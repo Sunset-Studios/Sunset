@@ -16,13 +16,26 @@ namespace Sunset
 		for (int16_t frame_number = 0; frame_number < MAX_BUFFERED_FRAMES; ++frame_number)
 		{
 			new_command_pool(gfx_context, &data.frame_command_pool_data[frame_number].command_pool, frame_number);
-			new_command_buffers(gfx_context, &data.frame_command_pool_data[frame_number].command_buffer, 1, frame_number);
+			new_command_buffers(gfx_context, &data.frame_command_pool_data[frame_number].command_buffer, data.frame_command_pool_data[frame_number].command_pool, 1, frame_number);
 		}
+
+		new_command_pool(gfx_context, &data.immediate_command_data.command_pool);
+		new_command_buffers(gfx_context, &data.immediate_command_data.command_buffer, data.immediate_command_data.command_pool);
+
+		data.immediate_command_data.fence = context_state->sync_pool.new_fence(context_state);
+
+		VkFence render_fence = context_state->sync_pool.get_fence(data.immediate_command_data.fence);
+		vkResetFences(context_state->get_device(), 1, &render_fence);
 	}
 
 	void VulkanCommandQueue::destroy(GraphicsContext* const gfx_context)
 	{
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
+
+		vkDestroyCommandPool(context_state->get_device(), data.immediate_command_data.command_pool, nullptr);
+
+		VkFence render_fence = context_state->sync_pool.get_fence(data.immediate_command_data.fence);
+		vkDestroyFence(context_state->get_device(), render_fence, nullptr);
 
 		for (int16_t frame_number = 0; frame_number < MAX_BUFFERED_FRAMES; ++frame_number)
 		{
@@ -44,15 +57,16 @@ namespace Sunset
 		VK_CHECK(vkCreateCommandPool(context_state->get_device(), &command_pool_info, nullptr, static_cast<VkCommandPool*>(command_pool_ptr)));
 	}
 
-	void VulkanCommandQueue::new_command_buffers(class GraphicsContext* const gfx_context, void* command_buffer_ptr, uint16_t count, uint16_t buffered_frame_number)
+	void VulkanCommandQueue::new_command_buffers(class GraphicsContext* const gfx_context, void* command_buffer_ptr, void* command_pool_ptr, uint16_t count, uint16_t buffered_frame_number)
 	{
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
+		VkCommandPool command_pool = static_cast<VkCommandPool>(command_pool_ptr);
 
 		VkCommandBufferAllocateInfo cmd_allocate_info = {};
 		cmd_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 		cmd_allocate_info.pNext = nullptr;
 
-		cmd_allocate_info.commandPool = data.frame_command_pool_data[buffered_frame_number].command_pool;
+		cmd_allocate_info.commandPool = command_pool;
 		cmd_allocate_info.commandBufferCount = count;
 		cmd_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 
@@ -109,5 +123,44 @@ namespace Sunset
 		submit_info.pCommandBuffers = &command_buffer;
 
 		VK_CHECK(vkQueueSubmit(data.graphics_queue, 1, &submit_info, render_fence));
+	}
+
+	void VulkanCommandQueue::submit_immediate(class GraphicsContext* const gfx_context, const std::function<void(void* cmd_buffer)>& buffer_update_fn)
+	{
+		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
+		VkCommandBuffer& command_buffer = data.immediate_command_data.command_buffer;
+
+		VkCommandBufferBeginInfo cmd_begin_info = {};
+		cmd_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		cmd_begin_info.pNext = nullptr;
+		cmd_begin_info.pInheritanceInfo = nullptr;
+		cmd_begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+		VK_CHECK(vkBeginCommandBuffer(command_buffer, &cmd_begin_info));
+
+		buffer_update_fn(command_buffer);
+
+		VK_CHECK(vkEndCommandBuffer(command_buffer));
+
+		VkSubmitInfo submit_info = {};
+		submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submit_info.pNext = nullptr;
+
+		VkFence render_fence = context_state->sync_pool.get_fence(data.immediate_command_data.fence);
+
+		submit_info.pWaitDstStageMask = nullptr;
+		submit_info.waitSemaphoreCount = 0;
+		submit_info.pWaitSemaphores = nullptr;
+		submit_info.signalSemaphoreCount = 0;
+		submit_info.pSignalSemaphores = nullptr;
+		submit_info.commandBufferCount = 1;
+		submit_info.pCommandBuffers = &command_buffer;
+
+		VK_CHECK(vkQueueSubmit(data.graphics_queue, 1, &submit_info, render_fence));
+
+		vkWaitForFences(context_state->get_device(), 1, &render_fence, true, 9999999999);
+		vkResetFences(context_state->get_device(), 1, &render_fence);
+
+		vkResetCommandPool(context_state->get_device(), data.immediate_command_data.command_pool, 0);
 	}
 }

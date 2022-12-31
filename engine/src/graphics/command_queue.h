@@ -30,9 +30,9 @@ namespace Sunset
 			queue_policy.new_command_pool(gfx_context, command_pool_ptr);
 		}
 
-		void new_command_buffers(class GraphicsContext* const gfx_context, void* command_buffer_ptr, uint16_t count = 1)
+		void new_command_buffers(class GraphicsContext* const gfx_context, void* command_buffer_ptr, void* command_pool_ptr, uint16_t count = 1)
 		{
-			queue_policy.new_command_buffers(gfx_context, command_buffer_ptr, count);
+			queue_policy.new_command_buffers(gfx_context, command_buffer_ptr, command_pool_ptr, count);
 		}
 
 		void* begin_one_time_buffer_record(class GraphicsContext* const gfx_context)
@@ -48,6 +48,11 @@ namespace Sunset
 		void submit(class GraphicsContext* const gfx_context)
 		{
 			queue_policy.submit(gfx_context);
+		}
+
+		void submit_immediate(class GraphicsContext* const gfx_context, const std::function<void(void* cmd_buffer)>& buffer_update_fn)
+		{
+			queue_policy.submit_immediate(gfx_context, buffer_update_fn);
 		}
 
 	private:
@@ -75,7 +80,7 @@ namespace Sunset
 			command_pool_ptr = nullptr;
 		}
 
-		void new_command_buffers(class GraphicsContext* const gfx_context, void* command_buffer_ptr, uint16_t count = 1)
+		void new_command_buffers(class GraphicsContext* const gfx_context, void* command_buffer_ptr, void* command_pool_ptr, uint16_t count = 1)
 		{
 			command_buffer_ptr = nullptr;
 		}
@@ -89,6 +94,9 @@ namespace Sunset
 		{ }
 
 		void submit(class GraphicsContext* const gfx_context)
+		{ }
+
+		void submit_immediate(class GraphicsContext* const gfx_context, const std::function<void(void* cmd_buffer)>& buffer_update_fn)
 		{ }
 	};
 

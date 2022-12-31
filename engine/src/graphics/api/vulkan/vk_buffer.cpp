@@ -9,17 +9,44 @@ namespace Sunset
 {
 	inline VkBufferUsageFlagBits SUNSET_TO_VULKAN_BUFFER_TYPE(BufferType type)
 	{
+		int32_t usage_flags{ 0 };
+		if (static_cast<int32_t>(type & BufferType::Vertex) > 0)
+		{
+			usage_flags = usage_flags | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+		}
+		if (static_cast<int32_t>(type & BufferType::UniformBuffer) > 0)
+		{
+			usage_flags = usage_flags | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+		}
+		if (static_cast<int32_t>(type & BufferType::StorageBuffer) > 0)
+		{
+			usage_flags = usage_flags | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+		}
+		if (static_cast<int32_t>(type & BufferType::TransferSource) > 0)
+		{
+			usage_flags = usage_flags | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+		}
+		if (static_cast<int32_t>(type & BufferType::TransferDestination) > 0)
+		{
+			usage_flags = usage_flags | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+		}
+		return usage_flags > 0 ? static_cast<VkBufferUsageFlagBits>(usage_flags) : VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+	}
+	
+	inline VmaMemoryUsage SUNSET_TO_VULKAN_MEMORY_USAGE(MemoryUsageType type)
+	{
 		switch (type)
 		{
-			case BufferType::Vertex:
-				return VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-			case BufferType::UniformBuffer:
-				return VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-			case BufferType::StorageBuffer:
-				return VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-			case BufferType::Generic:
+			case MemoryUsageType::OnlyCPU:
+				return VMA_MEMORY_USAGE_CPU_ONLY;
+			case MemoryUsageType::OnlyGPU:
+				return VMA_MEMORY_USAGE_GPU_ONLY;
+			case MemoryUsageType::CPUToGPU:
+				return VMA_MEMORY_USAGE_CPU_TO_GPU;
+			case MemoryUsageType::GPUToCPU:
+				return VMA_MEMORY_USAGE_GPU_TO_CPU;
 			default:
-				return VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+				return VMA_MEMORY_USAGE_UNKNOWN;
 		}
 	}
 
@@ -41,7 +68,7 @@ namespace Sunset
 		vmaDestroyAllocator(allocator);
 	}
 
-	void VulkanBuffer::initialize(class GraphicsContext* const gfx_context, size_t buffer_size, BufferType type)
+	void VulkanBuffer::initialize(class GraphicsContext* const gfx_context, size_t buffer_size, BufferType type, MemoryUsageType memory_usage)
 	{
 		assert(gfx_context->get_buffer_allocator() != nullptr);
 
@@ -53,7 +80,7 @@ namespace Sunset
 		buffer_create_info.usage = SUNSET_TO_VULKAN_BUFFER_TYPE(type);
 
 		VmaAllocationCreateInfo allocation_create_info = {};
-		allocation_create_info.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+		allocation_create_info.usage = SUNSET_TO_VULKAN_MEMORY_USAGE(memory_usage);
 
 		VK_CHECK(vmaCreateBuffer(allocator, &buffer_create_info, &allocation_create_info, &buffer, &allocation, nullptr));
 
@@ -84,21 +111,27 @@ namespace Sunset
 		vmaUnmapMemory(allocator, allocation);
 	}
 
+	void VulkanBuffer::copy_buffer(class GraphicsContext* const gfx_context, void* command_buffer, Buffer* other, size_t buffer_size, size_t buffer_offset /*= 0*/)
+	{
+		VkBuffer other_buffer = static_cast<VkBuffer>(other->get());
+		VkCommandBuffer cmd = static_cast<VkCommandBuffer>(command_buffer);
+
+		VkBufferCopy copy;
+		copy.dstOffset = 0;
+		copy.srcOffset = 0;
+		copy.size = buffer_size;
+
+		vkCmdCopyBuffer(cmd, other_buffer, buffer, 1, &copy);
+	}
+
 	void VulkanBuffer::bind(GraphicsContext* const gfx_context, BufferType type, void* command_buffer)
 	{
 		assert(gfx_context->get_buffer_allocator() != nullptr);
 
-		switch (type)
+		if (static_cast<int32_t>(type & BufferType::Vertex) > 0)
 		{
-			case BufferType::Vertex:
-			{
-				VkDeviceSize offset{ 0 };
-				vkCmdBindVertexBuffers(static_cast<VkCommandBuffer>(command_buffer), 0, 1, &buffer, &offset);
-				break;
-			}
-			case BufferType::Generic:
-			default:
-				break;
+			VkDeviceSize offset{ 0 };
+			vkCmdBindVertexBuffers(static_cast<VkCommandBuffer>(command_buffer), 0, 1, &buffer, &offset);
 		}
 	}
 }

@@ -35,15 +35,20 @@ namespace Sunset
 	public:
 		GenericBuffer() = default;
 
-		void initialize(class GraphicsContext* const gfx_context, size_t buffer_size, BufferType type)
+		void initialize(class GraphicsContext* const gfx_context, size_t buffer_size, BufferType type, MemoryUsageType memory_usage)
 		{
-			buffer_policy.initialize(gfx_context, buffer_size, type);
+			buffer_policy.initialize(gfx_context, buffer_size, type, memory_usage);
 			buffer_type = type;
 		}
 
 		void copy_from(class GraphicsContext* const gfx_context, void* data, size_t buffer_size, size_t buffer_offset = 0)
 		{
 			buffer_policy.copy_from(gfx_context, data, buffer_size, buffer_offset);
+		}
+
+		void copy_buffer(class GraphicsContext* const gfx_context, void* command_buffer, class Buffer* other, size_t buffer_size, size_t buffer_offset = 0)
+		{
+			buffer_policy.copy_buffer(gfx_context, command_buffer, other, buffer_size, buffer_offset);
 		}
 
 		void bind(class GraphicsContext* const gfx_context, void* command_buffer)
@@ -93,13 +98,16 @@ namespace Sunset
 	public:
 		NoopBuffer() = default;
 
-		void initialize(class GraphicsContext* const gfx_context, size_t buffer_size, BufferType type)
+		void initialize(class GraphicsContext* const gfx_context, size_t buffer_size, BufferType type, MemoryUsageType memory_usage)
 		{ }
 
 		void destroy(class GraphicsContext* const gfx_context)
 		{ }
 
 		void copy_from(class GraphicsContext* const gfx_context, void* data, size_t buffer_size, size_t buffer_offset = 0)
+		{ }
+
+		void copy_buffer(class GraphicsContext* const gfx_context, void* command_buffer, class Buffer* other, size_t buffer_size, size_t buffer_offset = 0)
 		{ }
 
 		void bind(class GraphicsContext* const gfx_context, BufferType type, void* command_buffer)
@@ -142,7 +150,7 @@ namespace Sunset
 	class BufferFactory
 	{
 	public:
-		static Buffer* create(class GraphicsContext* const gfx_context, size_t buffer_size, BufferType type);
+		static Buffer* create(class GraphicsContext* const gfx_context, size_t buffer_size, BufferType type, MemoryUsageType memory_usage = MemoryUsageType::CPUToGPU, bool auto_delete = true);
 	};
 
 	class BufferHelpers

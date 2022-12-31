@@ -2,6 +2,7 @@
 #include <graphics/graphics_context.h>
 #include <graphics/resource/buffer.h>
 #include <graphics/asset_pool.h>
+#include <graphics/renderer.h>
 #include <tiny_obj_loader.h>
 
 namespace Sunset
@@ -10,12 +11,19 @@ namespace Sunset
 	{
 		const size_t vertex_data_size = vertices.size() * sizeof(Vertex);
 
-		if (vertex_buffer == nullptr)
-		{
-			vertex_buffer = BufferFactory::create(gfx_context, vertex_data_size, BufferType::Vertex);
-		}
+		Buffer* const staging_buffer = BufferFactory::create(gfx_context, vertex_data_size, BufferType::TransferSource, MemoryUsageType::OnlyCPU, false);
 
-		vertex_buffer->copy_from(gfx_context, vertices.data(), vertex_data_size);
+		staging_buffer->copy_from(gfx_context, vertices.data(), vertex_data_size);
+
+		vertex_buffer = BufferFactory::create(gfx_context, vertex_data_size, BufferType::Vertex | BufferType::TransferDestination, MemoryUsageType::OnlyGPU);
+
+		Renderer::get()->graphics_command_queue()->submit_immediate(gfx_context, [this, gfx_context, staging_buffer, vertex_data_size](void* command_buffer)
+		{
+			vertex_buffer->copy_buffer(gfx_context, command_buffer, staging_buffer, vertex_data_size);
+		});
+
+		staging_buffer->destroy(gfx_context);
+		GlobalAssetPools<Buffer>::get()->deallocate(staging_buffer);
 	}
 
 	void Mesh::destroy(GraphicsContext* const gfx_context)

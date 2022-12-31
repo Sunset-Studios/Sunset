@@ -54,13 +54,43 @@ namespace Sunset
 		FloatDepth32
 	};
 
-	enum class BufferType : int16_t
+	enum class MemoryUsageType : int32_t
 	{
-		Generic,
-		Vertex,
-		UniformBuffer,
-		StorageBuffer
+		OnlyCPU,
+		OnlyGPU,
+		GPUToCPU,
+		CPUToGPU
 	};
+
+	enum class BufferType : int32_t
+	{
+		Generic = 0x00000000,
+		Vertex = 0x00000001,
+		UniformBuffer = 0x00000002,
+		StorageBuffer = 0x00000004,
+		TransferSource = 0x00000008,
+		TransferDestination = 0x00000020
+	};
+
+	inline BufferType operator|(BufferType lhs, BufferType rhs)
+	{
+		return static_cast<BufferType>(static_cast<int32_t>(lhs) | static_cast<int32_t>(rhs));
+	}
+
+	inline BufferType operator&(BufferType lhs, BufferType rhs)
+	{
+		return static_cast<BufferType>(static_cast<int32_t>(lhs) & static_cast<int32_t>(rhs));
+	}
+
+	inline BufferType& operator|=(BufferType& lhs, BufferType rhs)
+	{
+		return lhs = lhs | rhs;
+	}
+
+	inline BufferType& operator&=(BufferType& lhs, BufferType rhs)
+	{
+		return lhs = lhs & rhs;
+	}
 
 	enum class ImageFlags : int32_t
 	{
@@ -76,12 +106,12 @@ namespace Sunset
 
 	inline ImageFlags operator|(ImageFlags lhs, ImageFlags rhs)
 	{
-		return static_cast<ImageFlags>(static_cast<int16_t>(lhs) | static_cast<int16_t>(rhs));
+		return static_cast<ImageFlags>(static_cast<int32_t>(lhs) | static_cast<int32_t>(rhs));
 	}
 
 	inline ImageFlags operator&(ImageFlags lhs, ImageFlags rhs)
 	{
-		return static_cast<ImageFlags>(static_cast<int16_t>(lhs) & static_cast<int16_t>(rhs));
+		return static_cast<ImageFlags>(static_cast<int32_t>(lhs) & static_cast<int32_t>(rhs));
 	}
 
 	inline ImageFlags& operator|=(ImageFlags& lhs, ImageFlags rhs)
