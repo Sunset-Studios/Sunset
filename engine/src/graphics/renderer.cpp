@@ -29,11 +29,23 @@ namespace Sunset
 		swapchain = SwapchainFactory::create(graphics_context.get());
 		command_queue = GraphicsCommandQueueFactory::create(graphics_context.get());
 
-		const glm::vec2 image_extent = window->get_extent();
-		AttachmentConfig config(Format::FloatDepth32, glm::vec3(image_extent.x, image_extent.y, 1.0f), (ImageFlags::Depth | ImageFlags::Image2D), true, true, true);
-		Image* const depth_image = ImageFactory::create(graphics_context.get(), config);
+		{
+			const glm::vec2 image_extent = window->get_extent();
+			AttachmentConfig config(
+				Format::FloatDepth32,
+				glm::vec3(image_extent.x, image_extent.y, 1.0f),
+				(ImageFlags::Depth | ImageFlags::Image2D),
+				MemoryUsageType::OnlyGPU,
+				SamplerAddressMode::Repeat,
+				ImageFilter::Linear, 
+				true,
+				true,
+				true
+			);
+			Image* const depth_image = ImageFactory::create(graphics_context.get(), config);
 
-		graphics_master_pass = RenderPassFactory::create_default(graphics_context.get(), swapchain, { depth_image });
+			graphics_master_pass = RenderPassFactory::create_default(graphics_context.get(), swapchain, { depth_image });
+		}
 	}
 
 	void Renderer::draw()

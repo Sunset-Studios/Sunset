@@ -13,10 +13,10 @@ namespace Sunset
 		mesh_comp->mesh = mesh;
 	}
 
-	void set_shaders(MeshComponent* mesh_comp, const PipelineShaderPathList& mesh_shaders)
+	void set_material(MeshComponent* mesh_comp, const Material& material)
 	{
-		assert(mesh_comp != nullptr && "Cannot set shaders on null mesh component");
-		mesh_comp->shaders = mesh_shaders;
+		assert(mesh_comp != nullptr && "Cannot set material on null mesh component");
+		mesh_comp->material = material;
 	}
 
 	size_t mesh_vertex_count(MeshComponent* mesh_comp)

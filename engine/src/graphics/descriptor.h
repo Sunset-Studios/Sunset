@@ -232,7 +232,7 @@ namespace Sunset
 	class DescriptorHelpers
 	{
 	public:
-		static void inject_descriptors(class GraphicsContext* const context, DescriptorData& out_descriptor_data, const std::initializer_list<DescriptorBuildData>& descriptor_build_datas);
+		static void inject_descriptors(class GraphicsContext* const context, DescriptorData& out_descriptor_data, const std::vector<DescriptorBuildData>& descriptor_build_datas);
 	};
 	// END - Descriptor Helpers
 }

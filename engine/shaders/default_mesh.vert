@@ -3,8 +3,10 @@
 layout (location = 0) in vec3 in_position;
 layout (location = 1) in vec3 in_normal;
 layout (location = 2) in vec3 in_color;
+layout (location = 3) in vec2 in_tex_coord;
 
 layout (location = 0) out vec3 out_color;
+layout (location = 1) out vec2 out_tex_coord;
 
 layout (set = 0, binding = 0) uniform CameraBuffer
 {
@@ -30,4 +32,5 @@ void main()
 	mat4 transform_matrix = camera_data.view_proj * model_matrix;
 	gl_Position = transform_matrix * vec4(in_position, 1.0f);
 	out_color = in_color;
+	out_tex_coord = in_tex_coord;
 }

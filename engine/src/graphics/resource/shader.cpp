@@ -19,7 +19,11 @@ namespace Sunset
 		{
 			Shader* const new_shader = GlobalAssetPools<Shader>::get()->allocate();
 			new_shader->initialize(gfx_context, file_path);
-			gfx_context->add_resource_deletion_execution([new_shader, gfx_context]() { new_shader->destroy(gfx_context); });
+			gfx_context->add_resource_deletion_execution([new_shader, gfx_context]()
+			{
+				new_shader->destroy(gfx_context);
+				GlobalAssetPools<Shader>::get()->deallocate(new_shader);
+			});
 			cache.insert({ id, new_shader });
 		}
 		return id;

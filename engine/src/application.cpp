@@ -24,30 +24,61 @@ namespace Sunset
 
 		InputProvider::get()->push_context(InputProvider::default_context());
 
-		{ // Test Scene
+		//{ // Test Scene 1
+		//	std::unique_ptr<Scene> scene = std::make_unique<Scene>();
+
+		//	for (int i = -10; i < 10; ++i)
+		//	{
+		//		for (int j = -10; j < 10; ++j)
+		//		{
+		//			EntityID mesh_ent = scene->make_entity();
+		//		
+		//			TransformComponent* const transform_comp = scene->assign_component<TransformComponent>(mesh_ent);
+
+		//			set_position(transform_comp, glm::vec3(i * 2.0f + 1.0f, j * 2.0f, -10.0f));
+		//			set_scale(transform_comp, glm::vec3(1.0f));
+
+		//			MeshComponent* const mesh_comp = scene->assign_component<MeshComponent>(mesh_ent);
+
+		//			set_mesh(mesh_comp, MeshFactory::load_obj(Renderer::get()->context(), "../../assets/monkey_smooth.obj"));
+		//			set_shaders(mesh_comp,
+		//			{
+		//				{PipelineShaderStageType::Vertex, "../../shaders/default_mesh.vert.spv"},
+		//				{PipelineShaderStageType::Fragment, "../../shaders/default_lit.frag.spv"}
+		//			});
+		//		}
+		//	}
+
+		//	SimulationCore::get()->register_layer(std::move(scene));
+		//}
+
+		{ // Test Scene 2
 			std::unique_ptr<Scene> scene = std::make_unique<Scene>();
 
-			for (int i = -10; i < 10; ++i)
+			EntityID mesh_ent = scene->make_entity();
+
+			TransformComponent* const transform_comp = scene->assign_component<TransformComponent>(mesh_ent);
+
+			set_position(transform_comp, glm::vec3(5.0f, -10.0f, 0.0f));
+			set_scale(transform_comp, glm::vec3(1.0f));
+
+			MeshComponent* const mesh_comp = scene->assign_component<MeshComponent>(mesh_ent);
+
+			Material mesh_material
 			{
-				for (int j = -10; j < 10; ++j)
+				.shaders =
 				{
-					EntityID mesh_ent = scene->make_entity();
-				
-					TransformComponent* const transform_comp = scene->assign_component<TransformComponent>(mesh_ent);
-
-					set_position(transform_comp, glm::vec3(i * 2.0f + 1.0f, j * 2.0f, -10.0f));
-					set_scale(transform_comp, glm::vec3(1.0f));
-
-					MeshComponent* const mesh_comp = scene->assign_component<MeshComponent>(mesh_ent);
-
-					set_mesh(mesh_comp, MeshFactory::load_obj(Renderer::get()->context(), "../../assets/monkey_smooth.obj"));
-					set_shaders(mesh_comp,
-						{
-							{PipelineShaderStageType::Vertex, "../../shaders/default_mesh.vert.spv"},
-							{PipelineShaderStageType::Fragment, "../../shaders/default_lit.frag.spv"}
-						});
+					{PipelineShaderStageType::Vertex, "../../shaders/default_mesh.vert.spv"},
+					{PipelineShaderStageType::Fragment, "../../shaders/default_lit.frag.spv"}
+				},
+				.textures =
+				{
+					"../../assets/lost_empire-RGBA.png"
 				}
-			}
+			};
+
+			set_mesh(mesh_comp, MeshFactory::load_obj(Renderer::get()->context(), "../../assets/lost_empire.obj"));
+			set_material(mesh_comp, mesh_material);
 
 			SimulationCore::get()->register_layer(std::move(scene));
 		}

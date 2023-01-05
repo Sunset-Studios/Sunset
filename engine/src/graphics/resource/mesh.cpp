@@ -39,6 +39,7 @@ namespace Sunset
 		description.attributes.emplace_back(0, 0, Format::Float3x32, offsetof(Vertex, position));
 		description.attributes.emplace_back(0, 1, Format::Float3x32, offsetof(Vertex, normal));
 		description.attributes.emplace_back(0, 2, Format::Float3x32, offsetof(Vertex, color));
+		description.attributes.emplace_back(0, 3, Format::Float2x32, offsetof(Vertex, uv));
 
 		return description;
 	}
@@ -112,6 +113,10 @@ namespace Sunset
 						tinyobj::real_t ny = attrib.normals[3 * index.normal_index + 1];
 						tinyobj::real_t nz = attrib.normals[3 * index.normal_index + 2];
 
+						// UVs
+						tinyobj::real_t ux = attrib.texcoords[2 * index.texcoord_index + 0];
+						tinyobj::real_t uy = attrib.texcoords[2 * index.texcoord_index + 1];
+
 						Vertex new_vertex;
 
 						new_vertex.position.x = vx;
@@ -121,6 +126,9 @@ namespace Sunset
 						new_vertex.normal.x = nx;
 						new_vertex.normal.y = ny;
 						new_vertex.normal.z = nz;
+
+						new_vertex.uv.x = ux;
+						new_vertex.uv.y = 1 - uy;
 
 						new_vertex.color = new_vertex.normal;
 
@@ -150,7 +158,11 @@ namespace Sunset
 		if (cache.find(id) == cache.end())
 		{
 			Mesh* const new_mesh = GlobalAssetPools<Mesh>::get()->allocate();
-			gfx_context->add_resource_deletion_execution([new_mesh, gfx_context]() { new_mesh->destroy(gfx_context); });
+			gfx_context->add_resource_deletion_execution([new_mesh, gfx_context]()
+			{
+				new_mesh->destroy(gfx_context);
+				GlobalAssetPools<Mesh>::get()->deallocate(new_mesh);
+			});
 			cache.insert({ id, new_mesh });
 		}
 		return id;

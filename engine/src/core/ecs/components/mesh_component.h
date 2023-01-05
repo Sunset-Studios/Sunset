@@ -2,6 +2,7 @@
 
 #include <resource_types.h>
 #include <pipeline_types.h>
+#include <graphics/resource/material.h>
 #include <glm/glm.hpp>
 
 namespace Sunset
@@ -15,13 +16,12 @@ namespace Sunset
 	{
 		struct Mesh* mesh;
 		ResourceStateID resource_state;
-		PipelineStateID pipeline_state;
-		PipelineShaderPathList shaders;
+		Material material;
 		MeshAdditionalData additional_data;
 	};
 
 	void set_mesh(MeshComponent* mesh_comp, struct Mesh* const mesh);
-	void set_shaders(MeshComponent* mesh_comp, const PipelineShaderPathList& mesh_shaders);
+	void set_material(MeshComponent* mesh_comp, const Material& material);
 
 	size_t mesh_vertex_count(MeshComponent* mesh_comp);
 }

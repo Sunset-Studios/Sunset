@@ -51,7 +51,8 @@ namespace Sunset
 		Float4x32,
 		Int4x32,
 		Uint4x32,
-		FloatDepth32
+		FloatDepth32,
+		SRGB8x4
 	};
 
 	enum class MemoryUsageType : int32_t
@@ -101,7 +102,8 @@ namespace Sunset
 		TransferSrc = 0x00000008,
 		TransferDst = 0x00000010,
 		Image2D = 0x00000020,
-		Image3D = 0x00000040
+		Image3D = 0x00000040,
+		Sampled = 0x00000080
 	};
 
 	inline ImageFlags operator|(ImageFlags lhs, ImageFlags rhs)
@@ -136,6 +138,8 @@ namespace Sunset
 	};
 
 	using ObjectID = uint32_t;
+	using ImageID = size_t;
+	using MeshID = size_t;
 
 	#define SECONDS_TIME std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count() * 0.001
 	#define WORLD_UP glm::vec3(0.0f, 1.0f, 0.0f)

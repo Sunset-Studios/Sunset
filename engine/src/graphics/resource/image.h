@@ -3,6 +3,7 @@
 #include <common.h>
 #include <graphics/resource/buffer.h>
 #include <graphics/resource/image_types.h>
+#include <utility/pattern/singleton.h>
 
 namespace Sunset
 {
@@ -18,9 +19,9 @@ namespace Sunset
 			image_policy.initialize(gfx_context, attachment_config);
 		}
 
-		void copy_from(class GraphicsContext* const gfx_context, void* data)
+		void copy_buffer(class GraphicsContext* const gfx_context, void* command_buffer, class Buffer* buffer)
 		{
-			image_policy.copy_from(gfx_context, data);
+			image_policy.copy_buffer(gfx_context, command_buffer, attachment_config, buffer);
 		}
 
 		void bind(class GraphicsContext* const gfx_context, void* command_buffer)
@@ -48,6 +49,11 @@ namespace Sunset
 			return image_policy.get_image_view();
 		}
 
+		void* get_sampler()
+		{
+			return image_policy.get_sampler();
+		}
+
 	private:
 		Policy image_policy;
 		AttachmentConfig attachment_config;
@@ -64,7 +70,7 @@ namespace Sunset
 		void destroy(class GraphicsContext* const gfx_context)
 		{ }
 
-		void copy_from(class GraphicsContext* const gfx_context, void* data)
+		void copy_buffer(class GraphicsContext* const gfx_context, void* command_buffer, const AttachmentConfig& config, class Buffer* buffer)
 		{ }
 
 		void bind(class GraphicsContext* const gfx_context, void* command_buffer)
@@ -76,6 +82,11 @@ namespace Sunset
 		}
 
 		void* get_image_view()
+		{
+			return nullptr;
+		}
+
+		void* get_sampler()
 		{
 			return nullptr;
 		}
@@ -92,6 +103,32 @@ namespace Sunset
 	class ImageFactory
 	{
 	public:
-		static Image* create(class GraphicsContext* const gfx_context, const AttachmentConfig& config);
+		static Image* create(class GraphicsContext* const gfx_context, const AttachmentConfig& config, bool auto_delete = true);
+		static Image* load(class GraphicsContext* const gfx_context, const char* path);
+	};
+
+	class ImageCache : public Singleton<ImageCache>
+	{
+	friend class Singleton;
+
+	public:
+		void initialize();
+		void update();
+
+		ImageID fetch_or_add(const char* file_path, class GraphicsContext* const gfx_context = nullptr);
+		void remove(ImageID id);
+		Image* fetch(ImageID id);
+		void destroy(class GraphicsContext* const gfx_context);
+
+		size_t size() const
+		{
+			return cache.size();
+		}
+
+	protected:
+		std::unordered_map<ImageID, Image*> cache;
+
+	private:
+		ImageCache() = default;
 	};
 }

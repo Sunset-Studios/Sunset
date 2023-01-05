@@ -3,10 +3,12 @@
 #include <iostream>
 
 #include <vulkan/vulkan.h>
+#include <vk_mem_alloc.h>
 
 #include <minimal.h>
 #include <descriptor_types.h>
 #include <pipeline_types.h>
+#include <image_types.h>
 
 inline void VK_CHECK(VkResult result)
 {
@@ -95,6 +97,9 @@ inline VkFormat VK_FROM_SUNSET_FORMAT(Sunset::Format format)
 		case Sunset::Format::FloatDepth32:
 			return VK_FORMAT_D32_SFLOAT;
 
+		case Sunset::Format::SRGB8x4:
+			return VK_FORMAT_R8G8B8A8_SRGB;
+
 		default:
 			return VK_FORMAT_UNDEFINED;
 	}
@@ -182,4 +187,55 @@ inline std::vector<VkDescriptorSetLayoutBinding> VK_FROM_SUNSET_DESCRIPTOR_BINDI
 	}
 
 	return vk_bindings;
+}
+
+inline VmaMemoryUsage VK_FROM_SUNSET_MEMORY_USAGE(Sunset::MemoryUsageType type)
+{
+	switch (type)
+	{
+	case Sunset::MemoryUsageType::OnlyCPU:
+		return VMA_MEMORY_USAGE_CPU_ONLY;
+	case Sunset::MemoryUsageType::OnlyGPU:
+		return VMA_MEMORY_USAGE_GPU_ONLY;
+	case Sunset::MemoryUsageType::CPUToGPU:
+		return VMA_MEMORY_USAGE_CPU_TO_GPU;
+	case Sunset::MemoryUsageType::GPUToCPU:
+		return VMA_MEMORY_USAGE_GPU_TO_CPU;
+	default:
+		return VMA_MEMORY_USAGE_UNKNOWN;
+	}
+}
+
+inline VkFilter VK_FROM_SUNSET_IMAGE_FILTER(Sunset::ImageFilter filter)
+{
+	switch (filter)
+	{
+	case Sunset::ImageFilter::Nearest:
+		return VK_FILTER_NEAREST;
+	case Sunset::ImageFilter::Linear:
+		return VK_FILTER_LINEAR;
+	case Sunset::ImageFilter::Cubic:
+		return VK_FILTER_CUBIC_EXT;
+	default:
+		return VK_FILTER_LINEAR;
+	}
+}
+
+inline VkSamplerAddressMode VK_FROM_SUNSET_SAMPLER_ADDRESS_MODE(Sunset::SamplerAddressMode mode)
+{
+	switch (mode)
+	{
+	case Sunset::SamplerAddressMode::Mirrored:
+		return VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+	case Sunset::SamplerAddressMode::Repeat:
+		return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	case Sunset::SamplerAddressMode::EdgeClamp:
+		return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	case Sunset::SamplerAddressMode::BorderClamp:
+		return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+	case Sunset::SamplerAddressMode::MirroredEdgeClamp:
+		return VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
+	default:
+		return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	}
 }

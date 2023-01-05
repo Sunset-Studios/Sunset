@@ -52,6 +52,10 @@ namespace Sunset
 		{
 			ResourceState* const new_resource_state = GlobalAssetPools<ResourceState>::get()->allocate();
 			new_resource_state->initialize(gfx_context, data);
+			gfx_context->add_resource_deletion_execution([new_resource_state, gfx_context]()
+			{
+				GlobalAssetPools<ResourceState>::get()->deallocate(new_resource_state);
+			});
 			cache.insert({ id, new_resource_state });
 		}
 		return id;

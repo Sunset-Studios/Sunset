@@ -14,7 +14,7 @@ namespace Sunset
 
 		void initialize(class GraphicsContext* const gfx_context, AttachmentConfig& config);
 		void destroy(class GraphicsContext* const gfx_context);
-		void copy_from(class GraphicsContext* const gfx_context, void* data);
+		void copy_buffer(class GraphicsContext* const gfx_context, void* command_buffer, const AttachmentConfig& config, class Buffer* buffer);
 		void bind(class GraphicsContext* const gfx_context, void* command_buffer);
 
 		void* get_image()
@@ -27,9 +27,15 @@ namespace Sunset
 			return image_view;
 		}
 
+		void* get_sampler()
+		{
+			return sampler;
+		}
+
 	protected:
 		VkImage image;
 		VkImageView image_view;
+		VkSampler sampler;
 		VmaAllocation allocation;
 	};
 }

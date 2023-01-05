@@ -136,6 +136,10 @@ namespace Sunset
 		{
 			PipelineState* const new_pipeline_state = GlobalAssetPools<PipelineState>::get()->allocate();
 			new_pipeline_state->initialize(gfx_context, data);
+			gfx_context->add_resource_deletion_execution([new_pipeline_state, gfx_context]()
+			{
+				GlobalAssetPools<PipelineState>::get()->deallocate(new_pipeline_state);
+			});
 			cache.insert({ id, new_pipeline_state });
 		}
 		return id;

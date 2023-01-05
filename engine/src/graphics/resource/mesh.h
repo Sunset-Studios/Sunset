@@ -5,13 +5,12 @@
 
 namespace Sunset
 {
-	using MeshID = size_t;
-
 	struct Vertex
 	{
 		glm::vec3 position;
 		glm::vec3 normal;
 		glm::vec3 color;
+		glm::vec2 uv;
 
 		static PipelineVertexInputDescription get_description();
 	};
@@ -19,7 +18,7 @@ namespace Sunset
 	struct Mesh
 	{
 		Mesh() = default;
-		~Mesh();
+		~Mesh() = default;
 
 		std::vector<Vertex> vertices;
 		class Buffer* vertex_buffer;

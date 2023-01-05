@@ -18,6 +18,10 @@ namespace Sunset
 			DescriptorLayout* const new_descriptor_layout = GlobalAssetPools<DescriptorLayout>::get()->allocate();
 			new_descriptor_layout->set_bindings(bindings);
 			new_descriptor_layout->build(gfx_context);
+			gfx_context->add_resource_deletion_execution([new_descriptor_layout, gfx_context]()
+			{
+				GlobalAssetPools<DescriptorLayout>::get()->deallocate(new_descriptor_layout);
+			});
 			descriptor_layouts.insert({ id, new_descriptor_layout });
 		}
 		return id;
@@ -51,7 +55,7 @@ namespace Sunset
 	Sunset::DescriptorSetBuilder& DescriptorSetBuilder::bind_image(uint16_t binding, Image* image, size_t range_size, DescriptorType type, PipelineShaderStageType shader_stages)
 	{
 		bindings.push_back({ .slot = binding, .count = 1, .type = type, .pipeline_stages = shader_stages });
-		descriptor_writes.push_back({ .slot = binding, .count = 1, .type = type, .buffer = image->get_image(), .buffer_size = 0, .buffer_range = range_size, .set = nullptr });
+		descriptor_writes.push_back({ .slot = binding, .count = 1, .type = type, .buffer = image, .buffer_size = 0, .buffer_range = range_size, .set = nullptr });
 		return *this;
 	}
 
@@ -81,7 +85,7 @@ namespace Sunset
 		return true;
 	}
 
-	void DescriptorHelpers::inject_descriptors(GraphicsContext* const context, DescriptorData& out_descriptor_data, const std::initializer_list<DescriptorBuildData>& descriptor_build_datas)
+	void DescriptorHelpers::inject_descriptors(GraphicsContext* const context, DescriptorData& out_descriptor_data, const std::vector<DescriptorBuildData>& descriptor_build_datas)
 	{
 		if (out_descriptor_data.descriptor_set == nullptr)
 		{
@@ -89,7 +93,14 @@ namespace Sunset
 			for (const DescriptorBuildData& descriptor_build_data : descriptor_build_datas)
 			{
 				// TODO: Switch on descriptor type to determine whether to bind buffer or image
-				builder.bind_buffer(descriptor_build_data);
+				if (descriptor_build_data.type == DescriptorType::Image)
+				{
+					builder.bind_image(descriptor_build_data);
+				}
+				else
+				{
+					builder.bind_buffer(descriptor_build_data);
+				}
 
 				if (descriptor_build_data.type == DescriptorType::DynamicUniformBuffer)
 				{

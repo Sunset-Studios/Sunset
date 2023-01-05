@@ -32,23 +32,6 @@ namespace Sunset
 		}
 		return usage_flags > 0 ? static_cast<VkBufferUsageFlagBits>(usage_flags) : VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 	}
-	
-	inline VmaMemoryUsage SUNSET_TO_VULKAN_MEMORY_USAGE(MemoryUsageType type)
-	{
-		switch (type)
-		{
-			case MemoryUsageType::OnlyCPU:
-				return VMA_MEMORY_USAGE_CPU_ONLY;
-			case MemoryUsageType::OnlyGPU:
-				return VMA_MEMORY_USAGE_GPU_ONLY;
-			case MemoryUsageType::CPUToGPU:
-				return VMA_MEMORY_USAGE_CPU_TO_GPU;
-			case MemoryUsageType::GPUToCPU:
-				return VMA_MEMORY_USAGE_GPU_TO_CPU;
-			default:
-				return VMA_MEMORY_USAGE_UNKNOWN;
-		}
-	}
 
 	void VulkanBufferAllocator::initialize(class GraphicsContext* const gfx_context)
 	{
@@ -80,7 +63,7 @@ namespace Sunset
 		buffer_create_info.usage = SUNSET_TO_VULKAN_BUFFER_TYPE(type);
 
 		VmaAllocationCreateInfo allocation_create_info = {};
-		allocation_create_info.usage = SUNSET_TO_VULKAN_MEMORY_USAGE(memory_usage);
+		allocation_create_info.usage = VK_FROM_SUNSET_MEMORY_USAGE(memory_usage);
 
 		VK_CHECK(vmaCreateBuffer(allocator, &buffer_create_info, &allocation_create_info, &buffer, &allocation, nullptr));
 

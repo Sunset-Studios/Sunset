@@ -31,10 +31,12 @@ namespace Sunset
 
 	void RenderTaskExecutor::operator()(GraphicsContext* const gfx_context, void* command_buffer, PipelineStateID pipeline_state, ResourceStateID resource_state, const DrawCall& draw_call, const PushConstantPipelineData& push_constants, DescriptorData descriptor_datas[MAX_BOUND_DESCRIPTOR_SETS])
 	{
+		bool b_pipeline_changed = false;
 		if (cached_pipeline_state != pipeline_state)
 		{
 			PipelineStateCache::get()->fetch(pipeline_state)->bind(gfx_context, command_buffer);
 			cached_pipeline_state = pipeline_state;
+			b_pipeline_changed = true;
 		}
 
 		// TODO: Given that most of our resources will go through descriptors, this resource state will likely get deprecated.
@@ -48,7 +50,7 @@ namespace Sunset
 
 		for (int i = 0; i < MAX_BOUND_DESCRIPTOR_SETS; ++i)
 		{
-			if (descriptor_datas[i].descriptor_set != nullptr && cached_descriptor_datas[i].descriptor_set != descriptor_datas[i].descriptor_set)
+			if (descriptor_datas[i].descriptor_set != nullptr && (b_pipeline_changed || cached_descriptor_datas[i].descriptor_set != descriptor_datas[i].descriptor_set))
 			{
 				descriptor_datas[i].descriptor_set->bind(gfx_context, command_buffer, pipeline_state, descriptor_datas[i].dynamic_buffer_offsets, i);
 				cached_descriptor_datas[i].descriptor_set = descriptor_datas[i].descriptor_set;

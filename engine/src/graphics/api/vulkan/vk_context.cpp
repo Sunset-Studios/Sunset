@@ -2,6 +2,7 @@
 #include <graphics/resource/buffer.h>
 #include <graphics/pipeline_state.h>
 #include <graphics/descriptor.h>
+#include <graphics/resource/image.h>
 #include <core/common.h>
 #include <window/window.h>
 
@@ -108,7 +109,12 @@ namespace Sunset
 		{
 			if (write.type == DescriptorType::Image)
 			{
+				Image* const image = static_cast<Image*>(write.buffer);
+
 				VkDescriptorImageInfo& image_info = vk_image_infos.emplace_back();
+				image_info.sampler = static_cast<VkSampler>(image->get_sampler());
+				image_info.imageView = static_cast<VkImageView>(image->get_image_view());
+				image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 				VkWriteDescriptorSet& new_vk_write = vk_writes.emplace_back();
 				new_vk_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
