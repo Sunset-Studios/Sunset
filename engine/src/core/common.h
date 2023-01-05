@@ -22,3 +22,7 @@
 #if USE_SDL_WINDOWING
 #include <vendor/sdl_context.h>
 #endif
+
+#if defined USE_VULKAN_GRAPHICS && defined USE_SDL_WINDOWING
+#include <utility/gui/api/imgui_gui_core.h>
+#endif

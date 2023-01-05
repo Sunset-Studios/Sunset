@@ -8,6 +8,9 @@
 #include <graphics/render_pass.h>
 #include <graphics/resource/shader_pipeline_layout.h>
 #include <graphics/descriptor.h>
+#ifndef NDEBUG
+#include <utility/gui/gui_core.h>
+#endif
 
 namespace Sunset
 {
@@ -51,7 +54,9 @@ namespace Sunset
 	void Renderer::draw()
 	{
 		graphics_context->wait_for_gpu();
-
+#ifndef NDEBUG
+		global_gui_core.begin_draw();
+#endif
 		rendertask_allocator.reset();
 
 		swapchain->request_next_image(graphics_context.get());
@@ -59,7 +64,11 @@ namespace Sunset
 		void* buffer = command_queue->begin_one_time_buffer_record(graphics_context.get());
 
 		graphics_master_pass->begin_pass(graphics_context.get(), swapchain, buffer);
+
 		graphics_master_pass->draw(graphics_context.get(), buffer);
+#ifndef NDEBUG
+		global_gui_core.end_draw(buffer);
+#endif
 		graphics_master_pass->end_pass(graphics_context.get(), swapchain, buffer);
 
 		command_queue->end_one_time_buffer_record(graphics_context.get());

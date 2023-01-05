@@ -4,6 +4,7 @@
 #include <input/input_provider.h>
 #include <core/simulation_core.h>
 #include <core/layers/scene.h>
+#include <core/layers/editor_gui.h>
 #include <graphics/resource/mesh.h>
 
 #include <core/ecs/components/mesh_component.h>
@@ -23,6 +24,13 @@ namespace Sunset
 		Renderer::get()->setup(window);
 
 		InputProvider::get()->push_context(InputProvider::default_context());
+
+#ifndef NDEBUG
+		{
+			std::unique_ptr<EditorGui> gui = std::make_unique<EditorGui>();
+			SimulationCore::get()->register_layer(std::move(gui));
+		}
+#endif
 
 		//{ // Test Scene 1
 		//	std::unique_ptr<Scene> scene = std::make_unique<Scene>();
