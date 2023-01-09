@@ -4,8 +4,6 @@
 
 #include <glm/glm.hpp>
 
-#include <graphics/viewport.h>
-
 #include <memory>
 #include <vector>
 #include <array>
@@ -52,7 +50,8 @@ namespace Sunset
 		Int4x32,
 		Uint4x32,
 		FloatDepth32,
-		SRGB8x4
+		SRGB8x4,
+		UNorm4x8
 	};
 
 	enum class MemoryUsageType : int32_t

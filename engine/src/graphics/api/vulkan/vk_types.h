@@ -100,6 +100,9 @@ inline VkFormat VK_FROM_SUNSET_FORMAT(Sunset::Format format)
 		case Sunset::Format::SRGB8x4:
 			return VK_FORMAT_R8G8B8A8_SRGB;
 
+		case Sunset::Format::UNorm4x8:
+			return VK_FORMAT_R8G8B8A8_UNORM;
+
 		default:
 			return VK_FORMAT_UNDEFINED;
 	}

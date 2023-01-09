@@ -5,8 +5,10 @@ add_library(glm INTERFACE)
 add_library(vma INTERFACE)
 
 add_library(stb_image INTERFACE)
+add_library(json INTERFACE)
 
 add_library(tinyobjloader STATIC)
+add_library(lz4 STATIC)
 
 target_sources(vkbootstrap PRIVATE 
     vkbootstrap/VkBootstrap.h
@@ -27,6 +29,11 @@ target_sources(tinyobjloader PRIVATE
 
 target_include_directories(tinyobjloader PUBLIC tinyobjloader)
 
+target_sources(lz4 PRIVATE
+    lz4/lz4.h
+    lz4/lz4.c)
+
+target_include_directories(lz4 PUBLIC lz4)
 
 add_library(sdl2 INTERFACE)
 set(sdl2_DIR "C:/SDL2" CACHE PATH "Path to SDL2")
@@ -60,3 +67,4 @@ target_sources(imgui PRIVATE
 target_link_libraries(imgui PUBLIC Vulkan::Vulkan sdl2)
 
 target_include_directories(stb_image INTERFACE stb_image)
+target_include_directories(json INTERFACE json)

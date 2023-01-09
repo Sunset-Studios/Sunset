@@ -15,6 +15,7 @@ HEADER_DIRECTORIES(INCLUDE_DIRS)
 
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/third_party")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/tests")
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/tools")
 
 add_executable(Sunset ${SOURCES})
 
@@ -22,8 +23,8 @@ set_property(TARGET Sunset PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE
 
 target_include_directories(Sunset PUBLIC ${INCLUDE_DIRS})
 
-target_link_libraries(Sunset vkbootstrap vma glm tinyobjloader imgui stb_image)
-target_link_libraries(Sunset Vulkan::Vulkan sdl2)
+target_link_libraries(Sunset vkbootstrap vma glm tinyobjloader imgui stb_image lz4 json)
+target_link_libraries(Sunset Vulkan::Vulkan sdl2 AssetSerializer)
 
 ## find all the shader files under the shaders folder
 file(GLOB_RECURSE GLSL_SOURCE_FILES
@@ -51,7 +52,7 @@ add_custom_target(
     DEPENDS ${SPIRV_BINARY_FILES}
     )
 
-add_dependencies(Sunset Shaders)
+add_dependencies(Sunset Shaders CookerRun)
 
 add_custom_command(TARGET ${SUNSET_LIB} POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy "C:/SDL2/lib/x64/SDL2.dll" ${ENGINE_DIR}/bin/$<CONFIG>/SDL2.dll

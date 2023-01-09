@@ -2,9 +2,12 @@
 #include <graphics/asset_pool.h>
 #include <graphics/graphics_context.h>
 #include <graphics/renderer.h>
+#include <image_serializer.h>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
+#include <json.hpp>
+#include <lz4.h>
 
 namespace Sunset
 {
@@ -30,25 +33,28 @@ namespace Sunset
 
 		if (image->get_image() == nullptr)
 		{
-			int texture_width, texture_height, texture_channels;
-
-			stbi_uc* const pixel_buffer = stbi_load(path, &texture_width, &texture_height, &texture_channels, STBI_rgb_alpha);
-			if (pixel_buffer == nullptr)
+			SerializedAsset asset;
+			if (!deserialize_asset(path, asset))
 			{
 				return nullptr;
 			}
 
-			const size_t image_size = texture_height * texture_width * 4;
+			SerializedImageInfo image_info = get_serialized_image_info(&asset);
+
+			const size_t image_size = image_info.size;
+			const Format image_format = image_info.format;
+
 			Buffer* const staging_buffer = BufferFactory::create(gfx_context, image_size, BufferType::TransferSource, MemoryUsageType::OnlyCPU, false);
 
-			staging_buffer->copy_from(gfx_context, pixel_buffer, image_size);
-
-			stbi_image_free(pixel_buffer);
+			staging_buffer->copy_from(gfx_context, asset.binary.data(), asset.binary.size(), 0, [&image_info, &asset](void* memory)
+			{
+				unpack_image(&image_info, asset.binary.data(), asset.binary.size(), (char*)memory);
+			});
 
 			{
 				AttachmentConfig config;
-				config.format = Format::SRGB8x4;
-				config.extent = glm::vec3(texture_width, texture_height, 1);
+				config.format = image_format;
+				config.extent = glm::vec3(image_info.extent[0], image_info.extent[1], image_info.extent[2]);
 				config.flags = (ImageFlags::Sampled | ImageFlags::TransferDst);
 				config.usage_type = MemoryUsageType::OnlyGPU;
 				config.image_filter = ImageFilter::Nearest;

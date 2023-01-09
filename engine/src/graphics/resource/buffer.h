@@ -41,9 +41,9 @@ namespace Sunset
 			buffer_type = type;
 		}
 
-		void copy_from(class GraphicsContext* const gfx_context, void* data, size_t buffer_size, size_t buffer_offset = 0)
+		void copy_from(class GraphicsContext* const gfx_context, void* data, size_t buffer_size, size_t buffer_offset = 0, std::function<void(void*)> memcpy_op = {})
 		{
-			buffer_policy.copy_from(gfx_context, data, buffer_size, buffer_offset);
+			buffer_policy.copy_from(gfx_context, data, buffer_size, buffer_offset, memcpy_op);
 		}
 
 		void copy_buffer(class GraphicsContext* const gfx_context, void* command_buffer, class Buffer* other, size_t buffer_size, size_t buffer_offset = 0)
@@ -104,7 +104,7 @@ namespace Sunset
 		void destroy(class GraphicsContext* const gfx_context)
 		{ }
 
-		void copy_from(class GraphicsContext* const gfx_context, void* data, size_t buffer_size, size_t buffer_offset = 0)
+		void copy_from(class GraphicsContext* const gfx_context, void* data, size_t buffer_size, size_t buffer_offset = 0, std::function<void(void*)> memcpy_op = {})
 		{ }
 
 		void copy_buffer(class GraphicsContext* const gfx_context, void* command_buffer, class Buffer* other, size_t buffer_size, size_t buffer_offset = 0)

@@ -81,7 +81,7 @@ namespace Sunset
 				},
 				.textures =
 				{
-					"../../assets/lost_empire-RGBA.png"
+					"../../assets/lost_empire-RGBA.sun"
 				}
 			};
 

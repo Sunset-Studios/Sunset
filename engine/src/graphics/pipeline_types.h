@@ -1,5 +1,7 @@
 #pragma once
 
+#include <graphics/viewport.h>
+
 #include <vector>
 #include <vertex_types.h>
 #include <functional>
