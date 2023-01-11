@@ -3,7 +3,7 @@
 #include <graphics/resource/buffer.h>
 #include <graphics/asset_pool.h>
 #include <graphics/renderer.h>
-#include <tiny_obj_loader.h>
+#include <mesh_serializer.h>
 
 namespace Sunset
 {
@@ -66,75 +66,76 @@ namespace Sunset
 		return mesh;
 	}
 
-	Sunset::Mesh* MeshFactory::load_obj(class GraphicsContext* const gfx_context, const char* path)
+	Sunset::Mesh* MeshFactory::load(class GraphicsContext* const gfx_context, const char* path)
 	{
 		const MeshID mesh_id = MeshCache::get()->fetch_or_add(path, gfx_context);
 		Mesh* const mesh = MeshCache::get()->fetch(mesh_id);
 
 		if (mesh->vertex_buffer == nullptr)
 		{
-			tinyobj::attrib_t attrib;
-			std::vector<tinyobj::shape_t> shapes;
-			std::vector<tinyobj::material_t> materials;
-
-			std::string warn;
-			std::string err;
-
-			tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, path, nullptr);
-
-			if (!warn.empty())
-			{
-				// TODO: Need some custom logging
-			}
-
-			if (!err.empty())
+			SerializedAsset asset;
+			if (!deserialize_asset(path, asset))
 			{
 				// TODO: Need some custom logging
 				return nullptr;
 			}
 
-			const int32_t face_vertices = 3;
-			for (size_t s = 0; s < shapes.size(); ++s)
+			SerializedMeshInfo serialized_mesh_info = get_serialized_mesh_info(&asset);
+
+			std::vector<char> vertex_buffer;
+			std::vector<char> index_buffer;
+
+			vertex_buffer.resize(serialized_mesh_info.vertex_buffer_size);
+			index_buffer.resize(serialized_mesh_info.index_buffer_size);
+
+			unpack_mesh(&serialized_mesh_info, asset.binary.data(), asset.binary.size(), vertex_buffer.data(), index_buffer.data());
+
+			mesh->vertices.clear();
+
+			if (serialized_mesh_info.format == VertexFormat::PNCU32)
 			{
-				size_t index_offset = 0;
-				for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); ++f)
+				VertexPNCU32* unpacked_vertices = (VertexPNCU32*)vertex_buffer.data();
+				mesh->vertices.resize(vertex_buffer.size() / sizeof(VertexPNCU32));
+
+				for (int i = 0; i < mesh->vertices.size(); ++i)
 				{
-					for (size_t v = 0; v < face_vertices; ++v)
-					{
-						tinyobj::index_t index = shapes[s].mesh.indices[index_offset + v];
+					mesh->vertices[i].position.x = unpacked_vertices[i].position[0];
+					mesh->vertices[i].position.y = unpacked_vertices[i].position[1];
+					mesh->vertices[i].position.z = unpacked_vertices[i].position[2];
 
-						// Position
-						tinyobj::real_t vx = attrib.vertices[3 * index.vertex_index + 0];
-						tinyobj::real_t vy = attrib.vertices[3 * index.vertex_index + 1];
-						tinyobj::real_t vz = attrib.vertices[3 * index.vertex_index + 2];
+					mesh->vertices[i].normal.x = unpacked_vertices[i].normal[0];
+					mesh->vertices[i].normal.y = unpacked_vertices[i].normal[1];
+					mesh->vertices[i].normal.z = unpacked_vertices[i].normal[2];
 
-						// Normal
-						tinyobj::real_t nx = attrib.normals[3 * index.normal_index + 0];
-						tinyobj::real_t ny = attrib.normals[3 * index.normal_index + 1];
-						tinyobj::real_t nz = attrib.normals[3 * index.normal_index + 2];
+					mesh->vertices[i].color.r = mesh->vertices[i].color[0];
+					mesh->vertices[i].color.g = mesh->vertices[i].color[1];
+					mesh->vertices[i].color.b = mesh->vertices[i].color[2];
 
-						// UVs
-						tinyobj::real_t ux = attrib.texcoords[2 * index.texcoord_index + 0];
-						tinyobj::real_t uy = attrib.texcoords[2 * index.texcoord_index + 1];
+					mesh->vertices[i].uv.x = unpacked_vertices[i].uv[0];
+					mesh->vertices[i].uv.y = unpacked_vertices[i].uv[1];
+				}
+			}
+			else if (serialized_mesh_info.format == VertexFormat::P32N8C8U16)
+			{
+				VertexP32N8C8U16* unpacked_vertices = (VertexP32N8C8U16*)vertex_buffer.data();
+				mesh->vertices.resize(vertex_buffer.size() / sizeof(VertexP32N8C8U16));
 
-						Vertex new_vertex;
+				for (int i = 0; i < mesh->vertices.size(); ++i)
+				{
+					mesh->vertices[i].position.x = unpacked_vertices[i].position[0];
+					mesh->vertices[i].position.y = unpacked_vertices[i].position[1];
+					mesh->vertices[i].position.z = unpacked_vertices[i].position[2];
 
-						new_vertex.position.x = vx;
-						new_vertex.position.y = vy;
-						new_vertex.position.z = vz;
+					mesh->vertices[i].normal.x = unpacked_vertices[i].normal_color[0] & 0xFFFFFF00;
+					mesh->vertices[i].normal.y = unpacked_vertices[i].normal_color[1] & 0xFFFFFF00;
+					mesh->vertices[i].normal.z = unpacked_vertices[i].normal_color[2] & 0xFFFFFF00;
 
-						new_vertex.normal.x = nx;
-						new_vertex.normal.y = ny;
-						new_vertex.normal.z = nz;
+					mesh->vertices[i].color.r = unpacked_vertices[i].normal_color[0] & 0xFF;
+					mesh->vertices[i].color.g = unpacked_vertices[i].normal_color[1] & 0xFF;
+					mesh->vertices[i].color.b = unpacked_vertices[i].normal_color[2] & 0xFF;
 
-						new_vertex.uv.x = ux;
-						new_vertex.uv.y = 1 - uy;
-
-						new_vertex.color = new_vertex.normal;
-
-						mesh->vertices.push_back(new_vertex);
-					}
-					index_offset += face_vertices;
+					mesh->vertices[i].uv.x = unpacked_vertices[i].uv[0];
+					mesh->vertices[i].uv.y = unpacked_vertices[i].uv[1];
 				}
 			}
 

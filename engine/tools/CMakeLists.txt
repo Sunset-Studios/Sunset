@@ -6,6 +6,8 @@ add_library(AssetSerializer STATIC
 	${CMAKE_CURRENT_SOURCE_DIR}/asset_serializer/serializer.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/asset_serializer/image_serializer.h
 	${CMAKE_CURRENT_SOURCE_DIR}/asset_serializer/image_serializer.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/asset_serializer/mesh_serializer.h
+	${CMAKE_CURRENT_SOURCE_DIR}/asset_serializer/mesh_serializer.cpp
 )
 
 set_property(TARGET AssetSerializer PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:AssetSerializer>")

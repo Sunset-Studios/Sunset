@@ -48,7 +48,7 @@ namespace Sunset
 
 		//			MeshComponent* const mesh_comp = scene->assign_component<MeshComponent>(mesh_ent);
 
-		//			set_mesh(mesh_comp, MeshFactory::load_obj(Renderer::get()->context(), "../../assets/monkey_smooth.obj"));
+		//			set_mesh(mesh_comp, MeshFactory::load_obj(Renderer::get()->context(), "../../assets/monkey_smooth.sun"));
 		//			set_shaders(mesh_comp,
 		//			{
 		//				{PipelineShaderStageType::Vertex, "../../shaders/default_mesh.vert.spv"},
@@ -85,7 +85,7 @@ namespace Sunset
 				}
 			};
 
-			set_mesh(mesh_comp, MeshFactory::load_obj(Renderer::get()->context(), "../../assets/lost_empire.obj"));
+			set_mesh(mesh_comp, MeshFactory::load(Renderer::get()->context(), "../../assets/lost_empire.sun"));
 			set_material(mesh_comp, mesh_material);
 
 			SimulationCore::get()->register_layer(std::move(scene));
