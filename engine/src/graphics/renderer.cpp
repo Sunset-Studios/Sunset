@@ -49,6 +49,11 @@ namespace Sunset
 
 			graphics_master_pass = RenderPassFactory::create_default(graphics_context.get(), swapchain, { depth_image });
 		}
+
+		for (int i = 0; i < MAX_BUFFERED_FRAMES; ++i)
+		{
+			indirect_draw_buffers[i] = BufferFactory::create(graphics_context.get(), 2000, BufferType::Indirect);
+		}
 	}
 
 	void Renderer::draw()

@@ -26,9 +26,27 @@ namespace Sunset
 		return *this;
 	}
 
+	Sunset::ResourceStateBuilder& ResourceStateBuilder::set_index_buffer(class Buffer* buffer)
+	{
+		state_data.index_buffer = buffer;
+		return *this;
+	}
+
 	Sunset::ResourceStateBuilder& ResourceStateBuilder::set_instance_index(uint32_t index)
 	{
 		state_data.instance_index = index;
+		return *this;
+	}
+
+	Sunset::ResourceStateBuilder& ResourceStateBuilder::set_vertex_count(uint32_t count)
+	{
+		state_data.vertex_count = count;
+		return *this;
+	}
+
+	Sunset::ResourceStateBuilder& ResourceStateBuilder::set_index_count(uint32_t count)
+	{
+		state_data.index_count = count;
 		return *this;
 	}
 
@@ -82,5 +100,6 @@ namespace Sunset
 	{
 		assert(state_data.vertex_buffer != nullptr && "Cannot bind resource state with null vertex buffer. Make sure to properly set up the resource state data first.");
 		state_data.vertex_buffer->bind(gfx_context, buffer);
+		state_data.index_buffer->bind(gfx_context, buffer);
 	}
 }

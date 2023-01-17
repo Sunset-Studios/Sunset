@@ -32,6 +32,16 @@ namespace Sunset
 				graphics_policy.draw(buffer, vertex_count, instance_count, instance_index);
 			}
 
+			void draw_indexed(void* buffer, uint32_t index_count, uint32_t instance_count, uint32_t instance_index = 0)
+			{
+				graphics_policy.draw_indexed(buffer, index_count, instance_count, instance_index);
+			}
+
+			void draw_indexed_indirect(void* buffer, class Buffer* indirect_buffer, uint32_t draw_count, uint32_t draw_first = 0)
+			{
+				graphics_policy.draw_indexed_indirect(buffer, indirect_buffer, draw_count, draw_first);
+			}
+
 			void* get_state()
 			{
 				return graphics_policy.get_state();
@@ -92,6 +102,11 @@ namespace Sunset
 				return graphics_policy.get_min_ubo_offset_alignment();
 			}
 
+			void update_indirect_draw_command(void* commands, uint32_t command_index, uint32_t index_count, uint32_t first_index, uint32_t instance_count, uint32_t first_instance)
+			{
+				graphics_policy.update_indirect_draw_command(commands, command_index, index_count, first_index, instance_count, first_instance);
+			}
+
 		private:
 			Policy graphics_policy;
 			ExecutionQueue resource_deletion_queue;
@@ -112,6 +127,12 @@ namespace Sunset
 			{ }
 
 			void draw(void* buffer, uint32_t vertex_count, uint32_t instance_count, uint32_t instance_index = 0)
+			{ }
+
+			void draw_indexed(void* buffer, uint32_t index_count, uint32_t instance_count, uint32_t instance_index = 0)
+			{ }
+
+			void draw_indexed_indirect(void* buffer, class Buffer* indirect_buffer, uint32_t draw_count, uint32_t draw_first = 0)
 			{ }
 
 			void* get_state()
@@ -158,6 +179,9 @@ namespace Sunset
 			{
 				return 0;
 			}
+
+			void update_indirect_draw_command(void* commands, uint32_t command_index, uint32_t index_count, uint32_t first_index, uint32_t instance_count, uint32_t first_instance)
+			{ }
 	};
 
 #if USE_VULKAN_GRAPHICS

@@ -21,7 +21,9 @@ namespace Sunset
 		~Mesh() = default;
 
 		std::vector<Vertex> vertices;
+		std::vector<uint32_t> indices;
 		class Buffer* vertex_buffer;
+		class Buffer* index_buffer;
 
 		void upload(class GraphicsContext* const gfx_context);
 		void destroy(class GraphicsContext* const gfx_context);
@@ -30,8 +32,8 @@ namespace Sunset
 	class MeshFactory
 	{
 	public:
-		static Mesh* create_triangle(class GraphicsContext* const gfx_context);
-		static Mesh* load(class GraphicsContext* const gfx_context, const char* path);
+		static MeshID create_triangle(class GraphicsContext* const gfx_context);
+		static MeshID load(class GraphicsContext* const gfx_context, const char* path);
 	};
 
 	class MeshCache : public Singleton<MeshCache>

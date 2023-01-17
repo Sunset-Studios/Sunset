@@ -66,10 +66,12 @@ namespace Sunset
 	{
 		Generic = 0x00000000,
 		Vertex = 0x00000001,
-		UniformBuffer = 0x00000002,
-		StorageBuffer = 0x00000004,
-		TransferSource = 0x00000008,
-		TransferDestination = 0x00000020
+		Index = 0x00000002,
+		UniformBuffer = 0x00000004,
+		StorageBuffer = 0x00000008,
+		TransferSource = 0x00000010,
+		TransferDestination = 0x00000020,
+		Indirect = 0x00000040
 	};
 
 	inline BufferType operator|(BufferType lhs, BufferType rhs)
@@ -139,6 +141,7 @@ namespace Sunset
 	using ObjectID = uint32_t;
 	using ImageID = size_t;
 	using MeshID = size_t;
+	using MaterialID = size_t;
 
 	#define SECONDS_TIME std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count() * 0.001
 	#define WORLD_UP glm::vec3(0.0f, 1.0f, 0.0f)

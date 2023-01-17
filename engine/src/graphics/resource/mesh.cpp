@@ -9,21 +9,43 @@ namespace Sunset
 {
 	void Mesh::upload(GraphicsContext* const gfx_context)
 	{
-		const size_t vertex_data_size = vertices.size() * sizeof(Vertex);
-
-		Buffer* const staging_buffer = BufferFactory::create(gfx_context, vertex_data_size, BufferType::TransferSource, MemoryUsageType::OnlyCPU, false);
-
-		staging_buffer->copy_from(gfx_context, vertices.data(), vertex_data_size);
-
-		vertex_buffer = BufferFactory::create(gfx_context, vertex_data_size, BufferType::Vertex | BufferType::TransferDestination, MemoryUsageType::OnlyGPU);
-
-		Renderer::get()->graphics_command_queue()->submit_immediate(gfx_context, [this, gfx_context, staging_buffer, vertex_data_size](void* command_buffer)
 		{
-			vertex_buffer->copy_buffer(gfx_context, command_buffer, staging_buffer, vertex_data_size);
-		});
+			// Upload vertex buffer
+			const size_t vertex_data_size = vertices.size() * sizeof(Vertex);
 
-		staging_buffer->destroy(gfx_context);
-		GlobalAssetPools<Buffer>::get()->deallocate(staging_buffer);
+			Buffer* const vertex_staging_buffer = BufferFactory::create(gfx_context, vertex_data_size, BufferType::TransferSource, MemoryUsageType::OnlyCPU, false);
+
+			vertex_staging_buffer->copy_from(gfx_context, vertices.data(), vertex_data_size);
+
+			vertex_buffer = BufferFactory::create(gfx_context, vertex_data_size, BufferType::Vertex | BufferType::TransferDestination, MemoryUsageType::OnlyGPU);
+
+			Renderer::get()->graphics_command_queue()->submit_immediate(gfx_context, [this, gfx_context, vertex_staging_buffer, vertex_data_size](void* command_buffer)
+			{
+				vertex_buffer->copy_buffer(gfx_context, command_buffer, vertex_staging_buffer, vertex_data_size);
+			});
+
+			vertex_staging_buffer->destroy(gfx_context);
+			GlobalAssetPools<Buffer>::get()->deallocate(vertex_staging_buffer);
+		}
+
+		{
+			// Upload index buffer
+			const size_t index_data_size = indices.size() * sizeof(uint32_t);
+
+			Buffer* const index_staging_buffer = BufferFactory::create(gfx_context, index_data_size, BufferType::TransferSource, MemoryUsageType::OnlyCPU, false);
+
+			index_staging_buffer->copy_from(gfx_context, indices.data(), index_data_size);
+
+			index_buffer = BufferFactory::create(gfx_context, index_data_size, BufferType::Index | BufferType::TransferDestination, MemoryUsageType::OnlyGPU);
+
+			Renderer::get()->graphics_command_queue()->submit_immediate(gfx_context, [this, gfx_context, index_staging_buffer, index_data_size](void* command_buffer)
+			{
+				index_buffer->copy_buffer(gfx_context, command_buffer, index_staging_buffer, index_data_size);
+			});
+
+			index_staging_buffer->destroy(gfx_context);
+			GlobalAssetPools<Buffer>::get()->deallocate(index_staging_buffer);
+		}
 	}
 
 	void Mesh::destroy(GraphicsContext* const gfx_context)
@@ -44,9 +66,10 @@ namespace Sunset
 		return description;
 	}
 
-	Sunset::Mesh* MeshFactory::create_triangle(class GraphicsContext* const gfx_context)
+	Sunset::MeshID MeshFactory::create_triangle(class GraphicsContext* const gfx_context)
 	{
-		static Mesh* mesh = GlobalAssetPools<Mesh>::get()->allocate();
+		static MeshID mesh_id = MeshCache::get()->fetch_or_add("triangle", gfx_context);
+		Mesh* const mesh = MeshCache::get()->fetch(mesh_id);
 
 		if (mesh->vertices.size() == 0)
 		{
@@ -63,10 +86,10 @@ namespace Sunset
 			mesh->upload(gfx_context);
 		}
 
-		return mesh;
+		return mesh_id;
 	}
 
-	Sunset::Mesh* MeshFactory::load(class GraphicsContext* const gfx_context, const char* path)
+	Sunset::MeshID MeshFactory::load(class GraphicsContext* const gfx_context, const char* path)
 	{
 		const MeshID mesh_id = MeshCache::get()->fetch_or_add(path, gfx_context);
 		Mesh* const mesh = MeshCache::get()->fetch(mesh_id);
@@ -77,7 +100,7 @@ namespace Sunset
 			if (!deserialize_asset(path, asset))
 			{
 				// TODO: Need some custom logging
-				return nullptr;
+				return 0;
 			}
 
 			SerializedMeshInfo serialized_mesh_info = get_serialized_mesh_info(&asset);
@@ -139,10 +162,20 @@ namespace Sunset
 				}
 			}
 
+			mesh->indices.clear();
+
+			uint32_t* unpacked_indices = (uint32_t*)index_buffer.data();
+			mesh->indices.resize(index_buffer.size() / sizeof(uint32_t));
+
+			for (int i = 0; i < mesh->indices.size(); ++i)
+			{
+				mesh->indices[i] = unpacked_indices[i];
+			}
+
 			mesh->upload(gfx_context);
 		}
 
-		return mesh;
+		return mesh_id;
 	}
 
 	void MeshCache::initialize()

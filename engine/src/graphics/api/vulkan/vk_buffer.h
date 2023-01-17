@@ -32,6 +32,8 @@ namespace Sunset
 		void destroy(class GraphicsContext* const gfx_context);
 		void copy_from(class GraphicsContext* const gfx_context, void* data, size_t buffer_size, size_t buffer_offset = 0, std::function<void(void*)> memcpy_op = {});
 		void copy_buffer(class GraphicsContext* const gfx_context, void* command_buffer, Buffer* other, size_t buffer_size, size_t buffer_offset = 0);
+		char* map_gpu(class GraphicsContext* const gfx_context);
+		void unmap_gpu(class GraphicsContext* const gfx_context);
 		void bind(class GraphicsContext* const gfx_context, BufferType type, void* command_buffer);
 		void* get()
 		{

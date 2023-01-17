@@ -2,6 +2,8 @@
 
 #include <minimal.h>
 #include <graphics/render_task.h>
+#include <graphics/resource/material.h>
+#include <graphics/renderer_types.h>
 
 namespace Sunset
 {
@@ -21,6 +23,9 @@ namespace Sunset
 
 		private:
 			void execute(class GraphicsContext* const gfx_context, RenderTask* const task, void* command_buffer);
+			void execute(class GraphicsContext* const gfx_context, const IndirectDrawBatch& indirect_draw, void* command_buffer);
+
+			std::vector<IndirectDrawBatch> batch_indirect_draws(class GraphicsContext* const gfx_context);
 
 		private:
 			std::vector<RenderTask*> queue;

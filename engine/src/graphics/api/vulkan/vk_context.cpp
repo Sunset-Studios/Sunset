@@ -84,6 +84,18 @@ namespace Sunset
 		vkCmdDraw(static_cast<VkCommandBuffer>(buffer), vertex_count, instance_count, 0, instance_index);
 	}
 
+	void VulkanContext::draw_indexed(void* buffer, uint32_t index_count, uint32_t instance_count, uint32_t instance_index /*= 0*/)
+	{
+		vkCmdDrawIndexed(static_cast<VkCommandBuffer>(buffer), index_count, instance_count, instance_index, 0, 0);
+	}
+
+	void VulkanContext::draw_indexed_indirect(void* buffer, class Buffer* indirect_buffer, uint32_t draw_count, uint32_t draw_first /*= 0*/)
+	{
+		VkDeviceSize indirect_offset = draw_first * sizeof(VkDrawIndexedIndirectCommand);
+		uint32_t stride = sizeof(VkDrawIndexedIndirectCommand);
+		vkCmdDrawIndexedIndirect(static_cast<VkCommandBuffer>(buffer), static_cast<VkBuffer>(indirect_buffer->get()), indirect_offset, draw_count, stride);
+	}
+
 	void VulkanContext::push_constants(void* buffer, PipelineStateID pipeline_state, const PushConstantPipelineData& push_constant_data)
 	{
 		VkCommandBuffer command_buffer = static_cast<VkCommandBuffer>(buffer);
@@ -149,6 +161,15 @@ namespace Sunset
 	size_t VulkanContext::get_min_ubo_offset_alignment()
 	{
 		return state.device.physical_device.properties.limits.minUniformBufferOffsetAlignment;
+	}
+
+	void VulkanContext::update_indirect_draw_command(void* commands, uint32_t command_index, uint32_t index_count, uint32_t first_index, uint32_t instance_count, uint32_t first_instance)
+	{
+		VkDrawIndexedIndirectCommand* vk_commands = static_cast<VkDrawIndexedIndirectCommand*>(commands);
+		vk_commands[command_index].indexCount = index_count;
+		vk_commands[command_index].firstIndex = first_index;
+		vk_commands[command_index].instanceCount = instance_count;
+		vk_commands[command_index].firstInstance = first_instance;
 	}
 
 	void create_surface(VulkanContext* const vulkan_context, Window* const window)

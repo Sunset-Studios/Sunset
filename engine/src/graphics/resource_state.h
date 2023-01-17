@@ -29,7 +29,10 @@ namespace Sunset
 		static ResourceStateBuilder create(const ResourceStateData& data);
 
 		ResourceStateBuilder& set_vertex_buffer(class Buffer* buffer);
+		ResourceStateBuilder& set_index_buffer(class Buffer* buffer);
 		ResourceStateBuilder& set_instance_index(uint32_t index);
+		ResourceStateBuilder& set_vertex_count(uint32_t count);
+		ResourceStateBuilder& set_index_count(uint32_t count);
 
 		ResourceStateID finish();
 

@@ -14,6 +14,10 @@ namespace Sunset
 		{
 			usage_flags = usage_flags | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
 		}
+		if (static_cast<int32_t>(type & BufferType::Index) > 0)
+		{
+			usage_flags = usage_flags | VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+		}
 		if (static_cast<int32_t>(type & BufferType::UniformBuffer) > 0)
 		{
 			usage_flags = usage_flags | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
@@ -29,6 +33,10 @@ namespace Sunset
 		if (static_cast<int32_t>(type & BufferType::TransferDestination) > 0)
 		{
 			usage_flags = usage_flags | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+		}
+		if (static_cast<int32_t>(type & BufferType::Indirect) > 0)
+		{
+			usage_flags = usage_flags | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
 		}
 		return usage_flags > 0 ? static_cast<VkBufferUsageFlagBits>(usage_flags) : VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 	}
@@ -59,7 +67,7 @@ namespace Sunset
 
 		VkBufferCreateInfo buffer_create_info = {};
 		buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		buffer_create_info.size = buffer_size;
+		buffer_create_info.size = type == BufferType::Indirect ? buffer_size * sizeof(VkDrawIndexedIndirectCommand) : buffer_size;
 		buffer_create_info.usage = SUNSET_TO_VULKAN_BUFFER_TYPE(type);
 
 		VmaAllocationCreateInfo allocation_create_info = {};
@@ -114,14 +122,41 @@ namespace Sunset
 		vkCmdCopyBuffer(cmd, other_buffer, buffer, 1, &copy);
 	}
 
+
+	char* VulkanBuffer::map_gpu(class GraphicsContext* const gfx_context)
+	{
+		assert(gfx_context->get_buffer_allocator() != nullptr);
+
+		VmaAllocator allocator = static_cast<VmaAllocator>(gfx_context->get_buffer_allocator()->get_handle());
+
+		char* mapped_memory;
+		vmaMapMemory(allocator, allocation, (void**)&mapped_memory);
+
+		return mapped_memory;
+	}
+
+	void VulkanBuffer::unmap_gpu(class GraphicsContext* const gfx_context)
+	{
+		assert(gfx_context->get_buffer_allocator() != nullptr);
+
+		VmaAllocator allocator = static_cast<VmaAllocator>(gfx_context->get_buffer_allocator()->get_handle());
+
+		vmaUnmapMemory(allocator, allocation);
+	}
+
 	void VulkanBuffer::bind(GraphicsContext* const gfx_context, BufferType type, void* command_buffer)
 	{
 		assert(gfx_context->get_buffer_allocator() != nullptr);
 
-		if (static_cast<int32_t>(type & BufferType::Vertex) > 0)
+		if ((type & BufferType::Vertex) != BufferType::Generic)
 		{
 			VkDeviceSize offset{ 0 };
 			vkCmdBindVertexBuffers(static_cast<VkCommandBuffer>(command_buffer), 0, 1, &buffer, &offset);
+		}
+		else if ((type & BufferType::Index) != BufferType::Generic)
+		{
+			VkDeviceSize offset{ 0 };
+			vkCmdBindIndexBuffer(static_cast<VkCommandBuffer>(command_buffer), buffer, offset, VK_INDEX_TYPE_UINT32);
 		}
 	}
 }

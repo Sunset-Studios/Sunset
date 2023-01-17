@@ -51,6 +51,16 @@ namespace Sunset
 			buffer_policy.copy_buffer(gfx_context, command_buffer, other, buffer_size, buffer_offset);
 		}
 
+		char* map_gpu(class GraphicsContext* const gfx_context)
+		{
+			return buffer_policy.map_gpu(gfx_context);
+		}
+
+		void unmap_gpu(class GraphicsContext* const gfx_context)
+		{
+			buffer_policy.unmap_gpu(gfx_context);
+		}
+
 		void bind(class GraphicsContext* const gfx_context, void* command_buffer)
 		{
 			buffer_policy.bind(gfx_context, buffer_type, command_buffer);
@@ -110,6 +120,14 @@ namespace Sunset
 		void copy_buffer(class GraphicsContext* const gfx_context, void* command_buffer, class Buffer* other, size_t buffer_size, size_t buffer_offset = 0)
 		{ }
 
+		char* map_gpu(class GraphicsContext* const gfx_context)
+		{
+			return nullptr;
+		}
+
+		void unmap_gpu(class GraphicsContext* const gfx_context)
+		{ }
+
 		void bind(class GraphicsContext* const gfx_context, BufferType type, void* command_buffer)
 		{ }
 
@@ -157,5 +175,15 @@ namespace Sunset
 	{
 	public:
 		static size_t pad_ubo_size(size_t ubo_size, size_t min_ubo_alignment);
+	};
+
+	struct ScopedGPUBufferMapping
+	{
+		ScopedGPUBufferMapping(class GraphicsContext* const gfx_context, Buffer* buffer);
+		~ScopedGPUBufferMapping();
+
+		class GraphicsContext* gfx_context{ nullptr };
+		char* mapped_memory{ nullptr };
+		Buffer* buffer{ nullptr };
 	};
 }

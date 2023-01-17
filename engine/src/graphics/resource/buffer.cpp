@@ -28,4 +28,15 @@ namespace Sunset
 		}
 		return aligned_size;
 	}
+
+	ScopedGPUBufferMapping::ScopedGPUBufferMapping(class GraphicsContext* const gfx_context, Buffer* buffer)
+		: buffer(buffer), gfx_context(gfx_context)
+	{
+		mapped_memory = buffer->map_gpu(gfx_context);
+	}
+
+	ScopedGPUBufferMapping::~ScopedGPUBufferMapping()
+	{
+		buffer->unmap_gpu(gfx_context);
+	}
 }

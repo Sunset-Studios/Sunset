@@ -62,6 +62,8 @@ namespace Sunset
 			void destroy(ExecutionQueue& deletion_queue);
 			void wait_for_gpu();
 			void draw(void* buffer, uint32_t vertex_count, uint32_t instance_count, uint32_t instance_index = 0);
+			void draw_indexed(void* buffer, uint32_t index_count, uint32_t instance_count, uint32_t instance_index = 0);
+			void draw_indexed_indirect(void* buffer, class Buffer* indirect_buffer, uint32_t draw_count, uint32_t draw_first = 0);
 
 			void* get_state()
 			{
@@ -106,6 +108,7 @@ namespace Sunset
 			void push_constants(void* buffer, PipelineStateID pipeline_state, const PushConstantPipelineData& push_constant_data);
 			void push_descriptor_writes(const std::vector<DescriptorWrite>& descriptor_writes);
 			size_t get_min_ubo_offset_alignment();
+			void update_indirect_draw_command(void* commands, uint32_t command_index, uint32_t index_count, uint32_t first_index, uint32_t instance_count, uint32_t first_instance);
 
 		public:
 			VulkanContextState state;

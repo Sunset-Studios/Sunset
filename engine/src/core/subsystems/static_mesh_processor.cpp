@@ -35,20 +35,29 @@ namespace Sunset
 			if (mesh_comp->resource_state == 0)
 			{
 				mesh_comp->resource_state = ResourceStateBuilder::create()
-					.set_vertex_buffer(mesh_comp->mesh->vertex_buffer)
+					.set_vertex_buffer(mesh_vertex_buffer(mesh_comp))
+					.set_index_buffer(mesh_index_buffer(mesh_comp))
 					.set_instance_index(entity_index)
+					.set_vertex_count(mesh_vertex_count(mesh_comp))
+					.set_index_count(mesh_index_count(mesh_comp))
 					.finish();
 			}
 
-			PushConstantPipelineData push_constants_data = PushConstantPipelineData::create(&mesh_comp->additional_data);
+			Material* const material = MaterialCache::get()->fetch(mesh_comp->material);
+			assert(material != nullptr && "Cannot process mesh with a null material");
+
+			material->descriptor_datas[static_cast<int16_t>(DescriptorSetType::Global)] = Renderer::get()->get_global_descriptor_data(current_buffered_frame);
+			material->descriptor_datas[static_cast<int16_t>(DescriptorSetType::Object)] = Renderer::get()->get_object_descriptor_data(current_buffered_frame);
+
+			DescriptorData& material_descriptor = material->descriptor_datas[static_cast<int16_t>(DescriptorSetType::Material)];
 
 			// TODO_BEGIN: Material stuff can probably be moved out into some sort of material factory or material processor
-			if (mesh_comp->material.descriptor_data.descriptor_set == nullptr)
+			if (material_descriptor.descriptor_set == nullptr)
 			{
 				std::vector<DescriptorBuildData> texture_bindings;
-				for (int i = 0; i < mesh_comp->material.textures.size(); ++i)
+				for (int i = 0; i < material->textures.size(); ++i)
 				{
-					const char* path = mesh_comp->material.textures[i];
+					const char* path = material->textures[i];
 					Image* const texture = ImageFactory::load(Renderer::get()->context(), path);
 					texture_bindings.push_back(
 					DescriptorBuildData{
@@ -58,10 +67,12 @@ namespace Sunset
 						.shader_stages = PipelineShaderStageType::Fragment
 					});
 				}
-				DescriptorHelpers::inject_descriptors(Renderer::get()->context(), mesh_comp->material.descriptor_data, texture_bindings);
+				DescriptorHelpers::inject_descriptors(Renderer::get()->context(), material_descriptor, texture_bindings);
 			}
 
-			if (mesh_comp->material.pipeline_state == 0)
+			PushConstantPipelineData push_constants_data = PushConstantPipelineData::create(&mesh_comp->additional_data);
+
+			if (material->pipeline_state == 0)
 			{
 				PipelineStateBuilder state_builder = PipelineStateBuilder::create_default(Renderer::get()->window())
 					.clear_shader_stages()
@@ -72,30 +83,27 @@ namespace Sunset
 							{
 								Renderer::get()->global_descriptor_layout(current_buffered_frame),
 								Renderer::get()->object_descriptor_layout(current_buffered_frame),
-								mesh_comp->material.descriptor_data.descriptor_layout
+								material_descriptor.descriptor_layout
 							}
 						)
 					)
 					.value();
 
-				for (const std::pair<PipelineShaderStageType, const char*>& shader : mesh_comp->material.shaders)
+				for (const std::pair<PipelineShaderStageType, const char*>& shader : material->shaders)
 				{
 					state_builder.set_shader_stage(shader.first, shader.second);
 				}
 
-				mesh_comp->material.pipeline_state = state_builder.finish();
+				material->pipeline_state = state_builder.finish();
 
-				PipelineStateCache::get()->fetch(mesh_comp->material.pipeline_state)->build(Renderer::get()->context(), Renderer::get()->master_pass()->get_data());
+				PipelineStateCache::get()->fetch(material->pipeline_state)->build(Renderer::get()->context(), Renderer::get()->master_pass()->get_data());
 			}
 			// TODO_END: Material stuff can probably be moved out into some sort of material factory or material processor
 
 			Renderer::get()
 				->fresh_rendertask()
-				->setup(mesh_comp->material.pipeline_state, mesh_comp->resource_state, DrawCall{ mesh_vertex_count(mesh_comp) })
+				->setup(mesh_comp->material, mesh_comp->resource_state)
 				->set_push_constants(std::move(push_constants_data))
-				->set_descriptor_data(DescriptorSetType::Global, Renderer::get()->get_global_descriptor_data(current_buffered_frame))
-				->set_descriptor_data(DescriptorSetType::Object, Renderer::get()->get_object_descriptor_data(current_buffered_frame))
-				->set_descriptor_data(DescriptorSetType::Material, mesh_comp->material.descriptor_data)
 				->submit(Renderer::get()->master_pass());
 		}
 

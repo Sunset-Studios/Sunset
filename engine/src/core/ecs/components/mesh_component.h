@@ -14,14 +14,17 @@ namespace Sunset
 
 	struct MeshComponent
 	{
-		struct Mesh* mesh;
+		MeshID mesh;
 		ResourceStateID resource_state;
-		Material material;
+		MaterialID material;
 		MeshAdditionalData additional_data;
 	};
 
-	void set_mesh(MeshComponent* mesh_comp, struct Mesh* const mesh);
+	void set_mesh(MeshComponent* mesh_comp, MeshID mesh);
 	void set_material(MeshComponent* mesh_comp, const Material& material);
 
 	size_t mesh_vertex_count(MeshComponent* mesh_comp);
+	size_t mesh_index_count(MeshComponent* mesh_comp);
+	class Buffer* mesh_vertex_buffer(MeshComponent* mesh_comp);
+	class Buffer* mesh_index_buffer(MeshComponent* mesh_comp);
 }

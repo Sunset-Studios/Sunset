@@ -69,6 +69,11 @@ namespace Sunset
 				return object_descriptor_data[buffered_frame].descriptor_layout;
 			}
 
+			class Buffer* indirect_draw_buffer(uint16_t buffered_frame) const
+			{
+				return indirect_draw_buffers[buffered_frame];
+			}
+
 			RenderTask* fresh_rendertask();
 
 			void inject_global_descriptor(uint16_t buffered_frame, const std::initializer_list<DescriptorBuildData>& descriptor_build_datas);
@@ -89,6 +94,7 @@ namespace Sunset
 			class RenderPass* graphics_master_pass;
 			Window* graphics_window;
 
+			class Buffer* indirect_draw_buffers[MAX_BUFFERED_FRAMES];
 			DescriptorData global_descriptor_data[MAX_BUFFERED_FRAMES];
 			DescriptorData object_descriptor_data[MAX_BUFFERED_FRAMES];
 	};
