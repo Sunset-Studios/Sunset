@@ -32,4 +32,6 @@
 *.app
 
 # Sunset exclusions
+*.sun
+*.spv
 engine/bin
