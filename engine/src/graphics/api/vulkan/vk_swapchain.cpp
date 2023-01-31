@@ -49,10 +49,10 @@ namespace Sunset
 	}
 
 
-	void VulkanSwapchain::present(GraphicsContext* const gfx_context, GraphicsCommandQueue* const command_queue)
+	void VulkanSwapchain::present(GraphicsContext* const gfx_context, DeviceQueueType queue_type)
 	{
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
-		VulkanCommandQueueData* command_queue_data = static_cast<VulkanCommandQueueData*>(command_queue->get_data());
+		VulkanCommandQueueData* command_queue_data = static_cast<VulkanCommandQueueData*>(gfx_context->get_command_queue(queue_type)->get_data());
 
 		const int16_t current_buffered_frame = gfx_context->get_buffered_frame_number();
 

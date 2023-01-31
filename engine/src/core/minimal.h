@@ -127,6 +127,48 @@ namespace Sunset
 		return lhs = lhs & rhs;
 	}
 
+	enum class AccessFlags : int32_t
+	{
+		None = 0,
+		IndirectCommandRead = 0x00000001,
+		IndexRead = 0x00000002,
+		VertexAttributeRead = 0x00000004,
+		UniformRead = 0x00000008,
+		InputAttachmentRead = 0x00000010,
+		ShaderRead = 0x00000020,
+		ShaderWrite = 0x00000040,
+		ColorAttachmentRead = 0x00000080,
+		ColorAttachmentWrite = 0x00000100,
+		DepthStencilAttachmentRead = 0x00000200,
+		DepthStencilAttachmentWrite = 0x00000400,
+		TransferRead = 0x00000800,
+		TransferWrite = 0x00001000,
+		HostRead = 0x00002000,
+		HostWrite = 0x00004000,
+		MemoryRead = 0x00008000,
+		MemoryWrite = 0x00010000
+	};
+
+	inline AccessFlags operator|(AccessFlags lhs, AccessFlags rhs)
+	{
+		return static_cast<AccessFlags>(static_cast<int32_t>(lhs) | static_cast<int32_t>(rhs));
+	}
+
+	inline AccessFlags operator&(AccessFlags lhs, AccessFlags rhs)
+	{
+		return static_cast<AccessFlags>(static_cast<int32_t>(lhs) & static_cast<int32_t>(rhs));
+	}
+
+	inline AccessFlags& operator|=(AccessFlags& lhs, AccessFlags rhs)
+	{
+		return lhs = lhs | rhs;
+	}
+
+	inline AccessFlags& operator&=(AccessFlags& lhs, AccessFlags rhs)
+	{
+		return lhs = lhs & rhs;
+	}
+
 	enum class CompareOperation : int16_t
 	{
 		Always,
@@ -142,6 +184,8 @@ namespace Sunset
 	using ImageID = size_t;
 	using MeshID = size_t;
 	using MaterialID = size_t;
+	using BufferID = size_t;
+	using RenderPassID = size_t;
 
 	#define SECONDS_TIME std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count() * 0.001
 	#define WORLD_UP glm::vec3(0.0f, 1.0f, 0.0f)

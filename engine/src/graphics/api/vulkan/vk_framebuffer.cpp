@@ -6,7 +6,7 @@
 
 namespace Sunset
 {
-	void VulkanFramebuffer::initialize(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, void* render_pass_handle, void* attachments_handle, const std::initializer_list<Image*>& additional_attachments)
+	void VulkanFramebuffer::initialize(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, void* render_pass_handle, void* attachments_handle, const std::initializer_list<ImageID>& additional_attachments)
 	{
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
 		VulkanSwapchainData* swapchain_data = static_cast<VulkanSwapchainData*>(swapchain->get_data());
@@ -30,8 +30,9 @@ namespace Sunset
 		if (VkImageView* image_view = static_cast<VkImageView*>(attachments_handle))
 		{
 			fb_attachments.push_back(*image_view);
-			for (Image* const additional_image_attachment : additional_attachments)
+			for (ImageID additional_image_attachment_id : additional_attachments)
 			{
+				Image* const additional_image_attachment = ImageCache::get()->fetch(additional_image_attachment_id);
 				VkImageView attachment_image_view = static_cast<VkImageView>(additional_image_attachment->get_image_view());
 				fb_attachments.push_back(attachment_image_view);
 			}

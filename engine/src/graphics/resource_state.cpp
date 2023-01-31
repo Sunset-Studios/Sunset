@@ -52,48 +52,11 @@ namespace Sunset
 
 	Sunset::ResourceStateID ResourceStateBuilder::finish()
 	{
-		return ResourceStateCache::get()->fetch_or_add(state_data, context);
-	}
-
-	void ResourceStateCache::initialize()
-	{
-	}
-
-	void ResourceStateCache::update()
-	{
-	}
-
-	Sunset::ResourceStateID ResourceStateCache::fetch_or_add(const ResourceStateData& data, class GraphicsContext* const gfx_context /*= nullptr*/)
-	{
-		ResourceStateID id = std::hash<ResourceStateData>{}(data);
-		if (cache.find(id) == cache.end())
-		{
-			ResourceState* const new_resource_state = GlobalAssetPools<ResourceState>::get()->allocate();
-			new_resource_state->initialize(gfx_context, data);
-			gfx_context->add_resource_deletion_execution([new_resource_state, gfx_context]()
-			{
-				GlobalAssetPools<ResourceState>::get()->deallocate(new_resource_state);
-			});
-			cache.insert({ id, new_resource_state });
-		}
-		return id;
-	}
-
-	void ResourceStateCache::remove(ResourceStateID id)
-	{
-		cache.erase(id);
-	}
-
-	Sunset::ResourceState* ResourceStateCache::fetch(ResourceStateID id)
-	{
-		assert(cache.find(id) != cache.end());
-		return cache[id];
-	}
-
-
-	void ResourceStateCache::destroy(class GraphicsContext* const gfx_context)
-	{
-		cache.clear();
+		Identity cache_id = std::hash<ResourceStateData>{}(state_data);
+		ResourceStateID resource_state_id = ResourceStateCache::get()->fetch_or_add(cache_id, context);
+		ResourceState* const resource_state = ResourceStateCache::get()->fetch(resource_state_id);
+		resource_state->initialize(context, state_data);
+		return resource_state_id;
 	}
 
 	void ResourceState::bind(class GraphicsContext* const gfx_context, void* buffer)

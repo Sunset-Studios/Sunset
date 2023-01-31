@@ -9,13 +9,23 @@
 
 namespace Sunset
 {
-	void VulkanRenderPass::initialize(GraphicsContext* const gfx_context, Swapchain* const swapchain, const std::initializer_list<class Image*>& attachments)
+	void VulkanRenderPass::initialize_default_compute(GraphicsContext* const gfx_context, Swapchain* const swapchain)
 	{
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
 		VulkanSwapchainData* swapchain_data = static_cast<VulkanSwapchainData*>(swapchain->get_data());
+
+		VkSubpassDescription subpass = {};
+		subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;
+
+		VkRenderPassCreateInfo render_pass_create_info = {};
+		render_pass_create_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+		render_pass_create_info.subpassCount = 1;
+		render_pass_create_info.pSubpasses = &subpass;
+
+		VK_CHECK(vkCreateRenderPass(context_state->get_device(), &render_pass_create_info, nullptr, &data.render_pass));
 	}
 
-	void VulkanRenderPass::initialize_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, const std::initializer_list<class Image*>& attachments)
+	void VulkanRenderPass::initialize_default_graphics(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, const RenderPassConfig& config)
 	{
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
 		VulkanSwapchainData* swapchain_data = static_cast<VulkanSwapchainData*>(swapchain->get_data());
@@ -49,8 +59,10 @@ namespace Sunset
 		std::optional<VkAttachmentReference> main_depth_attachment_ref;
 
 		uint32_t AttachmentIndex = 1;
-		for (Image* const image_attachment : attachments)
+		for (ImageID image_attachment_id : config.attachments)
 		{
+			Image* const image_attachment = ImageCache::get()->fetch(image_attachment_id);
+
 			// Depth attachment
 			VkAttachmentDescription attachment = {};
 			attachment.format = VK_FROM_SUNSET_FORMAT(image_attachment->get_attachment_config().format);
@@ -73,8 +85,8 @@ namespace Sunset
 			dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
 			dependency.dstSubpass = 0;
 			dependency.srcStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-			dependency.srcAccessMask = 0;
 			dependency.dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+			dependency.srcAccessMask = 0;
 			dependency.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
 			vk_attachments.push_back(attachment);
@@ -103,7 +115,7 @@ namespace Sunset
 
 		VK_CHECK(vkCreateRenderPass(context_state->get_device(), &render_pass_create_info, nullptr, &data.render_pass));
 
-		create_default_output_framebuffers(gfx_context, swapchain, attachments);
+		create_default_output_framebuffers(gfx_context, swapchain, config.attachments);
 	}
 
 	void VulkanRenderPass::destroy(GraphicsContext* const gfx_context)
@@ -118,7 +130,7 @@ namespace Sunset
 		}
 	}
 
-	void VulkanRenderPass::draw(class GraphicsContext* const gfx_context, void* command_buffer)
+	void VulkanRenderPass::submit(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, void* command_buffer)
 	{
 	}
 
@@ -126,13 +138,6 @@ namespace Sunset
 	{
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
 		VulkanSwapchainData* swapchain_data = static_cast<VulkanSwapchainData*>(swapchain->get_data());
-
-		VkClearValue clear_value;
-		const float flash = std::abs(std::sin(gfx_context->get_frame_number() / 120.0f));
-		clear_value.color = { { 0.0f, 0.0f, flash, 1.0f } };
-
-		VkClearValue depth_clear_value;
-		depth_clear_value.depthStencil.depth = 1.0f;
 
 		VkRenderPassBeginInfo rp_begin_info = {};
 		rp_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -142,12 +147,24 @@ namespace Sunset
 		rp_begin_info.renderArea.offset.y = 0;
 		rp_begin_info.renderArea.extent.width = context_state->window->get_extent().x;
 		rp_begin_info.renderArea.extent.height = context_state->window->get_extent().y;
-		rp_begin_info.framebuffer = static_cast<VkFramebuffer>(data.output_framebuffers[swapchain_data->current_image_index]->get_framebuffer_handle());
 
-		VkClearValue clear_values[] = { clear_value, depth_clear_value };
+		// A null framebuffer probably means we're using this pass for compute work
+		if (data.output_framebuffers[swapchain_data->current_image_index] != nullptr)
+		{
+			rp_begin_info.framebuffer = static_cast<VkFramebuffer>(data.output_framebuffers[swapchain_data->current_image_index]->get_framebuffer_handle());
 
-		rp_begin_info.clearValueCount = 2;
-		rp_begin_info.pClearValues = &clear_values[0];
+			VkClearValue clear_value;
+			const float flash = std::abs(std::sin(gfx_context->get_frame_number() / 120.0f));
+			clear_value.color = { { 0.0f, 0.0f, flash, 1.0f } };
+
+			VkClearValue depth_clear_value;
+			depth_clear_value.depthStencil.depth = 1.0f;
+
+			VkClearValue clear_values[] = { clear_value, depth_clear_value };
+
+			rp_begin_info.clearValueCount = 2;
+			rp_begin_info.pClearValues = &clear_values[0];
+		}
 
 		vkCmdBeginRenderPass(static_cast<VkCommandBuffer>(command_buffer), &rp_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 	}
@@ -158,7 +175,7 @@ namespace Sunset
 		vkCmdEndRenderPass(static_cast<VkCommandBuffer>(command_buffer));
 	}
 
-	void VulkanRenderPass::create_default_output_framebuffers(GraphicsContext* const gfx_context, Swapchain* const swapchain, const std::initializer_list<class Image*>& attachments)
+	void VulkanRenderPass::create_default_output_framebuffers(GraphicsContext* const gfx_context, Swapchain* const swapchain, const std::initializer_list<ImageID>& attachments)
 	{
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
 		VulkanSwapchainData* swapchain_data = static_cast<VulkanSwapchainData*>(swapchain->get_data());

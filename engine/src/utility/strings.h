@@ -19,37 +19,59 @@ namespace Sunset
 		return size;
 	}
 
-	struct StringHash
+	struct Identity
 	{
 		uint32_t computed_hash;
 
-		constexpr StringHash(uint32_t hash) noexcept
+		constexpr Identity(uint32_t hash = 0) noexcept
 			: computed_hash(hash)
 		{ }
 
-		constexpr StringHash(const char* s) noexcept
+		constexpr Identity(const char* s) noexcept
 			: computed_hash(0)
 		{
 			computed_hash = fnvla_32(s, const_strlen(s));
+#ifndef NDEBUG
+			g_string_table[computed_hash] = s;
+#endif
 		}
 
-		constexpr StringHash(const char* s, std::size_t count) noexcept
+		constexpr Identity(const char* s, std::size_t count) noexcept
 			: computed_hash(0)
 		{
 			computed_hash = fnvla_32(s, count);
+#ifndef NDEBUG
+			g_string_table[computed_hash] = s;
+#endif
 		}
 
-		constexpr StringHash(std::string_view s) noexcept
+		constexpr Identity(std::string_view s) noexcept
 			: computed_hash(0)
 		{
 			computed_hash = fnvla_32(s.data(), s.size());
+#ifndef NDEBUG
+			g_string_table[computed_hash] = s;
+#endif
 		}
 
-		StringHash(const StringHash& other) = default;
+		Identity(const Identity& other) = default;
 
 		constexpr operator uint32_t() noexcept
 		{
 			return computed_hash;
 		}
+
+		constexpr operator std::string() noexcept
+		{
+#ifndef NDEBUG
+			return g_string_table.find(computed_hash) != g_string_table.end() ? g_string_table[computed_hash] : "";
+#else
+			return "";
+#endif
+		}
 	};
+
+#ifndef NDEBUG
+	std::unordered_map<uint32_t, std::string> g_string_table;
+#endif
 }

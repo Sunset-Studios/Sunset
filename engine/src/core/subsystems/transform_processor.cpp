@@ -13,7 +13,14 @@ namespace Sunset
 		{
 			if (EntityGlobals::get()->transforms.transform_buffer[i] == nullptr)
 			{
-				EntityGlobals::get()->transforms.transform_buffer[i] = BufferFactory::create(Renderer::get()->context(), sizeof(glm::mat4) * MIN_ENTITIES, BufferType::StorageBuffer);
+				EntityGlobals::get()->transforms.transform_buffer[i] = BufferFactory::create(
+					Renderer::get()->context(),
+					{
+						.name = "entity_transforms",
+						.buffer_size = sizeof(glm::mat4) * MIN_ENTITIES,
+						.type = BufferType::StorageBuffer
+					}
+				);
 			}
 		}
 	}

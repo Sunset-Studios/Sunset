@@ -67,7 +67,7 @@ namespace Sunset
 
 		VkBufferCreateInfo buffer_create_info = {};
 		buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		buffer_create_info.size = type == BufferType::Indirect ? buffer_size * sizeof(VkDrawIndexedIndirectCommand) : buffer_size;
+		buffer_create_info.size = type == BufferType::Indirect ? buffer_size * sizeof(VulkanGPUIndirectObject) : buffer_size;
 		buffer_create_info.usage = SUNSET_TO_VULKAN_BUFFER_TYPE(type);
 
 		VmaAllocationCreateInfo allocation_create_info = {};
@@ -76,6 +76,17 @@ namespace Sunset
 		VK_CHECK(vmaCreateBuffer(allocator, &buffer_create_info, &allocation_create_info, &buffer, &allocation, nullptr));
 
 		size = buffer_size;
+	}
+
+	void VulkanBuffer::reallocate(class GraphicsContext* const gfx_context, size_t new_buffer_size, BufferType type, MemoryUsageType memory_usage)
+	{
+		assert(gfx_context->get_buffer_allocator() != nullptr);
+
+		VmaAllocator allocator = static_cast<VmaAllocator>(gfx_context->get_buffer_allocator()->get_handle());
+
+		destroy(gfx_context);
+
+		initialize(gfx_context, new_buffer_size, type, memory_usage);
 	}
 
 	void VulkanBuffer::destroy(class GraphicsContext* const gfx_context)
@@ -158,5 +169,28 @@ namespace Sunset
 			VkDeviceSize offset{ 0 };
 			vkCmdBindIndexBuffer(static_cast<VkCommandBuffer>(command_buffer), buffer, offset, VK_INDEX_TYPE_UINT32);
 		}
+	}
+
+	void VulkanBuffer::barrier(class GraphicsContext* const gfx_context, void* command_buffer, AccessFlags src_access, AccessFlags dst_access, PipelineStageType src_pipeline_stage, PipelineStageType dst_pipeline_stage)
+	{
+		VkBufferMemoryBarrier buffer_barrier = {};
+		buffer_barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+		buffer_barrier.pNext = nullptr;
+		buffer_barrier.srcAccessMask = VK_FROM_SUNSET_ACCESS_FLAGS(src_access);
+		buffer_barrier.dstAccessMask = VK_FROM_SUNSET_ACCESS_FLAGS(dst_access);
+		buffer_barrier.buffer = buffer;
+		buffer_barrier.offset = 0;
+		buffer_barrier.size = size;
+
+		VkCommandBuffer cmd = static_cast<VkCommandBuffer>(command_buffer);
+		vkCmdPipelineBarrier(
+			cmd,
+			VK_FROM_SUNSET_PIPELINE_STAGE_TYPE(src_pipeline_stage),
+			VK_FROM_SUNSET_PIPELINE_STAGE_TYPE(dst_pipeline_stage),
+			0,
+			0, nullptr,
+			1, &buffer_barrier,
+			0, nullptr
+		);
 	}
 }

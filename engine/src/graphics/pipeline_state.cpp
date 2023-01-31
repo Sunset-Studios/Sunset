@@ -118,50 +118,10 @@ namespace Sunset
 		{
 			state_data.layout = ShaderPipelineLayoutFactory::get_default(Renderer::get()->context());
 		}
-		return PipelineStateCache::get()->fetch_or_add(state_data, context);
-	}
-
-	void PipelineStateCache::initialize()
-	{
-	}
-
-	void PipelineStateCache::update()
-	{
-	}
-
-	PipelineStateID PipelineStateCache::fetch_or_add(const PipelineStateData& data, class GraphicsContext* const gfx_context)
-	{
-		PipelineStateID id = std::hash<PipelineStateData>{}(data);
-		if (cache.find(id) == cache.end())
-		{
-			PipelineState* const new_pipeline_state = GlobalAssetPools<PipelineState>::get()->allocate();
-			new_pipeline_state->initialize(gfx_context, data);
-			gfx_context->add_resource_deletion_execution([new_pipeline_state, gfx_context]()
-			{
-				GlobalAssetPools<PipelineState>::get()->deallocate(new_pipeline_state);
-			});
-			cache.insert({ id, new_pipeline_state });
-		}
-		return id;
-	}
-
-	void PipelineStateCache::remove(PipelineStateID id)
-	{
-		cache.erase(id);
-	}
-
-	Sunset::PipelineState* PipelineStateCache::fetch(PipelineStateID id)
-	{
-		assert(cache.find(id) != cache.end());
-		return cache[id];
-	}
-
-	void PipelineStateCache::destroy(GraphicsContext* const gfx_context)
-	{
-		for (const std::pair<size_t, PipelineState*>& pair : cache)
-		{
-			pair.second->destroy(gfx_context);
-		}
-		cache.clear();
+		const Identity cache_id = std::hash<PipelineStateData>{}(state_data);
+		const PipelineStateID new_pipeline_state_id = PipelineStateCache::get()->fetch_or_add(cache_id, context);
+		PipelineState* const new_pipeline_state = PipelineStateCache::get()->fetch(new_pipeline_state_id);
+		new_pipeline_state->initialize(context, state_data);
+		return new_pipeline_state_id;
 	}
 }

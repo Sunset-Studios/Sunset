@@ -1,8 +1,8 @@
 #pragma once
 
 #include <common.h>
-#include <singleton.h>
 #include <graphics/resource/shader_types.h>
+#include <graphics/resource/resource_cache.h>
 
 namespace Sunset
 {
@@ -56,28 +56,5 @@ namespace Sunset
 	{ };
 #endif
 
-	class ShaderCache : public Singleton<ShaderCache>
-	{
-		friend class Singleton;
-
-	public:
-		void initialize();
-		void update();
-
-		ShaderID fetch_or_add(const char* file_path, class GraphicsContext* const gfx_context = nullptr);
-		Shader* fetch(ShaderID id);
-		void remove(ShaderID id);
-		void destroy(class GraphicsContext* const gfx_context);
-
-		size_t size() const
-		{
-			return cache.size();
-		}
-
-	protected:
-		std::unordered_map<ShaderID, Shader*> cache;
-
-	private:
-		ShaderCache() = default;
-	};
+	DEFINE_RESOURCE_CACHE(ShaderCache, ShaderID, Shader);
 }

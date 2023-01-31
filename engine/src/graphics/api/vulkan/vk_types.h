@@ -9,6 +9,16 @@
 #include <descriptor_types.h>
 #include <pipeline_types.h>
 #include <image_types.h>
+#include <renderer_types.h>
+
+namespace Sunset
+{
+	struct VulkanGPUIndirectObject
+	{
+		VkDrawIndexedIndirectCommand indirect_command;
+		GPUObjectInstance object_instance;
+	};
+}
 
 inline void VK_CHECK(VkResult result)
 {
@@ -172,6 +182,144 @@ inline VkShaderStageFlagBits VK_FROM_SUNSET_SHADER_STAGE_TYPE(Sunset::PipelineSh
 		vk_shader_stages |= VK_SHADER_STAGE_COMPUTE_BIT;
 	}
 	return static_cast<VkShaderStageFlagBits>(vk_shader_stages);
+}
+
+inline VkPipelineStageFlagBits VK_FROM_SUNSET_PIPELINE_STAGE_TYPE(Sunset::PipelineStageType pipeline_stage_type)
+{
+	uint32_t sunset_pipeline_stages{ static_cast<uint32_t>(pipeline_stage_type) };
+	uint32_t vk_pipeline_stages{ 0 };
+	if (sunset_pipeline_stages & static_cast<uint32_t>(Sunset::PipelineStageType::TopOfPipe))
+	{
+		vk_pipeline_stages |= VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+	}
+	if (sunset_pipeline_stages & static_cast<uint32_t>(Sunset::PipelineStageType::BottomOfPipe))
+	{
+		vk_pipeline_stages |= VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+	}
+	if (sunset_pipeline_stages & static_cast<uint32_t>(Sunset::PipelineStageType::DrawIndirect))
+	{
+		vk_pipeline_stages |= VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT;
+	}
+	if (sunset_pipeline_stages & static_cast<uint32_t>(Sunset::PipelineStageType::VertexInput))
+	{
+		vk_pipeline_stages |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+	}
+	if (sunset_pipeline_stages & static_cast<uint32_t>(Sunset::PipelineStageType::VertexShader))
+	{
+		vk_pipeline_stages |= VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
+	}
+	if (sunset_pipeline_stages & static_cast<uint32_t>(Sunset::PipelineStageType::TessellationControl))
+	{
+		vk_pipeline_stages |= VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT;
+	}
+	if (sunset_pipeline_stages & static_cast<uint32_t>(Sunset::PipelineStageType::TessellationEvaluation))
+	{
+		vk_pipeline_stages |= VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT;
+	}
+	if (sunset_pipeline_stages & static_cast<uint32_t>(Sunset::PipelineStageType::GeometryShader))
+	{
+		vk_pipeline_stages |= VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT;
+	}
+	if (sunset_pipeline_stages & static_cast<uint32_t>(Sunset::PipelineStageType::FragmentShader))
+	{
+		vk_pipeline_stages |= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+	}
+	if (sunset_pipeline_stages & static_cast<uint32_t>(Sunset::PipelineStageType::EarlyFragmentTest))
+	{
+		vk_pipeline_stages |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+	}
+	if (sunset_pipeline_stages & static_cast<uint32_t>(Sunset::PipelineStageType::LateFragmentTest))
+	{
+		vk_pipeline_stages |= VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+	}
+	if (sunset_pipeline_stages & static_cast<uint32_t>(Sunset::PipelineStageType::ColorAttachmentOutput))
+	{
+		vk_pipeline_stages |= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	}
+	if (sunset_pipeline_stages & static_cast<uint32_t>(Sunset::PipelineStageType::ComputeShader))
+	{
+		vk_pipeline_stages |= VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+	}
+	if (sunset_pipeline_stages & static_cast<uint32_t>(Sunset::PipelineStageType::Transfer))
+	{
+		vk_pipeline_stages |= VK_PIPELINE_STAGE_TRANSFER_BIT;
+	}
+	return static_cast<VkPipelineStageFlagBits>(vk_pipeline_stages);
+}
+
+inline VkAccessFlagBits VK_FROM_SUNSET_ACCESS_FLAGS(Sunset::AccessFlags access_flags)
+{
+	uint32_t sunset_access_stages{ static_cast<uint32_t>(access_flags) };
+	uint32_t vk_access_flags{ 0 };
+	if (sunset_access_stages & static_cast<uint32_t>(Sunset::AccessFlags::IndirectCommandRead))
+	{
+		vk_access_flags |= VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
+	}
+	if (sunset_access_stages & static_cast<uint32_t>(Sunset::AccessFlags::IndexRead))
+	{
+		vk_access_flags |= VK_ACCESS_INDEX_READ_BIT;
+	}
+	if (sunset_access_stages & static_cast<uint32_t>(Sunset::AccessFlags::VertexAttributeRead))
+	{
+		vk_access_flags |= VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
+	}
+	if (sunset_access_stages & static_cast<uint32_t>(Sunset::AccessFlags::UniformRead))
+	{
+		vk_access_flags |= VK_ACCESS_UNIFORM_READ_BIT;
+	}
+	if (sunset_access_stages & static_cast<uint32_t>(Sunset::AccessFlags::InputAttachmentRead))
+	{
+		vk_access_flags |= VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
+	}
+	if (sunset_access_stages & static_cast<uint32_t>(Sunset::AccessFlags::ShaderRead))
+	{
+		vk_access_flags |= VK_ACCESS_SHADER_READ_BIT;
+	}
+	if (sunset_access_stages & static_cast<uint32_t>(Sunset::AccessFlags::ShaderWrite))
+	{
+		vk_access_flags |= VK_ACCESS_SHADER_WRITE_BIT;
+	}
+	if (sunset_access_stages & static_cast<uint32_t>(Sunset::AccessFlags::ColorAttachmentRead))
+	{
+		vk_access_flags |= VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+	}
+	if (sunset_access_stages & static_cast<uint32_t>(Sunset::AccessFlags::ColorAttachmentWrite))
+	{
+		vk_access_flags |= VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+	}
+	if (sunset_access_stages & static_cast<uint32_t>(Sunset::AccessFlags::DepthStencilAttachmentRead))
+	{
+		vk_access_flags |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+	}
+	if (sunset_access_stages & static_cast<uint32_t>(Sunset::AccessFlags::DepthStencilAttachmentWrite))
+	{
+		vk_access_flags |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+	}
+	if (sunset_access_stages & static_cast<uint32_t>(Sunset::AccessFlags::TransferRead))
+	{
+		vk_access_flags |= VK_ACCESS_TRANSFER_READ_BIT;
+	}
+	if (sunset_access_stages & static_cast<uint32_t>(Sunset::AccessFlags::TransferWrite))
+	{
+		vk_access_flags |= VK_ACCESS_TRANSFER_WRITE_BIT;
+	}
+	if (sunset_access_stages & static_cast<uint32_t>(Sunset::AccessFlags::HostRead))
+	{
+		vk_access_flags |= VK_ACCESS_HOST_READ_BIT;
+	}
+	if (sunset_access_stages & static_cast<uint32_t>(Sunset::AccessFlags::HostWrite))
+	{
+		vk_access_flags |= VK_ACCESS_HOST_WRITE_BIT;
+	}
+	if (sunset_access_stages & static_cast<uint32_t>(Sunset::AccessFlags::MemoryRead))
+	{
+		vk_access_flags |= VK_ACCESS_MEMORY_READ_BIT;
+	}
+	if (sunset_access_stages & static_cast<uint32_t>(Sunset::AccessFlags::MemoryWrite))
+	{
+		vk_access_flags |= VK_ACCESS_MEMORY_WRITE_BIT;
+	}
+	return static_cast<VkAccessFlagBits>(vk_access_flags);
 }
 
 inline std::vector<VkDescriptorSetLayoutBinding> VK_FROM_SUNSET_DESCRIPTOR_BINDINGS(const std::vector<Sunset::DescriptorBinding>& bindings)

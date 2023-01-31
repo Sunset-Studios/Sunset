@@ -12,7 +12,7 @@ namespace Sunset
 		~VulkanFramebuffer() = default;
 
 	public:
-		void initialize(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, void* render_pass_handle = nullptr, void* attachments_handle = nullptr, const std::initializer_list<class Image*>& additional_attachments = {});
+		void initialize(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, void* render_pass_handle = nullptr, void* attachments_handle = nullptr, const std::initializer_list<ImageID>& additional_attachments = {});
 		void destroy(class GraphicsContext* const gfx_context);
 		void* get_framebuffer_handle()
 		{

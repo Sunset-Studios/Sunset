@@ -6,33 +6,6 @@
 
 namespace Sunset
 {
-	Sunset::DescriptorLayoutID DescriptorLayoutCache::fetch_or_add(const std::vector<DescriptorBinding>& bindings, class GraphicsContext* const gfx_context)
-	{
-		DescriptorLayoutID id{ 0 };
-		for (const DescriptorBinding& binding : bindings)
-		{
-			id = Maths::cantor_pair_hash(static_cast<int32_t>(id), static_cast<int32_t>(std::hash<DescriptorBinding>{}(binding)));
-		}
-		if (descriptor_layouts.find(id) == descriptor_layouts.end())
-		{
-			DescriptorLayout* const new_descriptor_layout = GlobalAssetPools<DescriptorLayout>::get()->allocate();
-			new_descriptor_layout->set_bindings(bindings);
-			new_descriptor_layout->build(gfx_context);
-			gfx_context->add_resource_deletion_execution([new_descriptor_layout, gfx_context]()
-			{
-				GlobalAssetPools<DescriptorLayout>::get()->deallocate(new_descriptor_layout);
-			});
-			descriptor_layouts.insert({ id, new_descriptor_layout });
-		}
-		return id;
-	}
-
-	Sunset::DescriptorLayout* DescriptorLayoutCache::fetch(DescriptorLayoutID layout_id)
-	{
-		assert(descriptor_layouts.find(layout_id) != descriptor_layouts.end());
-		return descriptor_layouts[layout_id];
-	}
-
 	Sunset::DescriptorSetBuilder DescriptorSetBuilder::begin(class GraphicsContext* const context)
 	{
 		DescriptorSetBuilder builder;
@@ -66,8 +39,17 @@ namespace Sunset
 
 	bool DescriptorSetBuilder::build(DescriptorSet*& out_descriptor_set, DescriptorLayout*& out_descriptor_layout)
 	{
-		DescriptorLayoutID layout_id = DescriptorLayoutCache::get()->fetch_or_add(bindings, gfx_context);
+		Identity cache_id;
+		for (const DescriptorBinding& binding : bindings)
+		{
+			cache_id = Maths::cantor_pair_hash(static_cast<int32_t>(cache_id), static_cast<int32_t>(std::hash<DescriptorBinding>{}(binding)));
+		}
+
+		DescriptorLayoutID layout_id = DescriptorLayoutCache::get()->fetch_or_add(cache_id, gfx_context);
 		out_descriptor_layout = DescriptorLayoutCache::get()->fetch(layout_id);
+
+		out_descriptor_layout->set_bindings(bindings);
+		out_descriptor_layout->build(gfx_context);
 		
 		out_descriptor_set = gfx_context->get_descriptor_set_allocator()->allocate(gfx_context, out_descriptor_layout);
 		if (out_descriptor_set == nullptr)

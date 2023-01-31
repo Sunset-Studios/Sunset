@@ -21,7 +21,8 @@ namespace Sunset
 {
 	void StaticMeshProcessor::update(class Scene* scene, double delta_time)
 	{
-		const uint32_t current_buffered_frame = Renderer::get()->context()->get_buffered_frame_number();
+		GraphicsContext* const gfx_context = Renderer::get()->context();
+		const uint32_t current_buffered_frame = gfx_context->get_buffered_frame_number();
 
 		for (EntityID entity : SceneView<MeshComponent, TransformComponent>(*scene))
 		{
@@ -51,14 +52,25 @@ namespace Sunset
 
 			DescriptorData& material_descriptor = material->descriptor_datas[static_cast<int16_t>(DescriptorSetType::Material)];
 
+			PushConstantPipelineData push_constants_data = PushConstantPipelineData::create(&mesh_comp->additional_data);
+
 			// TODO_BEGIN: Material stuff can probably be moved out into some sort of material factory or material processor
 			if (material_descriptor.descriptor_set == nullptr)
 			{
 				std::vector<DescriptorBuildData> texture_bindings;
 				for (int i = 0; i < material->textures.size(); ++i)
 				{
-					const char* path = material->textures[i];
-					Image* const texture = ImageFactory::load(Renderer::get()->context(), path);
+					Image* const texture = ImageFactory::load(
+						gfx_context,
+						{
+							.name = material->textures[i],
+							.path = material->textures[i],
+							.flags = (ImageFlags::Sampled | ImageFlags::TransferDst),
+							.usage_type = MemoryUsageType::OnlyGPU,
+							.image_filter = ImageFilter::Nearest
+						}
+					);
+
 					texture_bindings.push_back(
 					DescriptorBuildData{
 						.binding = static_cast<uint16_t>(i),
@@ -67,18 +79,16 @@ namespace Sunset
 						.shader_stages = PipelineShaderStageType::Fragment
 					});
 				}
-				DescriptorHelpers::inject_descriptors(Renderer::get()->context(), material_descriptor, texture_bindings);
+				DescriptorHelpers::inject_descriptors(gfx_context, material_descriptor, texture_bindings);
 			}
-
-			PushConstantPipelineData push_constants_data = PushConstantPipelineData::create(&mesh_comp->additional_data);
 
 			if (material->pipeline_state == 0)
 			{
-				PipelineStateBuilder state_builder = PipelineStateBuilder::create_default(Renderer::get()->window())
+				PipelineStateBuilder state_builder = PipelineStateBuilder::create_default(gfx_context->get_window())
 					.clear_shader_stages()
 					.set_shader_layout(
 						ShaderPipelineLayoutFactory::create(
-							Renderer::get()->context(),
+							gfx_context,
 							push_constants_data,
 							{
 								Renderer::get()->global_descriptor_layout(current_buffered_frame),
@@ -96,19 +106,25 @@ namespace Sunset
 
 				material->pipeline_state = state_builder.finish();
 
-				PipelineStateCache::get()->fetch(material->pipeline_state)->build(Renderer::get()->context(), Renderer::get()->master_pass()->get_data());
+				PipelineStateCache::get()
+					->fetch(material->pipeline_state)
+					->build(
+						gfx_context,
+						Renderer::get()->pass(RenderPassFlags::Main)->get_data()
+					);
 			}
 			// TODO_END: Material stuff can probably be moved out into some sort of material factory or material processor
 
 			Renderer::get()
 				->fresh_rendertask()
-				->setup(mesh_comp->material, mesh_comp->resource_state)
+				->setup(mesh_comp->material, mesh_comp->resource_state, 0)
 				->set_push_constants(std::move(push_constants_data))
-				->submit(Renderer::get()->master_pass());
+				->set_entity(entity)
+				->submit(RenderPassFlags::Main);
 		}
 
 		EntityGlobals::get()->transforms.transform_buffer[current_buffered_frame]->copy_from(
-			Renderer::get()->context(),
+			gfx_context,
 			EntityGlobals::get()->transforms.entity_transforms.data(),
 			EntityGlobals::get()->transforms.entity_transforms.size() * sizeof(glm::mat4)
 		);

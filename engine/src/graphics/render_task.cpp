@@ -9,18 +9,25 @@
 
 namespace Sunset
 {
-	RenderTask* RenderTask::setup(MaterialID new_material, ResourceStateID new_resource_state, uint32_t new_render_depth /*= 0*/, RenderPassFlags new_render_pass_flags /*= RenderPassFlags::Depth */)
+	RenderTask* RenderTask::setup(MaterialID new_material, ResourceStateID new_resource_state, uint32_t new_render_depth /*= 0*/)
 	{
 		material = new_material;
 		resource_state = new_resource_state;
 		render_depth = new_render_depth;
-		render_pass_flags = new_render_pass_flags;
 		return this;
 	}
 
-	void RenderTask::submit(RenderPass* pass)
+	void RenderTask::submit(RenderPassFlags render_passes)
 	{
-		pass->push_task(this);
+		task_hash = std::hash<RenderTask>{}(*this);
+		for (int i = 0; i < MAX_PASS_COUNT; ++i)
+		{
+			RenderPassFlags pass_type = static_cast<RenderPassFlags>(1 << i);
+			if ((pass_type | render_passes) != RenderPassFlags::None)
+			{
+				Renderer::get()->pass(pass_type)->push_task(this);
+			}
+		}
 	}
 
 	void RenderTaskExecutor::reset()
@@ -61,7 +68,7 @@ namespace Sunset
 			ResourceStateCache::get()->fetch(resource_state)->state_data.instance_index);
 	}
 
-	void RenderTaskExecutor::operator()(class GraphicsContext* const gfx_context, void* command_buffer, const IndirectDrawBatch& indirect_draw)
+	void RenderTaskExecutor::operator()(class GraphicsContext* const gfx_context, void* command_buffer, const IndirectDrawBatch& indirect_draw, class Buffer* indirect_buffer)
 	{
 		bool b_pipeline_changed = false;
 		if (cached_material != indirect_draw.material)
@@ -83,7 +90,7 @@ namespace Sunset
 
 		gfx_context->draw_indexed_indirect(
 			command_buffer,
-			Renderer::get()->indirect_draw_buffer(gfx_context->get_buffered_frame_number()),
+			indirect_buffer,
 			indirect_draw.count,
 			indirect_draw.first
 		);

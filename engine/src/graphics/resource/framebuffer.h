@@ -10,7 +10,7 @@ namespace Sunset
 	public:
 		GenericFramebuffer() = default;
 
-		void initialize(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, void* render_pass_handle = nullptr, void* attachments_handle = nullptr, const std::initializer_list<class Image*>& additional_attachments = {})
+		void initialize(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, void* render_pass_handle = nullptr, void* attachments_handle = nullptr, const std::initializer_list<ImageID>& additional_attachments = {})
 		{
 			framebuffer_policy.initialize(gfx_context, swapchain, render_pass_handle, attachments_handle, additional_attachments);
 		}
@@ -34,7 +34,7 @@ namespace Sunset
 	public:
 		NoopFramebuffer() = default;
 
-		void initialize(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, void* render_pass_handle = nullptr, void* attachments_handle = nullptr, const std::initializer_list<class Image*>& additional_attachments = {})
+		void initialize(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, void* render_pass_handle = nullptr, void* attachments_handle = nullptr, const std::initializer_list<ImageID>& additional_attachments = {})
 		{ }
 
 		void destroy(class GraphicsContext* const gfx_context)

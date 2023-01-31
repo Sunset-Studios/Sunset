@@ -1,4 +1,5 @@
 #include <graphics/api/vulkan/vk_context.h>
+#include <graphics/command_queue.h>
 #include <graphics/resource/buffer.h>
 #include <graphics/pipeline_state.h>
 #include <graphics/descriptor.h>
@@ -91,9 +92,32 @@ namespace Sunset
 
 	void VulkanContext::draw_indexed_indirect(void* buffer, class Buffer* indirect_buffer, uint32_t draw_count, uint32_t draw_first /*= 0*/)
 	{
-		VkDeviceSize indirect_offset = draw_first * sizeof(VkDrawIndexedIndirectCommand);
-		uint32_t stride = sizeof(VkDrawIndexedIndirectCommand);
+		VkDeviceSize indirect_offset = draw_first * sizeof(VulkanGPUIndirectObject);
+		uint32_t stride = sizeof(VulkanGPUIndirectObject);
 		vkCmdDrawIndexedIndirect(static_cast<VkCommandBuffer>(buffer), static_cast<VkBuffer>(indirect_buffer->get()), indirect_offset, draw_count, stride);
+	}
+
+	void VulkanContext::register_command_queue(DeviceQueueType queue_type)
+	{
+		const int16_t queue_type_idx = static_cast<int16_t>(queue_type);
+		if (state.queues[queue_type_idx] == nullptr)
+		{
+			state.queues[queue_type_idx] = std::move(GraphicsCommandQueueFactory::create(&state, queue_type));
+		}
+	}
+
+	void VulkanContext::destroy_command_queue(DeviceQueueType queue_type)
+	{
+		const int16_t queue_type_idx = static_cast<int16_t>(queue_type);
+		if (state.queues[queue_type_idx] != nullptr)
+		{
+			state.queues[queue_type_idx]->destroy(&state);
+		}
+	}
+
+	CommandQueue* VulkanContext::get_command_queue(DeviceQueueType queue_type)
+	{
+		return state.queues[static_cast<int16_t>(queue_type)].get();
 	}
 
 	void VulkanContext::push_constants(void* buffer, PipelineStateID pipeline_state, const PushConstantPipelineData& push_constant_data)
@@ -163,13 +187,15 @@ namespace Sunset
 		return state.device.physical_device.properties.limits.minUniformBufferOffsetAlignment;
 	}
 
-	void VulkanContext::update_indirect_draw_command(void* commands, uint32_t command_index, uint32_t index_count, uint32_t first_index, uint32_t instance_count, uint32_t first_instance)
+	void VulkanContext::update_indirect_draw_command(void* commands, uint32_t command_index, uint32_t index_count, uint32_t first_index, uint32_t instance_count, uint32_t first_instance, uint64_t object_id, uint32_t batch_id)
 	{
-		VkDrawIndexedIndirectCommand* vk_commands = static_cast<VkDrawIndexedIndirectCommand*>(commands);
-		vk_commands[command_index].indexCount = index_count;
-		vk_commands[command_index].firstIndex = first_index;
-		vk_commands[command_index].instanceCount = instance_count;
-		vk_commands[command_index].firstInstance = first_instance;
+		VulkanGPUIndirectObject* vk_commands = static_cast<VulkanGPUIndirectObject*>(commands);
+		vk_commands[command_index].indirect_command.indexCount = index_count;
+		vk_commands[command_index].indirect_command.firstIndex = first_index;
+		vk_commands[command_index].indirect_command.instanceCount = instance_count;
+		vk_commands[command_index].indirect_command.firstInstance = first_instance;
+		vk_commands[command_index].object_instance.object_id = object_id;
+		vk_commands[command_index].object_instance.batch_id = batch_id;
 	}
 
 	void create_surface(VulkanContext* const vulkan_context, Window* const window)

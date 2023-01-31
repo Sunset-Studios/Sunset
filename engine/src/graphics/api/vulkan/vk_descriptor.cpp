@@ -22,11 +22,14 @@ namespace Sunset
 		set_create_info.flags = 0;
 		set_create_info.pBindings = vk_bindings.data();
 		vkCreateDescriptorSetLayout(context_state->get_device(), &set_create_info, nullptr, &layout);
+	}
 
-		gfx_context->add_resource_deletion_execution([this, device = context_state->get_device()]()
-		{
-			vkDestroyDescriptorSetLayout(device, layout, nullptr);
-		});
+	void VulkanDescriptorLayout::destroy(class GraphicsContext* const gfx_context)
+	{
+		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
+		assert(context_state != nullptr);
+
+		vkDestroyDescriptorSetLayout(context_state->get_device(), layout, nullptr);
 	}
 
 	bool VulkanDescriptorSet::build(GraphicsContext* const gfx_context, DescriptorLayout* descriptor_layout, void* descriptor_pool)

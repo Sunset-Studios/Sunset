@@ -1,7 +1,7 @@
 #pragma once
 
-#include <singleton.h>
 #include <resource_types.h>
+#include <resource_cache.h>
 
 namespace Sunset
 {
@@ -52,28 +52,5 @@ namespace Sunset
 		class GraphicsContext* context{ nullptr };
 	};
 
-	class ResourceStateCache : public Singleton<ResourceStateCache>
-	{
-		friend class Singleton;
-
-	public:
-		void initialize();
-		void update();
-
-		ResourceStateID fetch_or_add(const ResourceStateData& data, class GraphicsContext* const gfx_context = nullptr);
-		void remove(ResourceStateID id);
-		ResourceState* fetch(ResourceStateID id);
-		void destroy(class GraphicsContext* const gfx_context);
-
-		size_t size() const
-		{
-			return cache.size();
-		}
-
-	protected:
-		std::unordered_map<ResourceStateID, ResourceState*> cache;
-
-	private:
-		ResourceStateCache() = default;
-	};
+	DEFINE_RESOURCE_CACHE(ResourceStateCache, ResourceStateID, ResourceState);
 }

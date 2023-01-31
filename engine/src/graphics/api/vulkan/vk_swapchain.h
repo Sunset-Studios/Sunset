@@ -33,7 +33,7 @@ namespace Sunset
 			}
 
 			void request_next_image(class GraphicsContext* const gfx_context);
-			void present(class GraphicsContext* const gfx_context, class GraphicsCommandQueue* const command_queue);
+			void present(class GraphicsContext* const gfx_context, DeviceQueueType queue_type);
 
 		protected:
 			VulkanSwapchainData data;

@@ -3,6 +3,7 @@
 #include <utility/execution_queue.h>
 #include <graphics/pipeline_types.h>
 #include <graphics/push_constants.h>
+#include <graphics/command_queue_types.h>
 
 #include <vk_types.h>
 #include <vk_initializers.h>
@@ -23,16 +24,17 @@ namespace Sunset
 	{
 		public:
 			VkInstance instance{ nullptr };
-			VkDebugUtilsMessengerEXT debug_messenger{ nullptr };
-			VkSurfaceKHR surface{ nullptr };
-			class Window* window{ nullptr };
-			class BufferAllocator* buffer_allocator{ nullptr };
-			class DescriptorSetAllocator* descriptor_set_allocator{ nullptr };
 			vkb::Device device;
 			vkb::PhysicalDevice physical_device;
+			VkDebugUtilsMessengerEXT debug_messenger{ nullptr };
+			VkSurfaceKHR surface{ nullptr };
 			VulkanSyncPool sync_pool;
 			VulkanFrameSyncPrimitives frame_sync_primitives[MAX_BUFFERED_FRAMES];
 			uint32_t frame_number{ 0 };
+			class Window* window{ nullptr };
+			std::unique_ptr<class CommandQueue> queues[static_cast<int16_t>(DeviceQueueType::Num)];
+			class BufferAllocator* buffer_allocator{ nullptr };
+			class DescriptorSetAllocator* descriptor_set_allocator{ nullptr };
 
 		public:
 			VulkanContextState() = default;
@@ -70,6 +72,11 @@ namespace Sunset
 				return &state;
 			}
 
+			class Window* get_window()
+			{
+				return state.window;
+			}
+
 			void set_buffer_allocator(class BufferAllocator* allocator)
 			{
 				state.buffer_allocator = allocator;
@@ -90,6 +97,10 @@ namespace Sunset
 				return state.descriptor_set_allocator;
 			}
 
+			void register_command_queue(DeviceQueueType queue_type);
+			void destroy_command_queue(DeviceQueueType queue_type);
+			class CommandQueue* get_command_queue(DeviceQueueType queue_type);
+
 			uint32_t get_frame_number() const
 			{
 				return state.frame_number;
@@ -108,7 +119,7 @@ namespace Sunset
 			void push_constants(void* buffer, PipelineStateID pipeline_state, const PushConstantPipelineData& push_constant_data);
 			void push_descriptor_writes(const std::vector<DescriptorWrite>& descriptor_writes);
 			size_t get_min_ubo_offset_alignment();
-			void update_indirect_draw_command(void* commands, uint32_t command_index, uint32_t index_count, uint32_t first_index, uint32_t instance_count, uint32_t first_instance);
+			void update_indirect_draw_command(void* commands, uint32_t command_index, uint32_t index_count, uint32_t first_index, uint32_t instance_count, uint32_t first_instance, uint64_t object_id, uint32_t batch_id);
 
 		public:
 			VulkanContextState state;

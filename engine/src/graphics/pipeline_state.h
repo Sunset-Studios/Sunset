@@ -1,11 +1,11 @@
 #pragma once
 
-#include <singleton.h>
 #include <common.h>
 #include <pipeline_types.h>
 #include <graphics/render_pass_types.h>
 #include <graphics/resource/shader.h>
 #include <graphics/resource/shader_pipeline_layout.h>
+#include <graphics/resource/resource_cache.h>
 
 namespace Sunset
 {
@@ -185,28 +185,5 @@ namespace Sunset
 			class GraphicsContext* context{ nullptr };
 	};
 
-	class PipelineStateCache : public Singleton<PipelineStateCache>
-	{
-		friend class Singleton;
-
-		public:
-			void initialize();
-			void update();
-
-			PipelineStateID fetch_or_add(const PipelineStateData& data, class GraphicsContext* const gfx_context = nullptr);
-			void remove(PipelineStateID id);
-			PipelineState* fetch(PipelineStateID id);
-			void destroy(class GraphicsContext* const gfx_context);
-			
-			size_t size() const
-			{
-				return cache.size();
-			}
-
-		protected:
-			std::unordered_map<PipelineStateID, PipelineState*> cache;
-
-		private:
-			PipelineStateCache() = default;
-	};
+	DEFINE_RESOURCE_CACHE(PipelineStateCache, PipelineStateID, PipelineState);
 }

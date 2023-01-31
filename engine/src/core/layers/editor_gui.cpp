@@ -6,7 +6,8 @@ namespace Sunset
 {
 	void EditorGui::initialize()
 	{
-		global_gui_core.initialize(Renderer::get()->context(), Renderer::get()->window());
+		GraphicsContext* const gfx_context = Renderer::get()->context();
+		global_gui_core.initialize(gfx_context, gfx_context->get_window());
 	}
 
 	void EditorGui::destroy()
@@ -16,6 +17,6 @@ namespace Sunset
 	void EditorGui::update(double delta_time)
 	{
 		global_gui_core.poll_events();
-		global_gui_core.new_frame(Renderer::get()->window());
+		global_gui_core.new_frame(Renderer::get()->context()->get_window());
 	}
 }

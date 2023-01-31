@@ -3,7 +3,7 @@
 #include <common.h>
 #include <graphics/resource/buffer.h>
 #include <graphics/resource/image_types.h>
-#include <utility/pattern/singleton.h>
+#include <graphics/resource/resource_cache.h>
 
 namespace Sunset
 {
@@ -103,32 +103,9 @@ namespace Sunset
 	class ImageFactory
 	{
 	public:
-		static Image* create(class GraphicsContext* const gfx_context, const AttachmentConfig& config, bool auto_delete = true);
-		static Image* load(class GraphicsContext* const gfx_context, const char* path);
+		static ImageID create(class GraphicsContext* const gfx_context, const AttachmentConfig& config, bool auto_delete = true);
+		static ImageID load(class GraphicsContext* const gfx_context, const AttachmentConfig& config);
 	};
 
-	class ImageCache : public Singleton<ImageCache>
-	{
-	friend class Singleton;
-
-	public:
-		void initialize();
-		void update();
-
-		ImageID fetch_or_add(const char* file_path, class GraphicsContext* const gfx_context = nullptr);
-		void remove(ImageID id);
-		Image* fetch(ImageID id);
-		void destroy(class GraphicsContext* const gfx_context);
-
-		size_t size() const
-		{
-			return cache.size();
-		}
-
-	protected:
-		std::unordered_map<ImageID, Image*> cache;
-
-	private:
-		ImageCache() = default;
-	};
+	DEFINE_RESOURCE_CACHE(ImageCache, ImageID, Image);
 }

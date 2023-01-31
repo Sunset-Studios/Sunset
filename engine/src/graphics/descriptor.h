@@ -1,8 +1,8 @@
 #pragma once
 
 #include <common.h>
-#include <utility/pattern/singleton.h>
 #include <graphics/descriptor_types.h>
+#include <graphics/resource/resource_cache.h>
 
 namespace Sunset
 {
@@ -28,6 +28,11 @@ namespace Sunset
 			descriptor_layout_policy.build(gfx_context, bindings);
 		}
 
+		void destroy(class GraphicsContext* const gfx_context)
+		{
+			descriptor_layout_policy.destroy(gfx_context);
+		}
+
 		void* get() const
 		{
 			return descriptor_layout_policy.get();
@@ -46,6 +51,9 @@ namespace Sunset
 		void build(class GraphicsContext* const gfx_context, const std::vector<DescriptorBinding>& bindings)
 		{ }
 
+		void destroy(class GraphicsContext* const gfx_context)
+		{ }
+
 		void* get() const
 		{
 			return nullptr;
@@ -60,22 +68,7 @@ namespace Sunset
 	{ };
 #endif
 
-	class DescriptorLayoutCache : public Singleton<DescriptorLayoutCache>
-	{
-		friend class Singleton;
-
-	public:
-		void initialize() { }
-
-		DescriptorLayoutID fetch_or_add(const std::vector<DescriptorBinding>& bindings, class GraphicsContext* const gfx_context);
-		DescriptorLayout* fetch(DescriptorLayoutID layout_id);
-
-	private:
-		DescriptorLayoutCache() = default;
-
-	private:
-		std::unordered_map<DescriptorLayoutID, DescriptorLayout*> descriptor_layouts;
-	};
+	DEFINE_RESOURCE_CACHE(DescriptorLayoutCache, DescriptorLayoutID, DescriptorLayout);
 	// END - Descriptor Set Layout
 
 	// BEGIN - Descriptor Set

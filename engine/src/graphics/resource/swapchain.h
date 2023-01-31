@@ -30,9 +30,9 @@ namespace Sunset
 			swapchain_policy.request_next_image(gfx_context);
 		}
 
-		void present(class GraphicsContext* const gfx_context, class GraphicsCommandQueue* const command_queue)
+		void present(class GraphicsContext* const gfx_context, DeviceQueueType queue_type)
 		{
-			swapchain_policy.present(gfx_context, command_queue);
+			swapchain_policy.present(gfx_context, queue_type);
 		}
 
 	private:
@@ -58,7 +58,7 @@ namespace Sunset
 		void request_next_image(class GraphicsContext* const gfx_context)
 		{ }
 
-		void present(class GraphicsContext* const gfx_context, class GraphicsCommandQueue* const command_queue)
+		void present(class GraphicsContext* const gfx_context, DeviceQueueType queue_type)
 		{ }
 	};
 

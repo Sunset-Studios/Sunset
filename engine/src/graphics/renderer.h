@@ -2,10 +2,8 @@
 
 #include <common.h>
 #include <singleton.h>
-#include <graphics/command_queue.h>
 #include <graphics/graphics_context.h>
-#include <graphics/render_task.h>
-#include <window/window.h>
+#include <graphics/render_graph.h>
 
 namespace Sunset
 {
@@ -22,21 +20,6 @@ namespace Sunset
 			GraphicsContext* context() const
 			{
 				return graphics_context.get();
-			}
-
-			Window* window() const
-			{
-				return graphics_window;
-			}
-
-			class RenderPass* master_pass() const
-			{
-				return graphics_master_pass;
-			}
-
-			GraphicsCommandQueue* graphics_command_queue() const
-			{
-				return command_queue.get();
 			}
 
 			DescriptorData get_global_descriptor_data(uint16_t buffered_frame) const
@@ -69,12 +52,7 @@ namespace Sunset
 				return object_descriptor_data[buffered_frame].descriptor_layout;
 			}
 
-			class Buffer* indirect_draw_buffer(uint16_t buffered_frame) const
-			{
-				return indirect_draw_buffers[buffered_frame];
-			}
-
-			RenderTask* fresh_rendertask();
+			RenderGraph& get_render_graph();
 
 			void inject_global_descriptor(uint16_t buffered_frame, const std::initializer_list<DescriptorBuildData>& descriptor_build_datas);
 			void inject_object_descriptor(uint16_t buffered_frame, const std::initializer_list<DescriptorBuildData>& descriptor_build_datas);
@@ -87,14 +65,11 @@ namespace Sunset
 			~Renderer() = default;
 
 		protected:
-			RenderTaskFrameAllocator rendertask_allocator;
 			std::unique_ptr<GraphicsContext> graphics_context;
 			class Swapchain* swapchain;
-			std::unique_ptr<GraphicsCommandQueue> command_queue;
-			class RenderPass* graphics_master_pass;
-			Window* graphics_window;
 
-			class Buffer* indirect_draw_buffers[MAX_BUFFERED_FRAMES];
+			RenderGraph render_graph;
+
 			DescriptorData global_descriptor_data[MAX_BUFFERED_FRAMES];
 			DescriptorData object_descriptor_data[MAX_BUFFERED_FRAMES];
 	};

@@ -7,28 +7,32 @@
 
 namespace Sunset
 {
-	class RenderQueue
+	class TaskQueue
 	{
 		public:
-			RenderQueue() = default;
-			~RenderQueue() = default;
+			TaskQueue() = default;
+			~TaskQueue() = default;
 
 			bool empty() const
 			{
 				return queue.empty();
 			}
 
-			void add(RenderTask* const task);
+			inline void add(RenderTask* const task)
+			{
+				queue.emplace_back(task);
+			}
+
 			void submit(class GraphicsContext* const gfx_context, void* command_buffer, bool b_flush = true);
 
 		private:
-			void execute(class GraphicsContext* const gfx_context, RenderTask* const task, void* command_buffer);
-			void execute(class GraphicsContext* const gfx_context, const IndirectDrawBatch& indirect_draw, void* command_buffer);
-
 			std::vector<IndirectDrawBatch> batch_indirect_draws(class GraphicsContext* const gfx_context);
+			void update_indirect_draw_buffers(class GraphicsContext* const gfx_context, void* command_buffer, const std::vector<IndirectDrawBatch>& indirect_batches);
 
 		private:
 			std::vector<RenderTask*> queue;
+			std::vector<size_t> previous_queue_hashes;
 			RenderTaskExecutor executor;
+			GPUInstanceIndirectBufferData instance_indirect_buffer_data;
 	};
 }

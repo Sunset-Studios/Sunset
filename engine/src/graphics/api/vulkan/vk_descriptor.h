@@ -14,6 +14,7 @@ namespace Sunset
 		VulkanDescriptorLayout() = default;
 
 		void build(class GraphicsContext* const gfx_context, const std::vector<DescriptorBinding>& bindings);
+		void destroy(class GraphicsContext* const gfx_context);
 
 		void* get() const
 		{

@@ -18,7 +18,7 @@ namespace Sunset
 
 		void reset();
 		void operator()(class GraphicsContext* const gfx_context, void* command_buffer, MaterialID material, ResourceStateID resource_state, const PushConstantPipelineData& push_constants = {});
-		void operator()(class GraphicsContext* const gfx_context, void* command_buffer, const IndirectDrawBatch& indirect_draw);
+		void operator()(class GraphicsContext* const gfx_context, void* command_buffer, const IndirectDrawBatch& indirect_draw, class Buffer* indirect_buffer);
 
 	private:
 		MaterialID cached_material{ 0 };
@@ -31,8 +31,8 @@ namespace Sunset
 		RenderTask() = default;
 		~RenderTask() = default;
 
-		RenderTask* setup(MaterialID new_material, ResourceStateID new_resource_state, uint32_t new_render_depth = 0, RenderPassFlags new_render_pass_flags = RenderPassFlags::Depth);
-		void submit(class RenderPass* pass);
+		RenderTask* setup(MaterialID new_material, ResourceStateID new_resource_state, uint32_t new_render_depth = 0);
+		void submit(RenderPassFlags render_passes);
 
 		RenderTask* set_push_constants(PushConstantPipelineData&& push_constant_data)
 		{
@@ -40,8 +40,16 @@ namespace Sunset
 			return this;
 		}
 
+		RenderTask* set_entity(EntityID entity_id)
+		{
+			entity = entity_id;
+			return this;
+		}
+
 	public:
-		RenderPassFlags render_pass_flags{ RenderPassFlags::Depth };
+		std::size_t task_hash{ 0 };
+
+		EntityID entity{ 0 };
 		MaterialID material{ 0 };
 		ResourceStateID resource_state{ 0 };
 		uint32_t render_depth{ 0 };
@@ -50,3 +58,22 @@ namespace Sunset
 
 	using RenderTaskFrameAllocator = StaticFrameAllocator<RenderTask>;
 }
+
+
+#pragma warning( push )
+#pragma warning( disable : 4244)
+#pragma warning( disable : 4267)
+
+template<>
+struct std::hash<Sunset::RenderTask>
+{
+	std::size_t operator()(const Sunset::RenderTask& psd) const
+	{
+		std::size_t final_hash = Sunset::Maths::cantor_pair_hash(static_cast<int32_t>(psd.entity), static_cast<int32_t>(psd.material));
+		final_hash = Sunset::Maths::cantor_pair_hash(final_hash, static_cast<int32_t>(psd.resource_state));
+		final_hash = Sunset::Maths::cantor_pair_hash(final_hash, psd.render_depth);
+		return final_hash;
+	}
+};
+
+#pragma warning( pop ) 

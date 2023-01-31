@@ -3,7 +3,9 @@
 #include <common.h>
 #include <graphics/pipeline_state.h>
 #include <graphics/render_task.h>
-#include <graphics/render_queue.h>
+#include <graphics/task_queue.h>
+#include <graphics/render_pass_types.h>
+#include <graphics/resource/resource_cache.h>
 
 namespace Sunset
 {
@@ -13,14 +15,15 @@ namespace Sunset
 	public:
 		GenericRenderPass() = default;
 
-		void initialize(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, const std::initializer_list<class Image*>& attachments)
+		void initialize_default_compute(class GraphicsContext* const gfx_context, class Swapchain* const swapchain)
 		{
-			render_pass_policy.initialize(gfx_context, swapchain, attachments);
+			render_pass_policy.initialize_default_compute(gfx_context, swapchain);
 		}
 
-		void initialize_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, const std::initializer_list<class Image*>& attachments)
+		void initialize_default_graphics(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, const RenderPassConfig& config)
 		{
-			render_pass_policy.initialize_default(gfx_context, swapchain, attachments);
+			pass_config = config;
+			render_pass_policy.initialize_default_graphics(gfx_context, swapchain, pass_config);
 		}
 
 		void destroy(class GraphicsContext* const gfx_context)
@@ -28,10 +31,10 @@ namespace Sunset
 			render_pass_policy.destroy(gfx_context);
 		}
 
-		void draw(class GraphicsContext* const gfx_context, void* command_buffer)
+		void submit(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, void* command_buffer)
 		{
-			render_pass_policy.draw(gfx_context, command_buffer);
-			render_queue.submit(gfx_context, command_buffer);
+			render_pass_policy.submit(gfx_context, command_buffer);
+			task_queue.submit(gfx_context, command_buffer);
 		}
 
 		void* get_data()
@@ -61,12 +64,15 @@ namespace Sunset
 
 		void push_task(RenderTask* task)
 		{
-			render_queue.add(task);
+			task_queue.add(task);
 		}
 
 	private:
 		Policy render_pass_policy;
-		RenderQueue render_queue;
+		RenderPassConfig pass_config;
+		// TODO: Move task queue out and rename to something more akin to it's purpose since it's
+		// mostly only used for mesh/object render tasks
+		TaskQueue task_queue;
 	};
 
 	class NoopRenderPass
@@ -74,10 +80,10 @@ namespace Sunset
 	public:
 		NoopRenderPass() = default;
 
-		void initialize(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, const std::initializer_list<class Image*>& attachments)
+		void initialize_default_compute(class GraphicsContext* const gfx_context, class Swapchain* const swapchain)
 		{ }
 
-		void initialize_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, const std::initializer_list<class Image*>& attachments)
+		void initialize_default_graphics(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, const RenderPassConfig& config)
 		{ }
 
 		void destroy(class GraphicsContext* const gfx_context)
@@ -117,18 +123,20 @@ namespace Sunset
 	class RenderPassFactory
 	{
 	public:
-		static RenderPass* create(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, const std::initializer_list<class Image*>& attachments)
+		static RenderPass* create_default_compute(class GraphicsContext* const gfx_context, class Swapchain* const swapchain)
 		{
 			RenderPass* rp = new RenderPass;
-			rp->initialize(gfx_context, swapchain, attachments);
+			rp->initialize_default_compute(gfx_context, swapchain);
 			return rp;
 		}
 
-		static RenderPass* create_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, const std::initializer_list<class Image*>& attachments)
+		static RenderPass* create_default_graphics(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, const RenderPassConfig& config)
 		{
 			RenderPass* rp = new RenderPass;
-			rp->initialize_default(gfx_context, swapchain, attachments);
+			rp->initialize_default_graphics(gfx_context, swapchain, config);
 			return rp;
 		}
 	};
+
+	DEFINE_RESOURCE_CACHE(RenderPassCache, RenderPassID, RenderPass);
 }

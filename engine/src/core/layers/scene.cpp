@@ -104,7 +104,14 @@ namespace Sunset
 
 		if (scene_data.buffer == nullptr)
 		{
-			scene_data.buffer = BufferFactory::create(Renderer::get()->context(), (aligned_cam_data_size + aligned_lighting_data_size) * MAX_BUFFERED_FRAMES, BufferType::UniformBuffer);
+			scene_data.buffer = BufferFactory::create(
+				Renderer::get()->context(), 
+				{
+					.name = "scene_data_buffer",
+					.buffer_size = (aligned_cam_data_size + aligned_lighting_data_size) * MAX_BUFFERED_FRAMES,
+					.type = BufferType::UniformBuffer
+				}
+			);
 		}
 
 		scene_data.cam_data_buffer_start = 0;

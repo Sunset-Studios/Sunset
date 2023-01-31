@@ -3,6 +3,7 @@
 #include <graphics/resource/buffer.h>
 #include <graphics/asset_pool.h>
 #include <graphics/renderer.h>
+#include <graphics/command_queue.h>
 #include <mesh_serializer.h>
 
 namespace Sunset
@@ -13,13 +14,34 @@ namespace Sunset
 			// Upload vertex buffer
 			const size_t vertex_data_size = vertices.size() * sizeof(Vertex);
 
-			Buffer* const vertex_staging_buffer = BufferFactory::create(gfx_context, vertex_data_size, BufferType::TransferSource, MemoryUsageType::OnlyCPU, false);
+			std::string buffer_name = name;
+			buffer_name += "_vertex_staging";
+			Buffer* const vertex_staging_buffer = BufferFactory::create(
+				gfx_context,
+				{
+					.name = buffer_name.c_str(),
+					.buffer_size = vertex_data_size,
+					.type = BufferType::TransferSource,
+					.memory_usage = MemoryUsageType::OnlyCPU
+				},
+				false
+			);
 
 			vertex_staging_buffer->copy_from(gfx_context, vertices.data(), vertex_data_size);
 
-			vertex_buffer = BufferFactory::create(gfx_context, vertex_data_size, BufferType::Vertex | BufferType::TransferDestination, MemoryUsageType::OnlyGPU);
+			buffer_name = name;
+			buffer_name += "_vertex";
+			vertex_buffer = BufferFactory::create(
+				gfx_context,
+				{
+					.name = buffer_name.c_str(),
+					.buffer_size = vertex_data_size,
+					.type = BufferType::Vertex | BufferType::TransferDestination,
+					.memory_usage = MemoryUsageType::OnlyGPU
+				}
+			);
 
-			Renderer::get()->graphics_command_queue()->submit_immediate(gfx_context, [this, gfx_context, vertex_staging_buffer, vertex_data_size](void* command_buffer)
+			gfx_context->get_command_queue(DeviceQueueType::Graphics)->submit_immediate(gfx_context, [this, gfx_context, vertex_staging_buffer, vertex_data_size](void* command_buffer)
 			{
 				vertex_buffer->copy_buffer(gfx_context, command_buffer, vertex_staging_buffer, vertex_data_size);
 			});
@@ -32,13 +54,34 @@ namespace Sunset
 			// Upload index buffer
 			const size_t index_data_size = indices.size() * sizeof(uint32_t);
 
-			Buffer* const index_staging_buffer = BufferFactory::create(gfx_context, index_data_size, BufferType::TransferSource, MemoryUsageType::OnlyCPU, false);
+			std::string buffer_name = name;
+			buffer_name += "_index_staging";
+			Buffer* const index_staging_buffer = BufferFactory::create(
+				gfx_context,
+				{
+					.name = buffer_name.c_str(),
+					.buffer_size = index_data_size,
+					.type = BufferType::TransferSource,
+					.memory_usage = MemoryUsageType::OnlyCPU
+				},
+				false
+			);
 
 			index_staging_buffer->copy_from(gfx_context, indices.data(), index_data_size);
 
-			index_buffer = BufferFactory::create(gfx_context, index_data_size, BufferType::Index | BufferType::TransferDestination, MemoryUsageType::OnlyGPU);
+			buffer_name = name;
+			buffer_name += "_index";
+			index_buffer = BufferFactory::create(
+				gfx_context,
+				{
+					.name = buffer_name.c_str(),
+					.buffer_size = index_data_size,
+					.type = BufferType::Index | BufferType::TransferDestination,
+					.memory_usage = MemoryUsageType::OnlyGPU
+				}
+			);
 
-			Renderer::get()->graphics_command_queue()->submit_immediate(gfx_context, [this, gfx_context, index_staging_buffer, index_data_size](void* command_buffer)
+			gfx_context->get_command_queue(DeviceQueueType::Graphics)->submit_immediate(gfx_context, [this, gfx_context, index_staging_buffer, index_data_size](void* command_buffer)
 			{
 				index_buffer->copy_buffer(gfx_context, command_buffer, index_staging_buffer, index_data_size);
 			});
@@ -68,7 +111,8 @@ namespace Sunset
 
 	Sunset::MeshID MeshFactory::create_triangle(class GraphicsContext* const gfx_context)
 	{
-		static MeshID mesh_id = MeshCache::get()->fetch_or_add("triangle", gfx_context);
+		Identity id = "engine_triangle";
+		static MeshID mesh_id = MeshCache::get()->fetch_or_add(id, gfx_context);
 		Mesh* const mesh = MeshCache::get()->fetch(mesh_id);
 
 		if (mesh->vertices.size() == 0)
@@ -83,6 +127,8 @@ namespace Sunset
 			mesh->vertices[1].color = { 0.0f, 1.0f, 0.0f };
 			mesh->vertices[2].color = { 0.0f, 1.0f, 0.0f };
 
+			mesh->name = id;
+
 			mesh->upload(gfx_context);
 		}
 
@@ -91,7 +137,8 @@ namespace Sunset
 
 	Sunset::MeshID MeshFactory::load(class GraphicsContext* const gfx_context, const char* path)
 	{
-		const MeshID mesh_id = MeshCache::get()->fetch_or_add(path, gfx_context);
+		Identity id = path;
+		const MeshID mesh_id = MeshCache::get()->fetch_or_add(id, gfx_context);
 		Mesh* const mesh = MeshCache::get()->fetch(mesh_id);
 
 		if (mesh->vertex_buffer == nullptr)
@@ -172,53 +219,11 @@ namespace Sunset
 				mesh->indices[i] = unpacked_indices[i];
 			}
 
+			mesh->name = id;
+
 			mesh->upload(gfx_context);
 		}
 
 		return mesh_id;
-	}
-
-	void MeshCache::initialize()
-	{
-	}
-
-	void MeshCache::update()
-	{
-	}
-
-	Sunset::MeshID MeshCache::fetch_or_add(const char* file_path, class GraphicsContext* const gfx_context /*= nullptr*/)
-	{
-		MeshID id = std::hash<std::string>{}(file_path);
-		if (cache.find(id) == cache.end())
-		{
-			Mesh* const new_mesh = GlobalAssetPools<Mesh>::get()->allocate();
-			gfx_context->add_resource_deletion_execution([new_mesh, gfx_context]()
-			{
-				new_mesh->destroy(gfx_context);
-				GlobalAssetPools<Mesh>::get()->deallocate(new_mesh);
-			});
-			cache.insert({ id, new_mesh });
-		}
-		return id;
-	}
-
-	Sunset::Mesh* MeshCache::fetch(MeshID id)
-	{
-		assert(cache.find(id) != cache.end());
-		return cache[id];
-	}
-
-	void MeshCache::remove(MeshID id)
-	{
-		cache.erase(id);
-	}
-
-	void MeshCache::destroy(class GraphicsContext* const gfx_context)
-	{
-		for (const std::pair<size_t, Mesh*>& pair : cache)
-		{
-			pair.second->destroy(gfx_context);
-		}
-		cache.clear();
 	}
 }

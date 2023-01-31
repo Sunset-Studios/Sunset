@@ -149,22 +149,22 @@ namespace Sunset
 		void initialize() { }
 
 		CVarParam* init_cvar(const char* name, const char* description);
-		CVarParam* get_cvar(StringHash hash);
+		CVarParam* get_cvar(Identity hash);
 
 		CVarParam* create_int_cvar(const char* name, const char* description, int32_t default_value, int32_t current_value);
 		CVarParam* create_float_cvar(const char* name, const char* description, double default_value, double current_value);
 		CVarParam* create_string_cvar(const char* name, const char* description, const std::string& default_value, const std::string& current_value);
 		CVarParam* create_bool_cvar(const char* name, const char* description, bool default_value, bool current_value);
 
-		int32_t* get_int_cvar(StringHash hash);
-		double* get_float_cvar(StringHash hash);
-		std::string* get_string_cvar(StringHash hash);
-		bool* get_bool_cvar(StringHash hash);
+		int32_t* get_int_cvar(Identity hash);
+		double* get_float_cvar(Identity hash);
+		std::string* get_string_cvar(Identity hash);
+		bool* get_bool_cvar(Identity hash);
 
-		void set_int_cvar(StringHash hash, int32_t value);
-		void set_float_cvar(StringHash hash, double value);
-		void set_string_cvar(StringHash hash, const std::string& value);
-		void set_bool_cvar(StringHash hash, bool value);
+		void set_int_cvar(Identity hash, int32_t value);
+		void set_float_cvar(Identity hash, double value);
+		void set_string_cvar(Identity hash, const std::string& value);
+		void set_bool_cvar(Identity hash, bool value);
 
 		template<typename T>
 		CVarArray<T>* get_cvar_array();

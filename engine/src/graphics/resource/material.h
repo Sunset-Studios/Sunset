@@ -3,7 +3,7 @@
 #include <pipeline_types.h>
 #include <descriptor_types.h>
 #include <image_types.h>
-#include <utility/pattern/singleton.h>
+#include <graphics/resource/resource_cache.h>
 
 namespace Sunset
 {
@@ -19,30 +19,7 @@ namespace Sunset
 	PipelineStateID get_material_pipeline(MaterialID material);
 	void bind_material_descriptors(class GraphicsContext* const gfx_context, void* cmd_buffer, MaterialID material);
 
-	class MaterialCache : public Singleton<MaterialCache>
-	{
-		friend class Singleton;
-
-	public:
-		void initialize();
-		void update();
-
-		MaterialID fetch_or_add(const Material& data, class GraphicsContext* const gfx_context = nullptr);
-		void remove(MaterialID id);
-		Material* fetch(MaterialID id);
-		void destroy(class GraphicsContext* const gfx_context);
-
-		size_t size() const
-		{
-			return cache.size();
-		}
-
-	protected:
-		std::unordered_map<MaterialID, Material*> cache;
-
-	private:
-		MaterialCache() = default;
-	};
+	DEFINE_RESOURCE_CACHE(MaterialCache, MaterialID, Material);
 }
 
 #pragma warning( push )

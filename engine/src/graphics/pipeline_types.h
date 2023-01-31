@@ -29,6 +29,44 @@ namespace Sunset
 		return static_cast<PipelineShaderStageType>(static_cast<uint16_t>(a) & static_cast<uint16_t>(b));
 	}
 
+	enum class PipelineStageType : uint32_t
+	{
+		TopOfPipe = 0x00000001,
+		DrawIndirect = 0x00000002,
+		VertexInput = 0x00000004,
+		VertexShader = 0x00000008,
+		TessellationControl = 0x00000010,
+		TessellationEvaluation = 0x00000020,
+		GeometryShader = 0x00000040,
+		FragmentShader = 0x00000080,
+		EarlyFragmentTest = 0x00000100,
+		LateFragmentTest = 0x00000200,
+		ColorAttachmentOutput = 0x00000400,
+		ComputeShader = 0x00000800,
+		Transfer = 0x00001000,
+		BottomOfPipe = 0x00002000
+	};
+
+	inline PipelineStageType operator|(PipelineStageType lhs, PipelineStageType rhs)
+	{
+		return static_cast<PipelineStageType>(static_cast<int32_t>(lhs) | static_cast<int32_t>(rhs));
+	}
+
+	inline PipelineStageType operator&(PipelineStageType lhs, PipelineStageType rhs)
+	{
+		return static_cast<PipelineStageType>(static_cast<int32_t>(lhs) & static_cast<int32_t>(rhs));
+	}
+
+	inline PipelineStageType& operator|=(PipelineStageType& lhs, PipelineStageType rhs)
+	{
+		return lhs = lhs | rhs;
+	}
+
+	inline PipelineStageType& operator&=(PipelineStageType& lhs, PipelineStageType rhs)
+	{
+		return lhs = lhs & rhs;
+	}
+
 	using PipelineShaderPathList = std::vector<std::pair<PipelineShaderStageType, const char*>>;
 
 	struct PipelineShaderStage
