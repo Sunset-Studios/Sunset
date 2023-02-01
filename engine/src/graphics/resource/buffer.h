@@ -187,7 +187,7 @@ namespace Sunset
 	class BufferFactory
 	{
 	public:
-		static Buffer* create(class GraphicsContext* const gfx_context, const BufferConfig& config, bool auto_delete = true);
+		static BufferID create(class GraphicsContext* const gfx_context, const BufferConfig& config, bool auto_delete = true);
 	};
 
 	DEFINE_RESOURCE_CACHE(BufferCache, BufferID, Buffer);

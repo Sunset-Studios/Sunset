@@ -1,18 +1,31 @@
 #pragma once
 
+#include <minimal.h>
 #include <common.h>
+#include <resource_cache.h>
+#include <utility/maths.h>
 
 namespace Sunset
 {
+	inline std::size_t hash_attachments_list(std::initializer_list<ImageID> attachments)
+	{
+		std::size_t hash = 0;
+		for (ImageID attachment : attachments)
+		{
+			hash = Sunset::Maths::cantor_pair_hash(hash, static_cast<int32_t>(attachment));
+		}
+		return hash;
+	}
+
 	template<class Policy>
 	class GenericFramebuffer
 	{
 	public:
 		GenericFramebuffer() = default;
 
-		void initialize(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, void* render_pass_handle = nullptr, void* attachments_handle = nullptr, const std::initializer_list<ImageID>& additional_attachments = {})
+		void initialize(class GraphicsContext* const gfx_context, void* render_pass_handle = nullptr, const std::initializer_list<ImageID>& attachments = {})
 		{
-			framebuffer_policy.initialize(gfx_context, swapchain, render_pass_handle, attachments_handle, additional_attachments);
+			framebuffer_policy.initialize(gfx_context, render_pass_handle, attachments);
 		}
 
 		void destroy(class GraphicsContext* const gfx_context)
@@ -34,7 +47,7 @@ namespace Sunset
 	public:
 		NoopFramebuffer() = default;
 
-		void initialize(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, void* render_pass_handle = nullptr, void* attachments_handle = nullptr, const std::initializer_list<ImageID>& additional_attachments = {})
+		void initialize(class GraphicsContext* const gfx_context, void* render_pass_handle = nullptr, const std::initializer_list<ImageID>& attachments = {})
 		{ }
 
 		void destroy(class GraphicsContext* const gfx_context)
@@ -57,12 +70,8 @@ namespace Sunset
 	class FramebufferFactory
 	{
 	public:
-		template<typename ...Args>
-		static Framebuffer* create(Args&&... args)
-		{
-			Framebuffer* gfx = new Framebuffer;
-			gfx->initialize(std::forward<Args>(args)...);
-			return gfx;
-		}
+		static FramebufferID create(class GraphicsContext* const gfx_context, void* render_pass_handle = nullptr, const std::initializer_list<ImageID>& attachments = {}, bool b_auto_delete = false);
 	};
+
+	DEFINE_RESOURCE_CACHE(FramebufferCache, FramebufferID, Framebuffer);
 }

@@ -4,10 +4,10 @@
 
 namespace Sunset
 {
-	Sunset::Buffer* BufferFactory::create(class GraphicsContext* const gfx_context, const BufferConfig& config, bool auto_delete)
+	Sunset::BufferID BufferFactory::create(class GraphicsContext* const gfx_context, const BufferConfig& config, bool auto_delete)
 	{
 		BufferID buffer_id = BufferCache::get()->fetch_or_add(config.name, gfx_context);
-		Buffer* buffer = BufferCache::get()->fetch(buffer_id);
+		Buffer* buffer = CACHE_FETCH(Buffer, buffer_id);
 		buffer->initialize(gfx_context, config);
 		if (auto_delete)
 		{
@@ -18,7 +18,7 @@ namespace Sunset
 				GlobalAssetPools<Buffer>::get()->deallocate(buffer);
 			});
 		}
-		return buffer;
+		return buffer_id;
 	}
 
 	size_t BufferHelpers::pad_ubo_size(size_t ubo_size, size_t min_ubo_alignment)

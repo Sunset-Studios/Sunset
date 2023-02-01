@@ -40,8 +40,8 @@ namespace Sunset
 		uint16_t binding{ 0 };
 		union
 		{
-			class Buffer* buffer{ nullptr };
-			class Image* image;
+			BufferID buffer{ 0 };
+			ImageID image;
 		};
 		uint32_t buffer_offset{ 0 };
 		size_t buffer_range{ 0 };

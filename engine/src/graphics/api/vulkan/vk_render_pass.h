@@ -13,7 +13,7 @@ namespace Sunset
 	struct VulkanRenderPassData
 	{
 		VkRenderPass render_pass{ nullptr };
-		std::vector<class Framebuffer*> output_framebuffers;
+		std::vector<FramebufferID> output_framebuffers;
 	};
 
 	class VulkanRenderPass
@@ -23,31 +23,30 @@ namespace Sunset
 		~VulkanRenderPass() = default;
 
 	public:
-		void initialize_default_compute(class GraphicsContext* const gfx_context, class Swapchain* const swapchain);
+		void initialize_default_compute(class GraphicsContext* const gfx_context, const RenderPassConfig& config);
 		void initialize_default_graphics(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, const RenderPassConfig& config);
 		void destroy(class GraphicsContext* const gfx_context);
-		void submit(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, void* command_buffer);
 
 		void* get_data()
 		{
 			return &data;
 		}
 
-		std::vector<class Framebuffer*> get_output_framebuffers()
+		std::vector<FramebufferID> get_output_framebuffers()
 		{
 			return data.output_framebuffers;
 		}
 
-		void set_output_framebuffers(std::vector<class Framebuffer*>&& framebuffers)
+		void set_output_framebuffers(std::vector<FramebufferID>&& framebuffers)
 		{
 			data.output_framebuffers = framebuffers;
 		}
 
-		void begin_pass(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, void* command_buffer);
-		void end_pass(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, void* command_buffer);
+		void begin_pass(class GraphicsContext* const gfx_context, uint32_t framebuffer_index, void* command_buffer);
+		void end_pass(class GraphicsContext* const gfx_context, void* command_buffer);
 
 	protected:
-		void create_default_output_framebuffers(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, const std::initializer_list<ImageID>& attachments);
+		void create_default_output_framebuffers(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, const RenderPassConfig& config, const std::initializer_list<ImageID>& attachments);
 
 	protected:
 		VulkanRenderPassData data;

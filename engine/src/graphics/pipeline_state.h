@@ -85,7 +85,7 @@ namespace Sunset
 		void set_shader_stage(class GraphicsContext* const gfx_context, PipelineShaderStageType stage, const char* shader_path)
 		{
 			const ShaderID new_shader = ShaderCache::get()->fetch_or_add(shader_path, gfx_context);
-			state_data.shader_stages.emplace_back(stage, ShaderCache::get()->fetch(new_shader));
+			state_data.shader_stages.emplace_back(stage, CACHE_FETCH(Shader, new_shader));
 		}
 
 		void set_primitive_topology(class GraphicsContext* const gfx_context, PipelinePrimitiveTopologyType topology_type)

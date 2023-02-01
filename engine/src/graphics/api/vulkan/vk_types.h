@@ -118,6 +118,95 @@ inline VkFormat VK_FROM_SUNSET_FORMAT(Sunset::Format format)
 	}
 }
 
+inline Sunset::Format SUNSET_FROM_VK_FORMAT(VkFormat format)
+{
+	switch (format)
+	{
+	case VK_FORMAT_UNDEFINED:
+		return Sunset::Format::Undefined;
+
+	case VK_FORMAT_R8_SINT:
+		return Sunset::Format::Int8;
+	case VK_FORMAT_R8_UINT:
+		return Sunset::Format::Uint8;
+	case VK_FORMAT_R16_SFLOAT:
+		return Sunset::Format::Float16;
+	case VK_FORMAT_R16_SINT:
+		return Sunset::Format::Int16;
+	case VK_FORMAT_R16_UINT:
+		return Sunset::Format::Uint16;
+	case VK_FORMAT_R32_SFLOAT:
+		return Sunset::Format::Float32;
+	case VK_FORMAT_R32_SINT:
+		return Sunset::Format::Int32;
+	case VK_FORMAT_R32_UINT:
+		return Sunset::Format::Uint32;
+
+	case VK_FORMAT_R8G8_SINT:
+		return Sunset::Format::Int2x8;
+	case VK_FORMAT_R8G8_UINT:
+		return Sunset::Format::Uint2x8;
+	case VK_FORMAT_R16G16_SFLOAT:
+		return Sunset::Format::Float2x16;
+	case VK_FORMAT_R16G16_SINT:
+		return Sunset::Format::Int2x16;
+	case VK_FORMAT_R16G16_UINT:
+		return Sunset::Format::Uint2x16;
+	case VK_FORMAT_R32G32_SFLOAT:
+		return Sunset::Format::Float2x32;
+	case VK_FORMAT_R32G32_SINT:
+		return Sunset::Format::Int2x32;
+	case VK_FORMAT_R32G32_UINT:
+		return Sunset::Format::Uint2x32;
+
+	case VK_FORMAT_R8G8B8_SINT:
+		return Sunset::Format::Int3x8;
+	case VK_FORMAT_R8G8B8_UINT:
+		return Sunset::Format::Uint3x8;
+	case VK_FORMAT_R16G16B16_SFLOAT:
+		return Sunset::Format::Float3x16;
+	case VK_FORMAT_R16G16B16_SINT:
+		return Sunset::Format::Int3x16;
+	case VK_FORMAT_R16G16B16_UINT:
+		return Sunset::Format::Uint3x16;
+	case VK_FORMAT_R32G32B32_SFLOAT:
+		return Sunset::Format::Float3x32;
+	case VK_FORMAT_R32G32B32_SINT:
+		return Sunset::Format::Int3x32;
+	case VK_FORMAT_R32G32B32_UINT:
+		return Sunset::Format::Uint3x32;
+
+	case VK_FORMAT_R8G8B8A8_SINT:
+		return Sunset::Format::Int4x8;
+	case VK_FORMAT_R8G8B8A8_UINT:
+		return Sunset::Format::Uint4x8;
+	case VK_FORMAT_R16G16B16A16_SFLOAT:
+		return Sunset::Format::Float4x16;
+	case VK_FORMAT_R16G16B16A16_SINT:
+		return Sunset::Format::Int4x16;
+	case VK_FORMAT_R16G16B16A16_UINT:
+		return Sunset::Format::Uint4x16;
+	case VK_FORMAT_R32G32B32A32_SFLOAT:
+		return Sunset::Format::Float4x32;
+	case VK_FORMAT_R32G32B32A32_SINT:
+		return Sunset::Format::Int4x32;
+	case VK_FORMAT_R32G32B32A32_UINT:
+		return Sunset::Format::Uint4x32;
+
+	case VK_FORMAT_D32_SFLOAT:
+		return Sunset::Format::FloatDepth32;
+
+	case VK_FORMAT_R8G8B8A8_SRGB:
+		return Sunset::Format::SRGB8x4;
+
+	case VK_FORMAT_R8G8B8A8_UNORM:
+		return Sunset::Format::UNorm4x8;
+
+	default:
+		return Sunset::Format::Undefined;
+	}
+}
+
 inline VkImageType VK_FROM_SUNSET_IMAGE_TYPE(Sunset::ImageFlags image_type)
 {
 	if (static_cast<int32_t>(image_type & Sunset::ImageFlags::Image2D) > 0)

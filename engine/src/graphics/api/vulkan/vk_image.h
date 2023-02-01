@@ -13,6 +13,7 @@ namespace Sunset
 		VulkanImage() = default;
 
 		void initialize(class GraphicsContext* const gfx_context, AttachmentConfig& config);
+		void initialize(class GraphicsContext* const gfx_context, const AttachmentConfig& config, void* image_handle, void* image_view_handle);
 		void destroy(class GraphicsContext* const gfx_context);
 		void copy_buffer(class GraphicsContext* const gfx_context, void* command_buffer, const AttachmentConfig& config, class Buffer* buffer);
 		void bind(class GraphicsContext* const gfx_context, void* command_buffer);

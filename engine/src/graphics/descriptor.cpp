@@ -22,7 +22,8 @@ namespace Sunset
 
 	Sunset::DescriptorSetBuilder& DescriptorSetBuilder::bind_buffer(const DescriptorBuildData& build_data)
 	{
-		return bind_buffer(build_data.binding, build_data.buffer, build_data.buffer_range, build_data.type, build_data.shader_stages);
+		Buffer* const buffer = CACHE_FETCH(Buffer, build_data.buffer);
+		return bind_buffer(build_data.binding, buffer, build_data.buffer_range, build_data.type, build_data.shader_stages);
 	}
 
 	Sunset::DescriptorSetBuilder& DescriptorSetBuilder::bind_image(uint16_t binding, Image* image, size_t range_size, DescriptorType type, PipelineShaderStageType shader_stages)
@@ -34,7 +35,8 @@ namespace Sunset
 
 	Sunset::DescriptorSetBuilder& DescriptorSetBuilder::bind_image(const DescriptorBuildData& build_data)
 	{
-		return bind_image(build_data.binding, build_data.image, build_data.buffer_range, build_data.type, build_data.shader_stages);
+		Image* const image = CACHE_FETCH(Image, build_data.image);
+		return bind_image(build_data.binding, image, build_data.buffer_range, build_data.type, build_data.shader_stages);
 	}
 
 	bool DescriptorSetBuilder::build(DescriptorSet*& out_descriptor_set, DescriptorLayout*& out_descriptor_layout)
@@ -46,7 +48,7 @@ namespace Sunset
 		}
 
 		DescriptorLayoutID layout_id = DescriptorLayoutCache::get()->fetch_or_add(cache_id, gfx_context);
-		out_descriptor_layout = DescriptorLayoutCache::get()->fetch(layout_id);
+		out_descriptor_layout = CACHE_FETCH(DescriptorLayout, layout_id);
 
 		out_descriptor_layout->set_bindings(bindings);
 		out_descriptor_layout->build(gfx_context);

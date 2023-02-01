@@ -100,11 +100,13 @@ namespace Sunset
 		Color = 0x00000001,
 		Depth = 0x00000002,
 		Stencil = 0x00000004,
-		TransferSrc = 0x00000008,
-		TransferDst = 0x00000010,
-		Image2D = 0x00000020,
-		Image3D = 0x00000040,
-		Sampled = 0x00000080
+		DepthStencil = 0x00000008,
+		TransferSrc = 0x00000010,
+		TransferDst = 0x00000020,
+		Image2D = 0x00000040,
+		Image3D = 0x00000080,
+		Sampled = 0x00000100,
+		Present = 0x00000200
 	};
 
 	inline ImageFlags operator|(ImageFlags lhs, ImageFlags rhs)
@@ -169,7 +171,7 @@ namespace Sunset
 		return lhs = lhs & rhs;
 	}
 
-	enum class CompareOperation : int16_t
+	enum class CompareOperation : uint16_t
 	{
 		Always,
 		Equal,
@@ -180,12 +182,20 @@ namespace Sunset
 		GreaterOrEqual
 	};
 
+	enum class ResourceType : uint16_t
+	{
+		Undefined = 0,
+		Image,
+		Buffer
+	};
+
 	using ObjectID = uint32_t;
 	using ImageID = size_t;
 	using MeshID = size_t;
 	using MaterialID = size_t;
 	using BufferID = size_t;
 	using RenderPassID = size_t;
+	using FramebufferID = size_t;
 
 	#define SECONDS_TIME std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count() * 0.001
 	#define WORLD_UP glm::vec3(0.0f, 1.0f, 0.0f)

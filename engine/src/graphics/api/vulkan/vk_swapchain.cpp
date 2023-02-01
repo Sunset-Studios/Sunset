@@ -1,6 +1,7 @@
 #include <graphics/api/vulkan/vk_swapchain.h>
 #include <graphics/graphics_context.h>
 #include <graphics/command_queue.h>
+#include <graphics/resource/image.h>
 #include <window/window.h>
 
 #include <VkBootstrap.h>
@@ -22,9 +23,22 @@ namespace Sunset
 			.value();
 
 		data.swapchain = vkb_swapchain.swapchain;
-		data.swapchain_images = vkb_swapchain.get_images().value();
-		data.swapchain_image_views = vkb_swapchain.get_image_views().value();
 		data.swapchain_image_format = vkb_swapchain.image_format;
+
+		std::vector<VkImage> swapchain_images = vkb_swapchain.get_images().value();
+		std::vector<VkImageView> swapchain_image_views = vkb_swapchain.get_image_views().value();
+		for (int i = 0; i < swapchain_images.size(); ++i)
+		{
+			data.swapchain_images.push_back(
+				ImageFactory::create(
+					gfx_context,
+					{ .name = std::string_view("swapchain_" + i) },
+					swapchain_images[i],
+					swapchain_image_views[i],
+					false
+				)
+			);
+		}
 	}
 
 	void VulkanSwapchain::destroy(GraphicsContext* const gfx_context)
@@ -33,9 +47,9 @@ namespace Sunset
 
 		vkDestroySwapchainKHR(context_state->get_device(), data.swapchain, nullptr);
 
-		for (int i = 0; i < data.swapchain_image_views.size(); ++i)
+		for (int i = 0; i < data.swapchain_images.size(); ++i)
 		{
-			vkDestroyImageView(context_state->get_device(), data.swapchain_image_views[i], nullptr);
+			CACHE_FETCH(Image, data.swapchain_images[i])->destroy(gfx_context);
 		}
 	}
 

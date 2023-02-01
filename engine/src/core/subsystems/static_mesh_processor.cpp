@@ -44,7 +44,7 @@ namespace Sunset
 					.finish();
 			}
 
-			Material* const material = MaterialCache::get()->fetch(mesh_comp->material);
+			Material* const material = CACHE_FETCH(Material, mesh_comp->material);
 			assert(material != nullptr && "Cannot process mesh with a null material");
 
 			material->descriptor_datas[static_cast<int16_t>(DescriptorSetType::Global)] = Renderer::get()->get_global_descriptor_data(current_buffered_frame);
@@ -55,12 +55,14 @@ namespace Sunset
 			PushConstantPipelineData push_constants_data = PushConstantPipelineData::create(&mesh_comp->additional_data);
 
 			// TODO_BEGIN: Material stuff can probably be moved out into some sort of material factory or material processor
+			// Ultimately pipeline state structures are render pass dependent so we'll need to either build those in the render
+			// graph compilation somewhere or specify pass information up front
 			if (material_descriptor.descriptor_set == nullptr)
 			{
 				std::vector<DescriptorBuildData> texture_bindings;
 				for (int i = 0; i < material->textures.size(); ++i)
 				{
-					Image* const texture = ImageFactory::load(
+					ImageID texture = ImageFactory::load(
 						gfx_context,
 						{
 							.name = material->textures[i],
@@ -120,10 +122,11 @@ namespace Sunset
 				->setup(mesh_comp->material, mesh_comp->resource_state, 0)
 				->set_push_constants(std::move(push_constants_data))
 				->set_entity(entity)
-				->submit(RenderPassFlags::Main);
+				->submit(Renderer::get()->get_mesh_task_queue());
 		}
 
-		EntityGlobals::get()->transforms.transform_buffer[current_buffered_frame]->copy_from(
+		Buffer* const transform_buffer = CACHE_FETCH(Buffer, EntityGlobals::get()->transforms.transform_buffer[current_buffered_frame]);
+		transform_buffer->copy_from(
 			gfx_context,
 			EntityGlobals::get()->transforms.entity_transforms.data(),
 			EntityGlobals::get()->transforms.entity_transforms.size() * sizeof(glm::mat4)

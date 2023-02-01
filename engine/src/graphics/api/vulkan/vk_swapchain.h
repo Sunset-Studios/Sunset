@@ -12,8 +12,7 @@ namespace Sunset
 		public:
 			VkSwapchainKHR swapchain;
 			VkFormat swapchain_image_format;
-			std::vector<VkImage> swapchain_images;
-			std::vector<VkImageView> swapchain_image_views;
+			std::vector<ImageID> swapchain_images;
 			uint32_t current_image_index;
 	};
 
@@ -30,6 +29,16 @@ namespace Sunset
 			void* get_data()
 			{
 				return &data;
+			}
+
+			Format get_format()
+			{
+				return SUNSET_FROM_VK_FORMAT(data.swapchain_image_format);
+			}
+
+			uint32_t get_current_image_index()
+			{
+				return data.current_image_index;
 			}
 
 			void request_next_image(class GraphicsContext* const gfx_context);

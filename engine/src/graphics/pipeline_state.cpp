@@ -73,7 +73,7 @@ namespace Sunset
 		// TODO: Defer creation of shaders until builder finish is called, and think about creating a separate cache for shaders
 		// so we don't potentially create duplicates
 		const ShaderID new_shader = ShaderCache::get()->fetch_or_add(shader_path, context);
-		state_data.shader_stages.emplace_back(stage, ShaderCache::get()->fetch(new_shader));
+		state_data.shader_stages.emplace_back(stage, CACHE_FETCH(Shader, new_shader));
 		return *this;
 	}
 
@@ -120,7 +120,7 @@ namespace Sunset
 		}
 		const Identity cache_id = std::hash<PipelineStateData>{}(state_data);
 		const PipelineStateID new_pipeline_state_id = PipelineStateCache::get()->fetch_or_add(cache_id, context);
-		PipelineState* const new_pipeline_state = PipelineStateCache::get()->fetch(new_pipeline_state_id);
+		PipelineState* const new_pipeline_state = CACHE_FETCH(PipelineState, new_pipeline_state_id);
 		new_pipeline_state->initialize(context, state_data);
 		return new_pipeline_state_id;
 	}

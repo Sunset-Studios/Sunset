@@ -17,17 +17,10 @@ namespace Sunset
 		return this;
 	}
 
-	void RenderTask::submit(RenderPassFlags render_passes)
+	void RenderTask::submit(TaskQueue& queue)
 	{
 		task_hash = std::hash<RenderTask>{}(*this);
-		for (int i = 0; i < MAX_PASS_COUNT; ++i)
-		{
-			RenderPassFlags pass_type = static_cast<RenderPassFlags>(1 << i);
-			if ((pass_type | render_passes) != RenderPassFlags::None)
-			{
-				Renderer::get()->pass(pass_type)->push_task(this);
-			}
-		}
+		queue.add(this);
 	}
 
 	void RenderTaskExecutor::reset()
@@ -52,7 +45,7 @@ namespace Sunset
 		// that we can index from the vertex shader using some push constant object ID.
 		if (cached_resource_state != resource_state)
 		{
-			ResourceStateCache::get()->fetch(resource_state)->bind(gfx_context, command_buffer);
+			CACHE_FETCH(ResourceState, resource_state)->bind(gfx_context, command_buffer);
 			cached_resource_state = resource_state;
 		}
 
@@ -63,9 +56,9 @@ namespace Sunset
 
 		gfx_context->draw_indexed(
 			command_buffer,
-			static_cast<uint32_t>(ResourceStateCache::get()->fetch(resource_state)->state_data.index_count),
+			static_cast<uint32_t>(CACHE_FETCH(ResourceState, resource_state)->state_data.index_count),
 			1,
-			ResourceStateCache::get()->fetch(resource_state)->state_data.instance_index);
+			CACHE_FETCH(ResourceState, resource_state)->state_data.instance_index);
 	}
 
 	void RenderTaskExecutor::operator()(class GraphicsContext* const gfx_context, void* command_buffer, const IndirectDrawBatch& indirect_draw, class Buffer* indirect_buffer)
@@ -84,7 +77,7 @@ namespace Sunset
 		// that we can index from the vertex shader using some push constant object ID.
 		if (cached_resource_state != indirect_draw.resource_state)
 		{
-			ResourceStateCache::get()->fetch(indirect_draw.resource_state)->bind(gfx_context, command_buffer);
+			CACHE_FETCH(ResourceState, indirect_draw.resource_state)->bind(gfx_context, command_buffer);
 			cached_resource_state = indirect_draw.resource_state;
 		}
 

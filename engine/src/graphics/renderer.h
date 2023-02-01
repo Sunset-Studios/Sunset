@@ -4,6 +4,8 @@
 #include <singleton.h>
 #include <graphics/graphics_context.h>
 #include <graphics/render_graph.h>
+#include <graphics/task_queue.h>
+#include <graphics/resource/swapchain.h>
 
 namespace Sunset
 {
@@ -14,8 +16,25 @@ namespace Sunset
 		public:
 			void initialize() { }
 			void setup(class Window* const window);
-			void draw();
 			void destroy();
+
+			template<typename RenderStrategy>
+			void draw()
+			{
+				static RenderStrategy strategy;
+
+				graphics_context->wait_for_gpu();
+
+				swapchain->request_next_image(graphics_context.get());
+
+				task_allocator.reset();
+
+				strategy.render(graphics_context.get(), render_graph, swapchain);
+
+				swapchain->present(graphics_context.get(), DeviceQueueType::Graphics);
+
+				graphics_context->advance_frame();
+			}
 
 			GraphicsContext* context() const
 			{
@@ -53,6 +72,8 @@ namespace Sunset
 			}
 
 			RenderGraph& get_render_graph();
+			TaskQueue& get_mesh_task_queue();
+			RenderTask* fresh_rendertask();
 
 			void inject_global_descriptor(uint16_t buffered_frame, const std::initializer_list<DescriptorBuildData>& descriptor_build_datas);
 			void inject_object_descriptor(uint16_t buffered_frame, const std::initializer_list<DescriptorBuildData>& descriptor_build_datas);
@@ -68,6 +89,10 @@ namespace Sunset
 			std::unique_ptr<GraphicsContext> graphics_context;
 			class Swapchain* swapchain;
 
+			// TODO: Rename class to something more akin to it's purpose since it's
+			// mostly only used for mesh/object render tasks
+			RenderTaskFrameAllocator task_allocator;
+			TaskQueue mesh_task_queue;
 			RenderGraph render_graph;
 
 			DescriptorData global_descriptor_data[MAX_BUFFERED_FRAMES];

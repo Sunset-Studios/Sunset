@@ -19,6 +19,12 @@ namespace Sunset
 			image_policy.initialize(gfx_context, attachment_config);
 		}
 
+		void initialize(class GraphicsContext* const gfx_context, const AttachmentConfig& config, void* image_handle, void* image_view_handle)
+		{
+			attachment_config = config;
+			image_policy.initialize(gfx_context, attachment_config, image_handle, image_view_handle);
+		}
+
 		void copy_buffer(class GraphicsContext* const gfx_context, void* command_buffer, class Buffer* buffer)
 		{
 			image_policy.copy_buffer(gfx_context, command_buffer, attachment_config, buffer);
@@ -67,6 +73,9 @@ namespace Sunset
 		void initialize(class GraphicsContext* const gfx_context, AttachmentConfig& config)
 		{ }
 
+		void initialize(class GraphicsContext* const gfx_context, const AttachmentConfig& config, void* image_handle, void* image_view_handle)
+		{ }
+
 		void destroy(class GraphicsContext* const gfx_context)
 		{ }
 
@@ -103,6 +112,7 @@ namespace Sunset
 	class ImageFactory
 	{
 	public:
+		static ImageID create(class GraphicsContext* const gfx_context, const AttachmentConfig& config, void* image_handle, void* image_view_handle, bool auto_delete = true);
 		static ImageID create(class GraphicsContext* const gfx_context, const AttachmentConfig& config, bool auto_delete = true);
 		static ImageID load(class GraphicsContext* const gfx_context, const AttachmentConfig& config);
 	};

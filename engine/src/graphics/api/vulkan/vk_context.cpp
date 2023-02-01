@@ -123,7 +123,7 @@ namespace Sunset
 	void VulkanContext::push_constants(void* buffer, PipelineStateID pipeline_state, const PushConstantPipelineData& push_constant_data)
 	{
 		VkCommandBuffer command_buffer = static_cast<VkCommandBuffer>(buffer);
-		PipelineState* const pso = PipelineStateCache::get()->fetch(pipeline_state);
+		PipelineState* const pso = CACHE_FETCH(PipelineState, pipeline_state);
 		assert(pso != nullptr && "Cannot push constants to a null pipeline state");
 
 		VkPipelineLayout pipeline_layout = static_cast<VkPipelineLayout>(pso->get_state_data().layout->get_data());

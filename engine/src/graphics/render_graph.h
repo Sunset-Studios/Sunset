@@ -7,6 +7,8 @@
 #include <graphics/resource/buffer_types.h>
 #include <graphics/render_pass_types.h>
 
+#include <unordered_set>
+
 namespace Sunset
 {
 	using RGPassHandle = uint32_t;
@@ -47,9 +49,9 @@ namespace Sunset
 	class RGResource
 	{
 	protected:
+		RGResourceHandle handle;
 		ResourceConfig config;
-		int32_t reference_count{ 0 };
-		int32_t physical_resource_id{ 0 };
+		int32_t physical_id{ 0 };
 	};
 
 	class RGImageResource : RGResource<AttachmentConfig>
@@ -62,6 +64,15 @@ namespace Sunset
 		friend class RenderGraph;
 	};
 
+	struct RGResourceMetadata
+	{
+		int32_t reference_count{ 0 };
+		std::vector<RGPassHandle> producers;
+		std::vector<RGPassHandle> consumers;
+		RGPassHandle first_user;
+		RGPassHandle last_user;
+	};
+
 	struct RGPassParameters
 	{
 		std::vector<RGResourceHandle> inputs;
@@ -72,9 +83,31 @@ namespace Sunset
 	{
 		friend class RenderGraph;
 	protected:
+		RGPassHandle handle;
 		RenderPassConfig pass_config;
 		RGPassParameters parameters;
-		int32_t physical_pass_id{ 0 };
+		std::function<void(class RenderGraph&, void*)> executor;
+		int32_t reference_count{ 0 };
+		int32_t physical_id{ 0 };
+	};
+
+	using ImageResourceFrameAllocator = StaticFrameAllocator<RGImageResource, 256>;
+	using BufferResourceFrameAllocator = StaticFrameAllocator<RGBufferResource, 256>;
+	using RenderPassFrameAllocator = StaticFrameAllocator<RGPass, 128>;
+
+	// All render graph registry resources (aside from render passes) should be transient and therefore do not need serious caching.
+	// Any resource that need to survive multiple frames should be allocated externally and registered to the render graph as external
+	// resources.
+	class RenderGraphRegistry
+	{
+		friend class RenderGraph;
+	protected:
+		std::vector<RGImageResource*> image_resources;
+		std::vector<RGBufferResource*> buffer_resources;
+		std::vector<RGPass*> render_passes;
+		std::vector<RGResourceHandle> all_resource_handles;
+		std::unordered_map<RGResourceHandle, RGResourceMetadata> resource_metadata;
+		std::unordered_set<Identity> pass_cache;
 	};
 
 	class RenderGraph
@@ -86,16 +119,42 @@ namespace Sunset
 		void initialize(class GraphicsContext* const gfx_context);
 		void destroy(class GraphicsContext* const gfx_context);
 
-		void compile(class GraphicsContext* const gfx_context);
+		RGResourceHandle create_image(
+			class GraphicsContext* const gfx_context,
+			const AttachmentConfig& config);
+
+		RGResourceHandle create_buffer(
+			class GraphicsContext* const gfx_context,
+			const BufferConfig& config);
+
+		RGPassHandle add_pass(
+			class GraphicsContext* const gfx_context,
+			Identity name,
+			RenderPassFlags pass_type,
+			const RGPassParameters& params,
+			std::function<void(RenderGraph&, void*)> execution_callback);
+
 		void submit(class GraphicsContext* const gfx_context, class Swapchain* const swapchain);
-		void reset();
 
 	protected:
-		RenderTaskFrameAllocator task_allocator;
+		void update_reference_counts(RGPass* pass);
+		void update_resource_param_producers_and_consumers(RGPass* pass);
+		void cull_graph_passes(class GraphicsContext* const gfx_context);
+		void compute_resource_first_and_last_users(class GraphicsContext* const gfx_context);
+		void compile(class GraphicsContext* const gfx_context, class Swapchain* const swapchain);
+		void execute_pass(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGPass* pass, void* command_buffer);
+		void reset();
 
-		std::vector<RGImageResource*> image_resource_registry;
-		std::vector<RGBufferResource*> buffer_resource_registry;
-		std::vector<RGPass*> registered_passes;
+		void create_physical_pass_if_necessary(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGPassHandle pass);
+		void create_physical_resource_if_necessary(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGResourceHandle pass);
+
+	protected:
+		ImageResourceFrameAllocator image_resource_allocator;
+		BufferResourceFrameAllocator buffer_resource_allocator;
+		RenderPassFrameAllocator render_pass_allocator;
+
+		RenderGraphRegistry registry;
+
 		std::vector<RGPassHandle> nonculled_passes;
 	};
 }

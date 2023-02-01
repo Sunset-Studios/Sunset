@@ -1,6 +1,7 @@
 ﻿#include <application.h>
 #include <window/window.h>
 #include <graphics/renderer.h>
+#include <graphics/strategies/forward_shading.h>
 #include <input/input_provider.h>
 #include <core/simulation_core.h>
 #include <core/layers/scene.h>
@@ -118,7 +119,7 @@ namespace Sunset
 
 				SimulationCore::get()->update();
 
-				Renderer::get()->draw();
+				Renderer::get()->draw<ForwardShadingStrategy>();
 			}
 		}
 	}

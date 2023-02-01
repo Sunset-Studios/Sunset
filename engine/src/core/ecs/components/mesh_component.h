@@ -25,6 +25,6 @@ namespace Sunset
 
 	size_t mesh_vertex_count(MeshComponent* mesh_comp);
 	size_t mesh_index_count(MeshComponent* mesh_comp);
-	class Buffer* mesh_vertex_buffer(MeshComponent* mesh_comp);
-	class Buffer* mesh_index_buffer(MeshComponent* mesh_comp);
+	BufferID mesh_vertex_buffer(MeshComponent* mesh_comp);
+	BufferID mesh_index_buffer(MeshComponent* mesh_comp);
 }

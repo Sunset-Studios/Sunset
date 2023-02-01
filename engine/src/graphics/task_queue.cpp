@@ -23,7 +23,8 @@ namespace Sunset
 		// TODO_BEGIN: Compute culling work should happen around here
 		update_indirect_draw_buffers(gfx_context, command_buffer, indirect_draws);
 
-		instance_indirect_buffer_data.object_instance_buffer->barrier(
+		Buffer* const object_instance_buffer = CACHE_FETCH(Buffer, instance_indirect_buffer_data.object_instance_buffer);
+		object_instance_buffer->barrier(
 			gfx_context,
 			command_buffer,
 			AccessFlags::TransferWrite,
@@ -35,7 +36,7 @@ namespace Sunset
 
 		for (const IndirectDrawBatch& draw : indirect_draws)
 		{
-			executor(gfx_context, command_buffer, draw, instance_indirect_buffer_data.draw_indirect_buffer);
+			executor(gfx_context, command_buffer, draw, CACHE_FETCH(Buffer, instance_indirect_buffer_data.draw_indirect_buffer));
 		}
 
 		// Cache off task hashes so we can diff the task queue in the next frame to determine whether we should
@@ -90,7 +91,7 @@ namespace Sunset
 	void TaskQueue::update_indirect_draw_buffers(class GraphicsContext* const gfx_context, void* command_buffer, const std::vector<IndirectDrawBatch>& indirect_batches)
 	{
 		// Reallocate GPU-only draw indirect buffer
-		if (instance_indirect_buffer_data.draw_indirect_buffer == nullptr)
+		if (instance_indirect_buffer_data.draw_indirect_buffer == 0)
 		{
 			instance_indirect_buffer_data.draw_indirect_buffer = BufferFactory::create(
 				gfx_context,
@@ -102,13 +103,13 @@ namespace Sunset
 				}
 			);
 		}
-		else if (instance_indirect_buffer_data.draw_indirect_buffer->get_size() < indirect_batches.size())
+		else if (CACHE_FETCH(Buffer, instance_indirect_buffer_data.draw_indirect_buffer)->get_size() < indirect_batches.size())
 		{
-			instance_indirect_buffer_data.draw_indirect_buffer->reallocate(gfx_context, std::max(static_cast<size_t>(256), indirect_batches.size()));
+			CACHE_FETCH(Buffer, instance_indirect_buffer_data.draw_indirect_buffer)->reallocate(gfx_context, std::max(static_cast<size_t>(256), indirect_batches.size()));
 		}
 
 		// Reallocate GPU-only compacted object instance buffer
-		if (instance_indirect_buffer_data.compacted_object_instance_buffer == nullptr)
+		if (instance_indirect_buffer_data.compacted_object_instance_buffer == 0)
 		{
 			instance_indirect_buffer_data.compacted_object_instance_buffer = BufferFactory::create(
 				gfx_context,
@@ -120,13 +121,13 @@ namespace Sunset
 				}
 			);
 		}
-		else if (instance_indirect_buffer_data.compacted_object_instance_buffer->get_size() < queue.size() * sizeof(uint32_t))
+		else if (CACHE_FETCH(Buffer, instance_indirect_buffer_data.compacted_object_instance_buffer)->get_size() < queue.size() * sizeof(uint32_t))
 		{
-			instance_indirect_buffer_data.compacted_object_instance_buffer->reallocate(gfx_context, queue.size() * sizeof(uint32_t));
+			CACHE_FETCH(Buffer, instance_indirect_buffer_data.compacted_object_instance_buffer)->reallocate(gfx_context, queue.size() * sizeof(uint32_t));
 		}
 
 		// Reallocate GPU-only object instance buffer
-		if (instance_indirect_buffer_data.object_instance_buffer == nullptr)
+		if (instance_indirect_buffer_data.object_instance_buffer == 0)
 		{
 			instance_indirect_buffer_data.object_instance_buffer = BufferFactory::create(
 				gfx_context,
@@ -138,15 +139,15 @@ namespace Sunset
 				}
 			);
 		}
-		else if (instance_indirect_buffer_data.object_instance_buffer->get_size() < queue.size() * sizeof(GPUObjectInstance))
+		else if (CACHE_FETCH(Buffer, instance_indirect_buffer_data.object_instance_buffer)->get_size() < queue.size() * sizeof(GPUObjectInstance))
 		{
-			instance_indirect_buffer_data.object_instance_buffer->reallocate(gfx_context, std::max(static_cast<size_t>(256) * sizeof(GPUObjectInstance), queue.size() * sizeof(GPUObjectInstance)));
+			CACHE_FETCH(Buffer, instance_indirect_buffer_data.object_instance_buffer)->reallocate(gfx_context, std::max(static_cast<size_t>(256) * sizeof(GPUObjectInstance), queue.size() * sizeof(GPUObjectInstance)));
 		}
 
 		if (instance_indirect_buffer_data.b_needs_refresh)
 		{
 			// Re-upload cleared draw indirect buffer data to GPU
-			if (instance_indirect_buffer_data.cleared_draw_indirect_buffer != nullptr)
+			if (instance_indirect_buffer_data.cleared_draw_indirect_buffer != 0)
 			{
 				instance_indirect_buffer_data.cleared_draw_indirect_buffer = BufferFactory::create(
 					gfx_context,
@@ -160,15 +161,15 @@ namespace Sunset
 			}
 			else
 			{
-				instance_indirect_buffer_data.cleared_draw_indirect_buffer->reallocate(gfx_context, indirect_batches.size());
+				CACHE_FETCH(Buffer, instance_indirect_buffer_data.cleared_draw_indirect_buffer)->reallocate(gfx_context, indirect_batches.size());
 			}
 
 			{
-				ScopedGPUBufferMapping scoped_mapping(gfx_context, instance_indirect_buffer_data.cleared_draw_indirect_buffer);
+				ScopedGPUBufferMapping scoped_mapping(gfx_context, CACHE_FETCH(Buffer, instance_indirect_buffer_data.cleared_draw_indirect_buffer));
 				
 				for (int i = 0; i < indirect_batches.size(); ++i)
 				{
-					ResourceState* const resource_state = ResourceStateCache::get()->fetch(indirect_batches[i].resource_state);
+					ResourceState* const resource_state = CACHE_FETCH(ResourceState, indirect_batches[i].resource_state);
 					gfx_context->update_indirect_draw_command(
 						scoped_mapping.mapped_memory,
 						i,
@@ -184,7 +185,7 @@ namespace Sunset
 
 			// Re-upload object instance buffer data to GPU
 			{
-				Buffer* const staging_buffer = BufferFactory::create(
+				const BufferID staging_buffer = BufferFactory::create(
 					gfx_context,
 					{
 						.name = "staging_object_instance_buffer",
@@ -195,7 +196,7 @@ namespace Sunset
 					false
 				);
 				{
-					ScopedGPUBufferMapping scoped_mapping(gfx_context, staging_buffer);
+					ScopedGPUBufferMapping scoped_mapping(gfx_context, CACHE_FETCH(Buffer, staging_buffer));
 
 					GPUObjectInstance* object_data = static_cast<GPUObjectInstance*>((void*)scoped_mapping.mapped_memory);
 
@@ -212,7 +213,7 @@ namespace Sunset
 					}
 				}
 
-				instance_indirect_buffer_data.object_instance_buffer->copy_buffer(gfx_context, command_buffer, staging_buffer, queue.size() * sizeof(GPUObjectInstance));
+				CACHE_FETCH(Buffer, instance_indirect_buffer_data.object_instance_buffer)->copy_buffer(gfx_context, command_buffer, staging_buffer, queue.size() * sizeof(GPUObjectInstance));
 			}
 
 			instance_indirect_buffer_data.b_needs_refresh = false;

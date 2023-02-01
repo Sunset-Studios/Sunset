@@ -88,7 +88,7 @@ namespace Sunset
 
 	void Scene::setup_subsystems()
 	{
-		// TODO: Potentially look for a more extensible way to add arbitrary subsystems
+		// TODO: Potentially look for a more extensible way to add arbitrary external subsystems
 		add_subsystem<CameraControlProcessor>();
 		add_subsystem<CameraInputController>();
 		add_subsystem<TransformProcessor>();
@@ -102,7 +102,7 @@ namespace Sunset
 		const size_t aligned_cam_data_size = BufferHelpers::pad_ubo_size(sizeof(CameraMatrices), min_ubo_alignment);
 		const size_t aligned_lighting_data_size = BufferHelpers::pad_ubo_size(sizeof(SceneLightingData), min_ubo_alignment);
 
-		if (scene_data.buffer == nullptr)
+		if (scene_data.buffer == 0)
 		{
 			scene_data.buffer = BufferFactory::create(
 				Renderer::get()->context(), 

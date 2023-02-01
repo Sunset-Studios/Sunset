@@ -15,10 +15,10 @@ namespace Sunset
 
 	struct GPUInstanceIndirectBufferData
 	{
-		class Buffer* cleared_draw_indirect_buffer;
-		class Buffer* draw_indirect_buffer;
-		class Buffer* object_instance_buffer;
-		class Buffer* compacted_object_instance_buffer;
+		BufferID cleared_draw_indirect_buffer;
+		BufferID draw_indirect_buffer;
+		BufferID object_instance_buffer;
+		BufferID compacted_object_instance_buffer;
 		bool b_needs_refresh{ false };
 	};
 

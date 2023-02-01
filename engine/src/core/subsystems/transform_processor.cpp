@@ -11,7 +11,7 @@ namespace Sunset
 	{
 		for (int i = 0; i < MAX_BUFFERED_FRAMES; ++i)
 		{
-			if (EntityGlobals::get()->transforms.transform_buffer[i] == nullptr)
+			if (EntityGlobals::get()->transforms.transform_buffer[i] == 0)
 			{
 				EntityGlobals::get()->transforms.transform_buffer[i] = BufferFactory::create(
 					Renderer::get()->context(),

@@ -65,4 +65,5 @@ namespace Sunset
 	};
 
 	#define DEFINE_RESOURCE_CACHE(CacheName, ResourceIDType, ResourceType) class CacheName : public ResourceCache<ResourceIDType, ResourceType> { }
+	#define CACHE_FETCH(Name, ID) Name##Cache::get()->fetch(ID)
 }

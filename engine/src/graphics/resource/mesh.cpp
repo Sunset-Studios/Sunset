@@ -16,7 +16,7 @@ namespace Sunset
 
 			std::string buffer_name = name;
 			buffer_name += "_vertex_staging";
-			Buffer* const vertex_staging_buffer = BufferFactory::create(
+			const BufferID vertex_staging_buffer_id = BufferFactory::create(
 				gfx_context,
 				{
 					.name = buffer_name.c_str(),
@@ -26,6 +26,7 @@ namespace Sunset
 				},
 				false
 			);
+			Buffer* const vertex_staging_buffer = CACHE_FETCH(Buffer, vertex_staging_buffer_id);
 
 			vertex_staging_buffer->copy_from(gfx_context, vertices.data(), vertex_data_size);
 
@@ -43,7 +44,8 @@ namespace Sunset
 
 			gfx_context->get_command_queue(DeviceQueueType::Graphics)->submit_immediate(gfx_context, [this, gfx_context, vertex_staging_buffer, vertex_data_size](void* command_buffer)
 			{
-				vertex_buffer->copy_buffer(gfx_context, command_buffer, vertex_staging_buffer, vertex_data_size);
+				Buffer* const vertex_buffer_obj = CACHE_FETCH(Buffer, vertex_buffer);
+				vertex_buffer_obj->copy_buffer(gfx_context, command_buffer, vertex_staging_buffer, vertex_data_size);
 			});
 
 			vertex_staging_buffer->destroy(gfx_context);
@@ -56,7 +58,7 @@ namespace Sunset
 
 			std::string buffer_name = name;
 			buffer_name += "_index_staging";
-			Buffer* const index_staging_buffer = BufferFactory::create(
+			const BufferID index_staging_buffer_id = BufferFactory::create(
 				gfx_context,
 				{
 					.name = buffer_name.c_str(),
@@ -66,6 +68,7 @@ namespace Sunset
 				},
 				false
 			);
+			Buffer* const index_staging_buffer = CACHE_FETCH(Buffer, index_staging_buffer_id);
 
 			index_staging_buffer->copy_from(gfx_context, indices.data(), index_data_size);
 
@@ -83,7 +86,8 @@ namespace Sunset
 
 			gfx_context->get_command_queue(DeviceQueueType::Graphics)->submit_immediate(gfx_context, [this, gfx_context, index_staging_buffer, index_data_size](void* command_buffer)
 			{
-				index_buffer->copy_buffer(gfx_context, command_buffer, index_staging_buffer, index_data_size);
+				Buffer* const index_buffer_obj = CACHE_FETCH(Buffer, index_buffer);
+				index_buffer_obj->copy_buffer(gfx_context, command_buffer, index_staging_buffer, index_data_size);
 			});
 
 			index_staging_buffer->destroy(gfx_context);
@@ -113,7 +117,7 @@ namespace Sunset
 	{
 		Identity id = "engine_triangle";
 		static MeshID mesh_id = MeshCache::get()->fetch_or_add(id, gfx_context);
-		Mesh* const mesh = MeshCache::get()->fetch(mesh_id);
+		Mesh* const mesh = CACHE_FETCH(Mesh, mesh_id);
 
 		if (mesh->vertices.size() == 0)
 		{
@@ -139,9 +143,9 @@ namespace Sunset
 	{
 		Identity id = path;
 		const MeshID mesh_id = MeshCache::get()->fetch_or_add(id, gfx_context);
-		Mesh* const mesh = MeshCache::get()->fetch(mesh_id);
+		Mesh* const mesh = CACHE_FETCH(Mesh, mesh_id);
 
-		if (mesh->vertex_buffer == nullptr)
+		if (mesh->vertex_buffer == 0)
 		{
 			SerializedAsset asset;
 			if (!deserialize_asset(path, asset))

@@ -6,8 +6,6 @@ namespace Sunset
 {
 	void EditorGui::initialize()
 	{
-		GraphicsContext* const gfx_context = Renderer::get()->context();
-		global_gui_core.initialize(gfx_context, gfx_context->get_window());
 	}
 
 	void EditorGui::destroy()

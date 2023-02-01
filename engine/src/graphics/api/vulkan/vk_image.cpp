@@ -108,6 +108,16 @@ namespace Sunset
 		}
 	}
 
+	void VulkanImage::initialize(class GraphicsContext* const gfx_context, const AttachmentConfig& config, void* image_handle, void* image_view_handle)
+	{
+		VkImage existing_image = static_cast<VkImage>(image_handle);
+		VkImageView existing_image_view = static_cast<VkImageView>(image_view_handle);
+		assert(existing_image != nullptr && existing_image_view != nullptr);
+
+		image = existing_image;
+		image_view = existing_image_view;
+	}
+
 	void VulkanImage::destroy(class GraphicsContext* const gfx_context)
 	{
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());

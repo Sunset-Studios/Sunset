@@ -60,7 +60,7 @@ namespace Sunset
 	{
 		assert(pipeline_state != 0);
 
-		ShaderPipelineLayout* const pipeline_layout = PipelineStateCache::get()->fetch(pipeline_state)->get_state_data().layout;
+		ShaderPipelineLayout* const pipeline_layout = CACHE_FETCH(PipelineState, pipeline_state)->get_state_data().layout;
 		VkPipelineLayout layout = static_cast<VkPipelineLayout>(pipeline_layout->get_data());
 		VkCommandBuffer buffer = static_cast<VkCommandBuffer>(cmd_buffer);
 

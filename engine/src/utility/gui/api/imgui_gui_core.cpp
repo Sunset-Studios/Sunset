@@ -1,5 +1,6 @@
 #include <utility/gui/api/imgui_gui_core.h>
 #include <graphics/graphics_context.h>
+#include <graphics/command_queue.h>
 #include <graphics/renderer.h>
 #include <graphics/render_pass.h>
 #include <window/window.h>
@@ -72,7 +73,7 @@ namespace Sunset
 				ImGui_ImplVulkan_Init(&init_info, render_pass_data->render_pass);
 			}
 
-			Renderer::get()->graphics_command_queue()->submit_immediate(gfx_context, [](void* command_buffer)
+			gfx_context->get_command_queue(DeviceQueueType::Graphics)->submit_immediate(gfx_context, [](void* command_buffer)
 			{
 				ImGui_ImplVulkan_CreateFontsTexture(static_cast<VkCommandBuffer>(command_buffer));
 			});

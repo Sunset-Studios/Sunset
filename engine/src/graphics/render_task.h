@@ -32,7 +32,7 @@ namespace Sunset
 		~RenderTask() = default;
 
 		RenderTask* setup(MaterialID new_material, ResourceStateID new_resource_state, uint32_t new_render_depth = 0);
-		void submit(RenderPassFlags render_passes);
+		void submit(TaskQueue& queue);
 
 		RenderTask* set_push_constants(PushConstantPipelineData&& push_constant_data)
 		{

@@ -25,6 +25,16 @@ namespace Sunset
 			return swapchain_policy.get_data();
 		}
 
+		Format get_format()
+		{
+			return swapchain_policy.get_format();
+		}
+
+		uint32_t get_current_image_index()
+		{
+			return swapchain_policy.get_current_image_index();
+		}
+
 		void request_next_image(class GraphicsContext* const gfx_context)
 		{
 			swapchain_policy.request_next_image(gfx_context);
@@ -53,6 +63,16 @@ namespace Sunset
 		void* get_data()
 		{
 			return nullptr;
+		}
+
+		Format get_format()
+		{
+			return Format::Undefined;
+		}
+
+		uint32_t get_current_image_index()
+		{
+			return 0;
 		}
 
 		void request_next_image(class GraphicsContext* const gfx_context)

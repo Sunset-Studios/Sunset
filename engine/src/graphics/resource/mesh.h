@@ -23,8 +23,8 @@ namespace Sunset
 		Identity name;
 		std::vector<Vertex> vertices;
 		std::vector<uint32_t> indices;
-		class Buffer* vertex_buffer;
-		class Buffer* index_buffer;
+		BufferID vertex_buffer;
+		BufferID index_buffer;
 
 		void upload(class GraphicsContext* const gfx_context);
 		void destroy(class GraphicsContext* const gfx_context);
