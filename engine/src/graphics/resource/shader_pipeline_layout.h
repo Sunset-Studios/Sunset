@@ -2,6 +2,7 @@
 
 #include <common.h>
 #include <push_constants.h>
+#include <graphics/resource/resource_cache.h>
 
 namespace Sunset
 {
@@ -11,7 +12,7 @@ namespace Sunset
 	public:
 		GenericShaderPipelineLayout() = default;
 
-		void initialize(class GraphicsContext* const gfx_context, const PushConstantPipelineData& push_constant_data = {}, const std::vector<class DescriptorLayout*> descriptor_layouts = {})
+		void initialize(class GraphicsContext* const gfx_context, const PushConstantPipelineData& push_constant_data = {}, const std::vector<DescriptorLayoutID> descriptor_layouts = {})
 		{
 			if (!b_initialized)
 			{
@@ -40,7 +41,7 @@ namespace Sunset
 	public:
 		NoopShaderPipelineLayout() = default;
 
-		void initialize(class GraphicsContext* const gfx_context, const PushConstantPipelineData& push_constant_data = {}, const std::vector<class DescriptorLayout*> descriptor_layouts = {})
+		void initialize(class GraphicsContext* const gfx_context, const PushConstantPipelineData& push_constant_data = {}, const std::vector<DescriptorLayoutID> descriptor_layouts = {})
 		{ }
 
 		void destroy(class GraphicsContext* const gfx_context)
@@ -63,7 +64,9 @@ namespace Sunset
 	class ShaderPipelineLayoutFactory
 	{
 	public:
-		static ShaderPipelineLayout* get_default(class GraphicsContext* const gfx_context);
-		static ShaderPipelineLayout* create(class GraphicsContext* const gfx_context, const PushConstantPipelineData& push_constant_data = {}, const std::vector<class DescriptorLayout*> descriptor_layouts = {});
+		static ShaderLayoutID get_default(class GraphicsContext* const gfx_context);
+		static ShaderLayoutID create(class GraphicsContext* const gfx_context, const PushConstantPipelineData& push_constant_data = {}, const std::vector<DescriptorLayoutID> descriptor_layouts = {});
 	};
+
+	DEFINE_RESOURCE_CACHE(ShaderPipelineLayoutCache, ShaderLayoutID, ShaderPipelineLayout);
 }

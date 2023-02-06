@@ -13,7 +13,7 @@ namespace Sunset
 
 		scene->scene_data.lighting.ambient_color = { glm::sin(framed), 0.0f, glm::cos(framed), 1.0f };
 
-		scene->scene_data.buffer->copy_from(
+		CACHE_FETCH(Buffer, scene->scene_data.buffer)->copy_from(
 			Renderer::get()->context(),
 			&scene->scene_data.lighting,
 			sizeof(SceneLightingData),

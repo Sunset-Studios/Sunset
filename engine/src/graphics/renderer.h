@@ -4,7 +4,8 @@
 #include <singleton.h>
 #include <graphics/graphics_context.h>
 #include <graphics/render_graph.h>
-#include <graphics/task_queue.h>
+#include <graphics/mesh_task_queue.h>
+#include <graphics/mesh_render_task.h>
 #include <graphics/resource/swapchain.h>
 
 namespace Sunset
@@ -41,42 +42,9 @@ namespace Sunset
 				return graphics_context.get();
 			}
 
-			DescriptorData get_global_descriptor_data(uint16_t buffered_frame) const
-			{
-				return global_descriptor_data[buffered_frame];
-			}
-
-			DescriptorData get_object_descriptor_data(uint16_t buffered_frame) const
-			{
-				return object_descriptor_data[buffered_frame];
-			}
-
-			class DescriptorSet* global_descriptor_set(uint16_t buffered_frame) const
-			{
-				return global_descriptor_data[buffered_frame].descriptor_set;
-			}
-
-			class DescriptorSet* object_descriptor_set(uint16_t buffered_frame) const
-			{
-				return object_descriptor_data[buffered_frame].descriptor_set;
-			}
-
-			class DescriptorLayout* global_descriptor_layout(uint16_t buffered_frame) const
-			{
-				return global_descriptor_data[buffered_frame].descriptor_layout;
-			}
-
-			class DescriptorLayout* object_descriptor_layout(uint16_t buffered_frame) const
-			{
-				return object_descriptor_data[buffered_frame].descriptor_layout;
-			}
-
 			RenderGraph& get_render_graph();
-			TaskQueue& get_mesh_task_queue();
-			RenderTask* fresh_rendertask();
-
-			void inject_global_descriptor(uint16_t buffered_frame, const std::initializer_list<DescriptorBuildData>& descriptor_build_datas);
-			void inject_object_descriptor(uint16_t buffered_frame, const std::initializer_list<DescriptorBuildData>& descriptor_build_datas);
+			MeshTaskQueue& get_mesh_task_queue();
+			MeshRenderTask* fresh_rendertask();
 
 		private:
 			Renderer() = default;
@@ -89,13 +57,8 @@ namespace Sunset
 			std::unique_ptr<GraphicsContext> graphics_context;
 			class Swapchain* swapchain;
 
-			// TODO: Rename class to something more akin to it's purpose since it's
-			// mostly only used for mesh/object render tasks
-			RenderTaskFrameAllocator task_allocator;
-			TaskQueue mesh_task_queue;
+			MeshRenderTaskFrameAllocator task_allocator;
+			MeshTaskQueue mesh_task_queue;
 			RenderGraph render_graph;
-
-			DescriptorData global_descriptor_data[MAX_BUFFERED_FRAMES];
-			DescriptorData object_descriptor_data[MAX_BUFFERED_FRAMES];
 	};
 }

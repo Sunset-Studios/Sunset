@@ -23,7 +23,7 @@ namespace Sunset
 	{
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
 		VulkanRenderPassData* render_pass = static_cast<VulkanRenderPassData*>(render_pass_data);
-		VkPipelineLayout pipeline_layout = static_cast<VkPipelineLayout>(state_data->layout->get_data());
+		VkPipelineLayout pipeline_layout = static_cast<VkPipelineLayout>(CACHE_FETCH(ShaderPipelineLayout, state_data->layout)->get_data());
 
 		std::vector<VkViewport> viewports(VK_FROM_SUNSET_VIEWPORT_LIST(state_data->viewports));
 		std::vector<VkRect2D> scissors(VK_FROM_SUNSET_SCISSORS_LIST(state_data->scissors));
@@ -33,7 +33,7 @@ namespace Sunset
 		std::vector<VkPipelineShaderStageCreateInfo> shader_stages;
 		for (PipelineShaderStage& shader_stage : state_data->shader_stages)
 		{
-			VulkanShaderData* shader_data = static_cast<VulkanShaderData*>(shader_stage.shader_module->get_data());
+			VulkanShaderData* shader_data = static_cast<VulkanShaderData*>(CACHE_FETCH(Shader, shader_stage.shader_module)->get_data());
 			shader_stages.push_back(new_shader_stage_create_info(VK_FROM_SUNSET_SHADER_STAGE_TYPE(shader_stage.stage_type), shader_data->shader_module));
 		}
 

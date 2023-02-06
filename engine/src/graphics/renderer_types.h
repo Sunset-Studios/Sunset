@@ -2,6 +2,7 @@
 
 #include <minimal.h>
 #include <graphics/resource_types.h>
+#include <graphics/push_constants.h>
 
 namespace Sunset
 {
@@ -9,16 +10,18 @@ namespace Sunset
 	{
 		MaterialID material;
 		ResourceStateID resource_state;
+		PushConstantPipelineData push_constants;
 		uint32_t first;
 		uint32_t count;
 	};
 
-	struct GPUInstanceIndirectBufferData
+	struct GPUDrawIndirectData
 	{
 		BufferID cleared_draw_indirect_buffer;
 		BufferID draw_indirect_buffer;
 		BufferID object_instance_buffer;
 		BufferID compacted_object_instance_buffer;
+		std::vector<IndirectDrawBatch> indirect_draws;
 		bool b_needs_refresh{ false };
 	};
 

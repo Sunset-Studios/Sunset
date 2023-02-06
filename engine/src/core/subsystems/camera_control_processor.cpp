@@ -38,7 +38,7 @@ namespace Sunset
 
 				for (int i = 0; i < MAX_BUFFERED_FRAMES; ++i)
 				{
-					scene->scene_data.buffer->copy_from(
+					CACHE_FETCH(Buffer, scene->scene_data.buffer)->copy_from(
 						Renderer::get()->context(),
 						&camera_control_comp->data.matrices,
 						sizeof(CameraMatrices),

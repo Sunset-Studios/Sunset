@@ -7,7 +7,7 @@
 
 namespace Sunset
 {
-	inline std::size_t hash_attachments_list(std::initializer_list<ImageID> attachments)
+	inline std::size_t hash_attachments_list(const std::vector<ImageID>& attachments)
 	{
 		std::size_t hash = 0;
 		for (ImageID attachment : attachments)
@@ -23,7 +23,7 @@ namespace Sunset
 	public:
 		GenericFramebuffer() = default;
 
-		void initialize(class GraphicsContext* const gfx_context, void* render_pass_handle = nullptr, const std::initializer_list<ImageID>& attachments = {})
+		void initialize(class GraphicsContext* const gfx_context, void* render_pass_handle = nullptr, const std::vector<ImageID>& attachments = {})
 		{
 			framebuffer_policy.initialize(gfx_context, render_pass_handle, attachments);
 		}
@@ -47,7 +47,7 @@ namespace Sunset
 	public:
 		NoopFramebuffer() = default;
 
-		void initialize(class GraphicsContext* const gfx_context, void* render_pass_handle = nullptr, const std::initializer_list<ImageID>& attachments = {})
+		void initialize(class GraphicsContext* const gfx_context, void* render_pass_handle = nullptr, const std::vector<ImageID>& attachments = {})
 		{ }
 
 		void destroy(class GraphicsContext* const gfx_context)
@@ -70,7 +70,7 @@ namespace Sunset
 	class FramebufferFactory
 	{
 	public:
-		static FramebufferID create(class GraphicsContext* const gfx_context, void* render_pass_handle = nullptr, const std::initializer_list<ImageID>& attachments = {}, bool b_auto_delete = false);
+		static FramebufferID create(class GraphicsContext* const gfx_context, void* render_pass_handle = nullptr, const std::vector<ImageID>& attachments = {}, bool b_auto_delete = false);
 	};
 
 	DEFINE_RESOURCE_CACHE(FramebufferCache, FramebufferID, Framebuffer);

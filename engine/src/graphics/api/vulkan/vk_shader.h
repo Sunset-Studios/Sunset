@@ -8,6 +8,7 @@ namespace Sunset
 	struct VulkanShaderData
 	{
 		VkShaderModule shader_module{ nullptr };
+		const char* shader_path{ nullptr };
 	};
 
 	class VulkanShader
@@ -18,6 +19,10 @@ namespace Sunset
 			void* get_data()
 			{
 				return &data;
+			}
+			bool is_compiled() const
+			{
+				return data.shader_module != nullptr;
 			}
 
 		protected:

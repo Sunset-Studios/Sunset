@@ -112,11 +112,11 @@ namespace Sunset
 	class GraphicsCommandQueueFactory
 	{
 	public:
-		static std::unique_ptr<CommandQueue> create(void* gfx_context_state, DeviceQueueType queue_type)
+		static CommandQueue* create(void* gfx_context_state, DeviceQueueType queue_type)
 		{
 			CommandQueue* gfx = new CommandQueue;
 			gfx->initialize(gfx_context_state, queue_type);
-			return std::unique_ptr<CommandQueue>(gfx);
+			return gfx;
 		}
 	};
 }

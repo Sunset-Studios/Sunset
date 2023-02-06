@@ -71,7 +71,8 @@ namespace Sunset
 		StorageBuffer = 0x00000008,
 		TransferSource = 0x00000010,
 		TransferDestination = 0x00000020,
-		Indirect = 0x00000040
+		Indirect = 0x00000040,
+		Transient = 0x00000080
 	};
 
 	inline BufferType operator|(BufferType lhs, BufferType rhs)
@@ -106,7 +107,9 @@ namespace Sunset
 		Image2D = 0x00000040,
 		Image3D = 0x00000080,
 		Sampled = 0x00000100,
-		Present = 0x00000200
+		Present = 0x00000200,
+		Transient = 0x00000400,
+		LocalLoad = 0x00000800
 	};
 
 	inline ImageFlags operator|(ImageFlags lhs, ImageFlags rhs)
@@ -196,10 +199,14 @@ namespace Sunset
 	using BufferID = size_t;
 	using RenderPassID = size_t;
 	using FramebufferID = size_t;
+	using ShaderLayoutID = size_t;
+	using ShaderID = size_t;
 
 	#define SECONDS_TIME std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count() * 0.001
 	#define WORLD_UP glm::vec3(0.0f, 1.0f, 0.0f)
 	#define WORLD_FORWARD glm::vec3(0.0f, 0.0f, -1.0f)
 
-	#define MAX_BUFFERED_FRAMES 2
+	constexpr uint16_t MAX_BUFFERED_FRAMES = 2;
+	constexpr uint16_t MAX_MATERIALS = 16536;
+	constexpr uint16_t MAX_MATERIAL_TEXTURES = 16;
 }

@@ -14,44 +14,53 @@ namespace Sunset
 {
 	Sunset::ImageID ImageFactory::create(class GraphicsContext* const gfx_context, const AttachmentConfig& config, bool auto_delete)
 	{
-		ImageID image_id = ImageCache::get()->fetch_or_add(config.name, gfx_context);
-		Image* image = CACHE_FETCH(Image, image_id);
-		image->initialize(gfx_context, config);
-		if (auto_delete)
+		bool b_added{ false };
+		ImageID image_id = ImageCache::get()->fetch_or_add(config.name, gfx_context, b_added, auto_delete);
+		if (b_added)
 		{
-			gfx_context->add_resource_deletion_execution([image_id, image, gfx_context]()
-			{
-				ImageCache::get()->remove(image_id);
-				image->destroy(gfx_context);
-				GlobalAssetPools<Image>::get()->deallocate(image);
-			});
+			Image* image = CACHE_FETCH(Image, image_id);
+			image->initialize(gfx_context, config);
 		}
 		return image_id;
 	}
 
 	Sunset::ImageID ImageFactory::create(class GraphicsContext* const gfx_context, const AttachmentConfig& config, void* image_handle, void* image_view_handle, bool auto_delete /*= true*/)
 	{
-		ImageID image_id = ImageCache::get()->fetch_or_add(config.name, gfx_context);
-		Image* image = CACHE_FETCH(Image, image_id);
-		image->initialize(gfx_context, config, image_handle, image_view_handle);
-		if (auto_delete)
+		bool b_added{ false };
+		ImageID image_id = ImageCache::get()->fetch_or_add(config.name, gfx_context, b_added, auto_delete);
+		if (b_added)
 		{
-			gfx_context->add_resource_deletion_execution([image_id, image, gfx_context]()
-			{
-				ImageCache::get()->remove(image_id);
-				image->destroy(gfx_context);
-				GlobalAssetPools<Image>::get()->deallocate(image);
-			});
+			Image* image = CACHE_FETCH(Image, image_id);
+			image->initialize(gfx_context, config, image_handle, image_view_handle);
 		}
 		return image_id;
 	}
 
+	Sunset::ImageID ImageFactory::create_default(class GraphicsContext* const gfx_context)
+	{
+		static ImageID image;
+		if (image == 0)
+		{
+			AttachmentConfig config;
+			config.name = "default";
+			config.format = Format::Float4x16;
+			config.extent = glm::vec3(1.0f, 1.0f, 1.0f);
+			config.flags = ImageFlags::Color | ImageFlags::Sampled;
+			config.usage_type = MemoryUsageType::OnlyGPU;
+			config.sampler_address_mode = SamplerAddressMode::Repeat;
+			config.image_filter = ImageFilter::Linear;
+			image = create(gfx_context, config);
+		}
+		return image;
+	}
+
 	Sunset::ImageID ImageFactory::load(class GraphicsContext* const gfx_context, const AttachmentConfig& config)
 	{
-		ImageID image_id = ImageCache::get()->fetch_or_add(config.name, gfx_context);
+		bool b_added{ false };
+		ImageID image_id = ImageCache::get()->fetch_or_add(config.name, gfx_context, b_added);
 		Image* image = CACHE_FETCH(Image, image_id);
 
-		if (image->get_image() == nullptr)
+		if (b_added)
 		{
 			SerializedAsset asset;
 			if (!deserialize_asset(config.path, asset))

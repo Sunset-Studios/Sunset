@@ -18,7 +18,7 @@
 
 namespace Sunset
 {
-	void ImGUICore::initialize(class GraphicsContext* gfx_context, class Window* const window)
+	void ImGUICore::initialize(class GraphicsContext* gfx_context, class Window* const window, RenderPassID render_pass)
 	{
 		if (!b_initialized)
 		{
@@ -69,7 +69,7 @@ namespace Sunset
 				init_info.ImageCount = 3;
 				init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 
-				VulkanRenderPassData* render_pass_data = static_cast<VulkanRenderPassData*>(Renderer::get()->master_pass()->get_data());
+				VulkanRenderPassData* render_pass_data = static_cast<VulkanRenderPassData*>(CACHE_FETCH(RenderPass, render_pass)->get_data());
 				ImGui_ImplVulkan_Init(&init_info, render_pass_data->render_pass);
 			}
 

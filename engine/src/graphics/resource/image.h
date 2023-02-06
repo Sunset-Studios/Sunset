@@ -114,6 +114,7 @@ namespace Sunset
 	public:
 		static ImageID create(class GraphicsContext* const gfx_context, const AttachmentConfig& config, void* image_handle, void* image_view_handle, bool auto_delete = true);
 		static ImageID create(class GraphicsContext* const gfx_context, const AttachmentConfig& config, bool auto_delete = true);
+		static ImageID create_default(class GraphicsContext* const gfx_context);
 		static ImageID load(class GraphicsContext* const gfx_context, const AttachmentConfig& config);
 	};
 

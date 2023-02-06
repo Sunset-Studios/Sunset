@@ -22,11 +22,13 @@ namespace Sunset
 		// into something more appropriate (e.g. the compute queue would utilize it's own pool)
 		graphics_context->set_descriptor_set_allocator(DescriptorSetAllocatorFactory::create(graphics_context.get()));
 		graphics_context->get_descriptor_set_allocator()->configure_pool_sizes({
-			{ DescriptorType::UniformBuffer, 128 },
-			{ DescriptorType::DynamicUniformBuffer, 128 },
-			{ DescriptorType::StorageBuffer, 128 },
-			{ DescriptorType::Image, 1048 }
-			});
+			{ DescriptorType::UniformBuffer, MAX_DESCRIPTOR_BINDINGS },
+			{ DescriptorType::DynamicUniformBuffer, MAX_DESCRIPTOR_BINDINGS },
+			{ DescriptorType::StorageBuffer, MAX_DESCRIPTOR_BINDINGS },
+			{ DescriptorType::Image, MAX_DESCRIPTOR_BINDINGS }
+		});
+
+		render_graph.initialize(graphics_context.get());
 	}
 
 	void Renderer::destroy()
@@ -55,31 +57,13 @@ namespace Sunset
 		return render_graph;
 	}
 
-	Sunset::TaskQueue& Renderer::get_mesh_task_queue()
+	Sunset::MeshTaskQueue& Renderer::get_mesh_task_queue()
 	{
 		return mesh_task_queue;
 	}
 
-	Sunset::RenderTask* Renderer::fresh_rendertask()
+	Sunset::MeshRenderTask* Renderer::fresh_rendertask()
 	{
 		return task_allocator.get_new();
-	}
-
-	void Renderer::inject_global_descriptor(uint16_t buffered_frame, const std::initializer_list<DescriptorBuildData>& descriptor_build_datas)
-	{
-		assert(buffered_frame >= 0 && buffered_frame < MAX_BUFFERED_FRAMES);
-
-		DescriptorData& descriptor_data = global_descriptor_data[buffered_frame];
-
-		DescriptorHelpers::inject_descriptors(context(), descriptor_data, descriptor_build_datas);
-	}
-
-	void Renderer::inject_object_descriptor(uint16_t buffered_frame, const std::initializer_list<DescriptorBuildData>& descriptor_build_datas)
-	{
-		assert(buffered_frame >= 0 && buffered_frame < MAX_BUFFERED_FRAMES);
-
-		DescriptorData& descriptor_data = object_descriptor_data[buffered_frame];
-
-		DescriptorHelpers::inject_descriptors(context(), descriptor_data, descriptor_build_datas);
 	}
 }

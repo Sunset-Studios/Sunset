@@ -13,11 +13,10 @@ namespace Sunset
 		mesh_comp->mesh = mesh;
 	}
 
-	void set_material(MeshComponent* mesh_comp, const Material& material)
+	void set_material(MeshComponent* mesh_comp, MaterialID material)
 	{
 		assert(mesh_comp != nullptr && "Cannot set material on null mesh component");
-		Identity cache_id = std::hash<Material>{}(material);
-		mesh_comp->material = MaterialCache::get()->fetch_or_add(cache_id, Renderer::get()->context());
+		mesh_comp->material = material;
 	}
 
 	size_t mesh_vertex_count(MeshComponent* mesh_comp)

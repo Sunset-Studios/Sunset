@@ -29,7 +29,6 @@ namespace Sunset
 		void destroy(class GraphicsContext* const gfx_context)
 		{
 			pipeline_state_policy.destroy(gfx_context, &state_data);
-			state_data.layout->destroy(gfx_context);
 		}
 
 		void build(class GraphicsContext* const gfx_context, void* render_pass_data)
@@ -67,7 +66,7 @@ namespace Sunset
 			state_data.shader_stages.clear();
 		}
 
-		void set_shader_layout(class GraphicsContext* const gfx_context, class ShaderPipelineLayout* layout)
+		void set_shader_layout(class GraphicsContext* const gfx_context, ShaderLayoutID layout)
 		{
 			state_data.layout = layout;
 		}
@@ -77,15 +76,24 @@ namespace Sunset
 			state_data.vertex_input_description = vertex_input_description;
 		}
 
-		void set_shader_stage(class GraphicsContext* const gfx_context, PipelineShaderStageType stage, class Shader* shader)
+		void set_shader_stage(class GraphicsContext* const gfx_context, PipelineShaderStageType stage, ShaderID shader)
 		{
 			state_data.shader_stages.emplace_back(stage, shader);
 		}
 
 		void set_shader_stage(class GraphicsContext* const gfx_context, PipelineShaderStageType stage, const char* shader_path)
 		{
-			const ShaderID new_shader = ShaderCache::get()->fetch_or_add(shader_path, gfx_context);
-			state_data.shader_stages.emplace_back(stage, CACHE_FETCH(Shader, new_shader));
+			bool b_added{ false };
+			const ShaderID new_shader = ShaderCache::get()->fetch_or_add(shader_path, gfx_context, b_added);
+			if (b_added)
+			{
+				Shader* const shader = CACHE_FETCH(Shader, new_shader);
+				if (!shader->is_compiled())
+				{
+					shader->initialize(gfx_context, shader_path);
+				}
+			}
+			state_data.shader_stages.emplace_back(stage, new_shader);
 		}
 
 		void set_primitive_topology(class GraphicsContext* const gfx_context, PipelinePrimitiveTopologyType topology_type)
@@ -157,15 +165,16 @@ namespace Sunset
 
 			PipelineStateBuilder& add_viewport(float x_pos, float y_pos, float width, float height, float min_depth, float max_depth);
 			PipelineStateBuilder& add_scissor(int32_t x_pos, int32_t y_pos, int32_t width, int32_t height);
-			PipelineStateBuilder& set_shader_layout(class ShaderPipelineLayout* layout);
+			PipelineStateBuilder& set_shader_layout(ShaderLayoutID layout);
 			PipelineStateBuilder& clear_shader_stages();
-			PipelineStateBuilder& set_shader_stage(PipelineShaderStageType stage, class Shader* shader);
+			PipelineStateBuilder& set_shader_stage(PipelineShaderStageType stage, ShaderID shader);
 			PipelineStateBuilder& set_shader_stage(PipelineShaderStageType stage, const char* shader_path);
 			PipelineStateBuilder& set_vertex_input_description(PipelineVertexInputDescription vertex_input_description);
 			PipelineStateBuilder& set_primitive_topology_type(PipelinePrimitiveTopologyType topology_type);
 			PipelineStateBuilder& set_rasterizer_state(PipelineRasterizerPolygonMode polygon_mode, float line_width, PipelineRasterizerCullMode cull_mode);
 			PipelineStateBuilder& set_multisample_count(uint16_t count);
 			PipelineStateBuilder& set_depth_stencil_state(bool b_depth_test_enabled, bool b_depth_write_enabled, CompareOperation compare_op);
+			PipelineStateBuilder& set_pass(RenderPassID pass);
 
 			PipelineStateID finish();
 

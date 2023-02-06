@@ -27,6 +27,11 @@ namespace Sunset
 			return shader_policy.get_data();
 		}
 
+		bool is_compiled() const
+		{
+			return shader_policy.is_compiled();
+		}
+
 	private:
 		Policy shader_policy;
 	};
@@ -46,6 +51,11 @@ namespace Sunset
 		{
 			return nullptr;
 		}
+
+		bool is_compiled() const
+		{
+			return false;
+		}
 	};
 
 #if USE_VULKAN_GRAPHICS
@@ -55,6 +65,12 @@ namespace Sunset
 	class Shader : public GenericShader<NoopShader>
 	{ };
 #endif
+
+	class ShaderFactory
+	{
+	public:
+		static ShaderID create(class GraphicsContext* gfx_context, const char* shader_path);
+	};
 
 	DEFINE_RESOURCE_CACHE(ShaderCache, ShaderID, Shader);
 }

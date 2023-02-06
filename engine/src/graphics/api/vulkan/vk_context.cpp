@@ -41,8 +41,18 @@ namespace Sunset
 		shader_draw_parameters_features.pNext = nullptr;
 		shader_draw_parameters_features.shaderDrawParameters = VK_TRUE;
 
-		state.device = device_builder.add_pNext(&shader_draw_parameters_features).build().value();
+		VkPhysicalDeviceDescriptorIndexingFeatures indexing_features = {};
+		indexing_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT;
+		indexing_features.pNext = nullptr;
+
+		state.device = device_builder
+			.add_pNext(&shader_draw_parameters_features)
+			.add_pNext(&indexing_features)
+			.build()
+			.value();
+
 		state.window = window;
+		state.supports_bindless = indexing_features.descriptorBindingPartiallyBound && indexing_features.runtimeDescriptorArray;
 
 		for (int16_t frame_number = 0; frame_number < MAX_BUFFERED_FRAMES; ++frame_number)
 		{
@@ -102,7 +112,7 @@ namespace Sunset
 		const int16_t queue_type_idx = static_cast<int16_t>(queue_type);
 		if (state.queues[queue_type_idx] == nullptr)
 		{
-			state.queues[queue_type_idx] = std::move(GraphicsCommandQueueFactory::create(&state, queue_type));
+			state.queues[queue_type_idx] = GraphicsCommandQueueFactory::create(&state, queue_type);
 		}
 	}
 
@@ -117,7 +127,7 @@ namespace Sunset
 
 	CommandQueue* VulkanContext::get_command_queue(DeviceQueueType queue_type)
 	{
-		return state.queues[static_cast<int16_t>(queue_type)].get();
+		return state.queues[static_cast<int16_t>(queue_type)];
 	}
 
 	void VulkanContext::push_constants(void* buffer, PipelineStateID pipeline_state, const PushConstantPipelineData& push_constant_data)
@@ -126,7 +136,7 @@ namespace Sunset
 		PipelineState* const pso = CACHE_FETCH(PipelineState, pipeline_state);
 		assert(pso != nullptr && "Cannot push constants to a null pipeline state");
 
-		VkPipelineLayout pipeline_layout = static_cast<VkPipelineLayout>(pso->get_state_data().layout->get_data());
+		VkPipelineLayout pipeline_layout = static_cast<VkPipelineLayout>(CACHE_FETCH(ShaderPipelineLayout, pso->get_state_data().layout)->get_data());
 		assert(pipeline_layout != nullptr && "Cannot push constants to a pipeline state with a null pipeline layout object");
 
 		vkCmdPushConstants(command_buffer, pipeline_layout, VK_FROM_SUNSET_SHADER_STAGE_TYPE(push_constant_data.shader_stage), push_constant_data.offset, static_cast<uint32_t>(push_constant_data.size), push_constant_data.data);
@@ -160,6 +170,7 @@ namespace Sunset
 				new_vk_write.pImageInfo = &image_info;
 				new_vk_write.dstBinding = write.slot;
 				new_vk_write.dstSet = static_cast<VkDescriptorSet>(write.set->get());
+				new_vk_write.dstArrayElement = write.array_index;
 			}
 			else
 			{
@@ -176,6 +187,7 @@ namespace Sunset
 				new_vk_write.pBufferInfo = &buffer_info;
 				new_vk_write.dstBinding = write.slot;
 				new_vk_write.dstSet = static_cast<VkDescriptorSet>(write.set->get());
+				new_vk_write.dstArrayElement = write.array_index;
 			}
 		}
 

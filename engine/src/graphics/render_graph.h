@@ -2,10 +2,10 @@
 
 #include <common.h>
 
-#include <graphics/render_task.h>
 #include <graphics/resource/image_types.h>
 #include <graphics/resource/buffer_types.h>
 #include <graphics/render_pass_types.h>
+#include <memory/allocators/stack_allocator.h>
 
 #include <unordered_set>
 
@@ -20,7 +20,7 @@ namespace Sunset
 
 	inline RGResourceHandle create_graph_resource_handle(RGResourceIndex index, RGResourceType type, RGResourceVersion version)
 	{
-		return ((RGResourceIndex)index << 32) | ((RGResourceType)type << 16) | ((RGResourceVersion)version);
+		return ((RGResourceHandle)index << 32) | ((RGResourceHandle)type << 16) | version;
 	}
 
 	inline RGResourceIndex get_graph_resource_index(RGResourceHandle handle)
@@ -51,7 +51,6 @@ namespace Sunset
 	protected:
 		RGResourceHandle handle;
 		ResourceConfig config;
-		int32_t physical_id{ 0 };
 	};
 
 	class RGImageResource : RGResource<AttachmentConfig>
@@ -67,14 +66,37 @@ namespace Sunset
 	struct RGResourceMetadata
 	{
 		int32_t reference_count{ 0 };
+		int32_t physical_id{ 0 };
 		std::vector<RGPassHandle> producers;
 		std::vector<RGPassHandle> consumers;
 		RGPassHandle first_user;
 		RGPassHandle last_user;
+		bool b_is_external{ false };
+	};
+
+	struct RGFrameData
+	{
+		std::vector<DescriptorLayoutID> descriptor_layouts;
+		RenderPassID current_pass{ 0 };
+		class GraphicsContext* gfx_context{ nullptr };
+	};
+
+	struct RGShaderDescriptorDeclaration
+	{
+		uint32_t count{ 0 };
+		DescriptorType type;
+		PipelineShaderStageType shader_stages;
+		bool b_supports_bindless{ false };
+	};
+
+	struct RGShaderDataSetup
+	{
+		std::vector<RGShaderDescriptorDeclaration> declarations;
 	};
 
 	struct RGPassParameters
 	{
+		RGShaderDataSetup shader_setup;
 		std::vector<RGResourceHandle> inputs;
 		std::vector<RGResourceHandle> outputs;
 	};
@@ -86,7 +108,7 @@ namespace Sunset
 		RGPassHandle handle;
 		RenderPassConfig pass_config;
 		RGPassParameters parameters;
-		std::function<void(class RenderGraph&, void*)> executor;
+		std::function<void(class RenderGraph&, RGFrameData&, void*)> executor;
 		int32_t reference_count{ 0 };
 		int32_t physical_id{ 0 };
 	};
@@ -96,8 +118,8 @@ namespace Sunset
 	using RenderPassFrameAllocator = StaticFrameAllocator<RGPass, 128>;
 
 	// All render graph registry resources (aside from render passes) should be transient and therefore do not need serious caching.
-	// Any resource that need to survive multiple frames should be allocated externally and registered to the render graph as external
-	// resources.
+	// For this reason the pass cache is the only thing we don't clear out per-frame. Any resource that need to survive multiple frames
+	// should be allocated externally and registered to the render graph as external resources.
 	class RenderGraphRegistry
 	{
 		friend class RenderGraph;
@@ -123,30 +145,50 @@ namespace Sunset
 			class GraphicsContext* const gfx_context,
 			const AttachmentConfig& config);
 
+		RGResourceHandle register_image(
+			class GraphicsContext* const gfx_context,
+			ImageID image);
+
 		RGResourceHandle create_buffer(
 			class GraphicsContext* const gfx_context,
 			const BufferConfig& config);
+
+		RGResourceHandle register_buffer(
+			class GraphicsContext* const gfx_context,
+			BufferID buffer);
 
 		RGPassHandle add_pass(
 			class GraphicsContext* const gfx_context,
 			Identity name,
 			RenderPassFlags pass_type,
 			const RGPassParameters& params,
-			std::function<void(RenderGraph&, void*)> execution_callback);
+			std::function<void(RenderGraph&, RGFrameData&, void*)> execution_callback);
 
 		void submit(class GraphicsContext* const gfx_context, class Swapchain* const swapchain);
+
+		void inject_global_descriptors(class GraphicsContext* const gfx_context, uint16_t buffered_frame_index, const std::initializer_list<DescriptorBuildData>& descriptor_build_datas);
+
+		int32_t get_physical_resource(RGResourceHandle resource);
 
 	protected:
 		void update_reference_counts(RGPass* pass);
 		void update_resource_param_producers_and_consumers(RGPass* pass);
 		void cull_graph_passes(class GraphicsContext* const gfx_context);
 		void compute_resource_first_and_last_users(class GraphicsContext* const gfx_context);
+		void create_dummy_pipeline_layout(class GraphicsContext* const gfx_context);
 		void compile(class GraphicsContext* const gfx_context, class Swapchain* const swapchain);
-		void execute_pass(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGPass* pass, void* command_buffer);
-		void reset();
 
-		void create_physical_pass_if_necessary(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGPassHandle pass);
-		void create_physical_resource_if_necessary(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGResourceHandle pass);
+		void execute_pass(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGPass* pass, RGFrameData& frame_data, void* command_buffer);
+
+		void setup_physical_pass_and_resources(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGPassHandle pass, void* command_buffer);
+		void setup_physical_resource(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGResourceHandle pass);
+		void tie_resource_to_pass_config_attachments(class GraphicsContext* const gfx_context, RGResourceHandle resource, RGPass* pass);
+		void setup_pass_descriptors(class GraphicsContext* const gfx_context, RGPass* pass, void* command_buffer);
+		void bind_global_descriptors(class GraphicsContext* const gfx_context, void* command_buffer);
+		void bind_pass_descriptors(class GraphicsContext* const gfx_context, RGPass* pass, void* command_buffer);
+		void update_transient_resources(class GraphicsContext* const gfx_context, RGPass* pass);
+
+		void reset();
 
 	protected:
 		ImageResourceFrameAllocator image_resource_allocator;
@@ -156,5 +198,8 @@ namespace Sunset
 		RenderGraphRegistry registry;
 
 		std::vector<RGPassHandle> nonculled_passes;
+
+		DescriptorData global_descriptor_datas[MAX_BUFFERED_FRAMES];
+		ShaderLayoutID dummy_pipeline_layout{ 0 };
 	};
 }

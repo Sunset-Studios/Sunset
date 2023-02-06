@@ -59,7 +59,7 @@ namespace Sunset
 		vmaDestroyAllocator(allocator);
 	}
 
-	void VulkanBuffer::initialize(class GraphicsContext* const gfx_context, size_t buffer_size, BufferType type, MemoryUsageType memory_usage)
+	void VulkanBuffer::initialize(class GraphicsContext* const gfx_context, const BufferConfig& config)
 	{
 		assert(gfx_context->get_buffer_allocator() != nullptr);
 
@@ -67,18 +67,18 @@ namespace Sunset
 
 		VkBufferCreateInfo buffer_create_info = {};
 		buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		buffer_create_info.size = type == BufferType::Indirect ? buffer_size * sizeof(VulkanGPUIndirectObject) : buffer_size;
-		buffer_create_info.usage = SUNSET_TO_VULKAN_BUFFER_TYPE(type);
+		buffer_create_info.size = config.type == BufferType::Indirect ? config.buffer_size * sizeof(VulkanGPUIndirectObject) : config.buffer_size;
+		buffer_create_info.usage = SUNSET_TO_VULKAN_BUFFER_TYPE(config.type);
 
 		VmaAllocationCreateInfo allocation_create_info = {};
-		allocation_create_info.usage = VK_FROM_SUNSET_MEMORY_USAGE(memory_usage);
+		allocation_create_info.usage = VK_FROM_SUNSET_MEMORY_USAGE(config.memory_usage);
 
 		VK_CHECK(vmaCreateBuffer(allocator, &buffer_create_info, &allocation_create_info, &buffer, &allocation, nullptr));
 
-		size = buffer_size;
+		size = config.buffer_size;
 	}
 
-	void VulkanBuffer::reallocate(class GraphicsContext* const gfx_context, size_t new_buffer_size, BufferType type, MemoryUsageType memory_usage)
+	void VulkanBuffer::reallocate(class GraphicsContext* const gfx_context, const BufferConfig& config)
 	{
 		assert(gfx_context->get_buffer_allocator() != nullptr);
 
@@ -86,7 +86,7 @@ namespace Sunset
 
 		destroy(gfx_context);
 
-		initialize(gfx_context, new_buffer_size, type, memory_usage);
+		initialize(gfx_context, config);
 	}
 
 	void VulkanBuffer::destroy(class GraphicsContext* const gfx_context)

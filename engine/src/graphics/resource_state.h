@@ -16,6 +16,9 @@ namespace Sunset
 				state_data = data;
 			}
 
+			void destroy(class GraphicsContext* const gfx_context)
+			{ }
+
 			void bind(class GraphicsContext* const gfx_context, void* buffer);
 
 		public:

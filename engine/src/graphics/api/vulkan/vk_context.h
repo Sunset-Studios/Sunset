@@ -32,9 +32,10 @@ namespace Sunset
 			VulkanFrameSyncPrimitives frame_sync_primitives[MAX_BUFFERED_FRAMES];
 			uint32_t frame_number{ 0 };
 			class Window* window{ nullptr };
-			std::unique_ptr<class CommandQueue> queues[static_cast<int16_t>(DeviceQueueType::Num)];
+			class CommandQueue* queues[static_cast<int16_t>(DeviceQueueType::Num)];
 			class BufferAllocator* buffer_allocator{ nullptr };
 			class DescriptorSetAllocator* descriptor_set_allocator{ nullptr };
+			bool supports_bindless{ false };
 
 		public:
 			VulkanContextState() = default;

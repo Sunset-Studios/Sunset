@@ -5,7 +5,7 @@
 
 namespace Sunset
 {
-	void VulkanShaderPipelineLayout::initialize(class GraphicsContext* const gfx_context, const PushConstantPipelineData& push_constant_data, const std::vector<DescriptorLayout*> descriptor_layouts)
+	void VulkanShaderPipelineLayout::initialize(class GraphicsContext* const gfx_context, const PushConstantPipelineData& push_constant_data, const std::vector<DescriptorLayoutID> descriptor_layouts)
 	{
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
 
@@ -32,9 +32,10 @@ namespace Sunset
 		std::vector<VkDescriptorSetLayout> set_layouts;
 		if (descriptor_layouts.size() > 0)
 		{
-			for (DescriptorLayout* const layout : descriptor_layouts)
+			for (DescriptorLayoutID layout : descriptor_layouts)
 			{
-				set_layouts.push_back(static_cast<VkDescriptorSetLayout>(layout->get()));
+				DescriptorLayout* const layout_obj = CACHE_FETCH(DescriptorLayout, layout);
+				set_layouts.push_back(static_cast<VkDescriptorSetLayout>(layout_obj->get()));
 			}
 
 			create_info.setLayoutCount = static_cast<uint32_t>(set_layouts.size());

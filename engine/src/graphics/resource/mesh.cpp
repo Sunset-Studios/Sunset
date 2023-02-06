@@ -14,7 +14,7 @@ namespace Sunset
 			// Upload vertex buffer
 			const size_t vertex_data_size = vertices.size() * sizeof(Vertex);
 
-			std::string buffer_name = name;
+			std::string buffer_name = std::string(name);
 			buffer_name += "_vertex_staging";
 			const BufferID vertex_staging_buffer_id = BufferFactory::create(
 				gfx_context,
@@ -30,7 +30,7 @@ namespace Sunset
 
 			vertex_staging_buffer->copy_from(gfx_context, vertices.data(), vertex_data_size);
 
-			buffer_name = name;
+			buffer_name = std::string(name);
 			buffer_name += "_vertex";
 			vertex_buffer = BufferFactory::create(
 				gfx_context,
@@ -56,7 +56,7 @@ namespace Sunset
 			// Upload index buffer
 			const size_t index_data_size = indices.size() * sizeof(uint32_t);
 
-			std::string buffer_name = name;
+			std::string buffer_name = std::string(name);
 			buffer_name += "_index_staging";
 			const BufferID index_staging_buffer_id = BufferFactory::create(
 				gfx_context,
@@ -72,7 +72,7 @@ namespace Sunset
 
 			index_staging_buffer->copy_from(gfx_context, indices.data(), index_data_size);
 
-			buffer_name = name;
+			buffer_name = std::string(name);
 			buffer_name += "_index";
 			index_buffer = BufferFactory::create(
 				gfx_context,
@@ -115,11 +115,12 @@ namespace Sunset
 
 	Sunset::MeshID MeshFactory::create_triangle(class GraphicsContext* const gfx_context)
 	{
-		Identity id = "engine_triangle";
-		static MeshID mesh_id = MeshCache::get()->fetch_or_add(id, gfx_context);
+		Identity id{ "engine_triangle" };
+		bool b_added{ false };
+		static MeshID mesh_id = MeshCache::get()->fetch_or_add(id, gfx_context, b_added);
 		Mesh* const mesh = CACHE_FETCH(Mesh, mesh_id);
 
-		if (mesh->vertices.size() == 0)
+		if (b_added)
 		{
 			mesh->vertices.resize(3);
 
@@ -141,11 +142,12 @@ namespace Sunset
 
 	Sunset::MeshID MeshFactory::load(class GraphicsContext* const gfx_context, const char* path)
 	{
-		Identity id = path;
-		const MeshID mesh_id = MeshCache::get()->fetch_or_add(id, gfx_context);
+		Identity id{ path };
+		bool b_added{ false };
+		const MeshID mesh_id = MeshCache::get()->fetch_or_add(id, gfx_context, b_added);
 		Mesh* const mesh = CACHE_FETCH(Mesh, mesh_id);
 
-		if (mesh->vertex_buffer == 0)
+		if (b_added)
 		{
 			SerializedAsset asset;
 			if (!deserialize_asset(path, asset))

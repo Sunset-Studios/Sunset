@@ -1,5 +1,4 @@
 #include <core/layers/scene.h>
-#include <core/data_globals.h>
 #include <core/subsystems/static_mesh_processor.h>
 #include <core/subsystems/transform_processor.h>
 #include <core/subsystems/camera_control_processor.h>
@@ -102,10 +101,13 @@ namespace Sunset
 		const size_t aligned_cam_data_size = BufferHelpers::pad_ubo_size(sizeof(CameraMatrices), min_ubo_alignment);
 		const size_t aligned_lighting_data_size = BufferHelpers::pad_ubo_size(sizeof(SceneLightingData), min_ubo_alignment);
 
+		scene_data.cam_data_buffer_start = 0;
+		scene_data.lighting_data_buffer_start = aligned_cam_data_size * MAX_BUFFERED_FRAMES;
+
 		if (scene_data.buffer == 0)
 		{
 			scene_data.buffer = BufferFactory::create(
-				Renderer::get()->context(), 
+				Renderer::get()->context(),
 				{
 					.name = "scene_data_buffer",
 					.buffer_size = (aligned_cam_data_size + aligned_lighting_data_size) * MAX_BUFFERED_FRAMES,
@@ -114,18 +116,16 @@ namespace Sunset
 			);
 		}
 
-		scene_data.cam_data_buffer_start = 0;
-		scene_data.lighting_data_buffer_start = aligned_cam_data_size * MAX_BUFFERED_FRAMES;
-
 		for (int i = 0; i < MAX_BUFFERED_FRAMES; ++i)
 		{
-			Renderer::get()->inject_global_descriptor(i,
+			Renderer::get()->get_render_graph().inject_global_descriptors(Renderer::get()->context(), i,
 			{
 				{
 					.binding = 0,
 					.buffer = scene_data.buffer,
 					.buffer_offset = static_cast<uint32_t>(scene_data.cam_data_buffer_start + aligned_cam_data_size * i),
 					.buffer_range = sizeof(CameraMatrices),
+					.count = 1,
 					.type = DescriptorType::DynamicUniformBuffer,
 					.shader_stages = PipelineShaderStageType::Vertex
 				},
@@ -134,20 +134,9 @@ namespace Sunset
 					.buffer = scene_data.buffer,
 					.buffer_offset = static_cast<uint32_t>(scene_data.lighting_data_buffer_start + aligned_lighting_data_size * i),
 					.buffer_range = sizeof(SceneLightingData),
+					.count = 1,
 					.type = DescriptorType::DynamicUniformBuffer,
-					.shader_stages = PipelineShaderStageType::Vertex | PipelineShaderStageType::Fragment
-				}
-			});
-
-			Renderer::get()->inject_object_descriptor(i,
-			{
-				{
-					.binding = 0,
-					.buffer = EntityGlobals::get()->transforms.transform_buffer[i],
-					.buffer_offset = 0,
-					.buffer_range = sizeof(glm::mat4) * MIN_ENTITIES,
-					.type = DescriptorType::StorageBuffer,
-					.shader_stages = PipelineShaderStageType::Vertex
+					.shader_stages = PipelineShaderStageType::All
 				}
 			});
 		}

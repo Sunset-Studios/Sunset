@@ -13,10 +13,11 @@ namespace Sunset
 
 	enum class PipelineShaderStageType : uint16_t
 	{
-		Vertex = 1,
-		Fragment = 2,
-		Geometry = 4,
-		Compute = 8
+		Vertex = 0x0001,
+		Fragment = 0x0002,
+		Geometry = 0x0004,
+		Compute = 0x0008,
+		All = 0xFFFF
 	};
 
 	inline PipelineShaderStageType operator|(PipelineShaderStageType a, PipelineShaderStageType b)
@@ -73,7 +74,7 @@ namespace Sunset
 	{
 		public:
 			PipelineShaderStageType stage_type{ PipelineShaderStageType::Vertex };
-			class Shader* shader_module{ nullptr };
+			ShaderID shader_module{ 0 };
 
 			bool operator==(const PipelineShaderStage& other) const
 			{
@@ -142,13 +143,14 @@ namespace Sunset
 			std::vector<Viewport> viewports;
 			std::vector<Scissor> scissors;
 			PipelineVertexInputDescription vertex_input_description;
-			class ShaderPipelineLayout* layout{ nullptr };
+			ShaderLayoutID layout{ 0 };
 			PipelinePrimitiveTopologyType primitive_topology_type{ PipelinePrimitiveTopologyType::TriangleList };
 			PipelineRasterizerState rasterizer_state{{}};
 			uint16_t multisample_count{ 1 };
 			bool b_depth_test_enabled{ false };
 			bool b_depth_write_enabled{ false };
 			CompareOperation compare_op{ CompareOperation::Always };
+			RenderPassID render_pass;
 
 			bool operator==(const PipelineStateData& other) const
 			{
@@ -162,7 +164,8 @@ namespace Sunset
 					&& multisample_count == other.multisample_count
 					&& b_depth_test_enabled == other.b_depth_test_enabled
 					&& b_depth_write_enabled == other.b_depth_write_enabled
-					&& compare_op == other.compare_op;
+					&& compare_op == other.compare_op
+					&& render_pass == other.render_pass;
 			}
 	};
 }
@@ -179,7 +182,7 @@ struct std::hash<Sunset::PipelineStateData>
 		std::size_t ss_seed = psd.shader_stages.size();
 		for (auto& i : psd.shader_stages)
 		{
-			std::size_t hash = Sunset::Maths::cantor_pair_hash(static_cast<int32_t>(i.stage_type), reinterpret_cast<uintptr_t>(i.shader_module));
+			std::size_t hash = Sunset::Maths::cantor_pair_hash(static_cast<int32_t>(i.stage_type), static_cast<int32_t>(i.shader_module));
 			ss_seed ^= hash + 0x9e3779b9 + (ss_seed << 6) + (ss_seed >> 2);
 		}
 
@@ -226,7 +229,7 @@ struct std::hash<Sunset::PipelineStateData>
 			rasterizer_state_seed ^= hash + 0x9e3779b9 + (rasterizer_state_seed << 6) + (rasterizer_state_seed >> 2);
 		}
 
-		std::size_t pipeline_layout_seed = reinterpret_cast<uintptr_t>(psd.layout);
+		std::size_t pipeline_layout_seed = static_cast<int32_t>(psd.layout);
 
 		std::size_t topology_seed = static_cast<int32_t>(psd.primitive_topology_type);
 
@@ -238,6 +241,8 @@ struct std::hash<Sunset::PipelineStateData>
 
 		std::size_t compare_op_seed = static_cast<int32_t>(psd.compare_op);
 
+		std::size_t pass_seed = static_cast<int32_t>(psd.render_pass);
+
 		std::size_t final_hash = Sunset::Maths::cantor_pair_hash(static_cast<int32_t>(ss_seed), static_cast<int32_t>(viewport_seed));
 		final_hash = Sunset::Maths::cantor_pair_hash(final_hash, static_cast<int32_t>(scissors_seed));
 		final_hash = Sunset::Maths::cantor_pair_hash(final_hash, static_cast<int32_t>(vertex_input_seed));
@@ -248,6 +253,7 @@ struct std::hash<Sunset::PipelineStateData>
 		final_hash = Sunset::Maths::cantor_pair_hash(final_hash, static_cast<int32_t>(depth_test_seed));
 		final_hash = Sunset::Maths::cantor_pair_hash(final_hash, static_cast<int32_t>(depth_write_seed));
 		final_hash = Sunset::Maths::cantor_pair_hash(final_hash, static_cast<int32_t>(compare_op_seed));
+		final_hash = Sunset::Maths::cantor_pair_hash(final_hash, static_cast<int32_t>(pass_seed));
 
 		return final_hash;
 	}

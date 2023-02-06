@@ -73,18 +73,20 @@ namespace Sunset
 
 			MeshComponent* const mesh_comp = scene->assign_component<MeshComponent>(mesh_ent);
 
-			Material mesh_material
-			{
-				.shaders =
+			MaterialID mesh_material = MaterialFactory::create(
+				Renderer::get()->context(),
 				{
-					{PipelineShaderStageType::Vertex, "../../shaders/default_mesh.vert.spv"},
-					{PipelineShaderStageType::Fragment, "../../shaders/default_lit.frag.spv"}
-				},
-				.textures =
-				{
-					"../../assets/lost_empire-RGBA.sun"
+					.shaders =
+					{
+						{PipelineShaderStageType::Vertex, "../../shaders/default_mesh.vert.spv"},
+						{PipelineShaderStageType::Fragment, "../../shaders/default_lit.frag.spv"}
+					},
+					.textures =
+					{
+						"../../assets/lost_empire-RGBA.sun"
+					}
 				}
-			};
+			);
 
 			set_mesh(mesh_comp, MeshFactory::load(Renderer::get()->context(), "../../assets/lost_empire.sun"));
 			set_material(mesh_comp, mesh_material);

@@ -22,3 +22,21 @@ namespace Sunset
 		}
 	};
 }
+
+#pragma warning( push )
+#pragma warning( disable : 4244)
+#pragma warning( disable : 4267)
+
+template<>
+struct std::hash<Sunset::PushConstantPipelineData>
+{
+	std::size_t operator()(const Sunset::PushConstantPipelineData& pc_data) const
+	{
+		std::size_t hash = Sunset::Maths::cantor_pair_hash(pc_data.offset, static_cast<int32_t>(pc_data.size));
+		hash = Sunset::Maths::cantor_pair_hash(hash, static_cast<int32_t>(pc_data.shader_stage));
+		hash = Sunset::Maths::cantor_pair_hash(hash, reinterpret_cast<uintptr_t>(pc_data.data));
+		return hash;
+	}
+};
+
+#pragma warning( pop ) 

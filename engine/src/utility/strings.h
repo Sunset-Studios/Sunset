@@ -4,6 +4,10 @@
 
 namespace Sunset
 {
+#ifndef NDEBUG
+	extern std::unordered_map<uint32_t, std::string> g_string_table;
+#endif
+
 	constexpr uint32_t fnvla_32(char const* s, std::size_t count)
 	{
 		return ((count > 0 ? fnvla_32(s, count - 1) : 2166136261u) ^ s[count]) * 16777619u;
@@ -69,9 +73,25 @@ namespace Sunset
 			return "";
 #endif
 		}
-	};
 
-#ifndef NDEBUG
-	std::unordered_map<uint32_t, std::string> g_string_table;
-#endif
+		constexpr bool operator==(const Identity& other) const noexcept
+		{
+			return computed_hash == other.computed_hash;
+		}
+	};
 }
+
+#pragma warning( push )
+#pragma warning( disable : 4244)
+#pragma warning( disable : 4267)
+
+template<>
+struct std::hash<Sunset::Identity>
+{
+	std::size_t operator()(const Sunset::Identity& id) const
+	{
+		return id.computed_hash;
+	}
+};
+
+#pragma warning( pop ) 

@@ -6,7 +6,7 @@
 
 namespace Sunset
 {
-	void VulkanFramebuffer::initialize(class GraphicsContext* const gfx_context, void* render_pass_handle, const std::initializer_list<ImageID>& attachments)
+	void VulkanFramebuffer::initialize(class GraphicsContext* const gfx_context, void* render_pass_handle, const std::vector<ImageID>& attachments)
 	{
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
 

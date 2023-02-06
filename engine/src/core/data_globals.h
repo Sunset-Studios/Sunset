@@ -3,15 +3,10 @@
 #include <minimal.h>
 #include <singleton.h>
 #include <entity.h>
+#include <gpu_shared_data_types.h>
 
 namespace Sunset
 {
-	struct EntityTransformData
-	{
-		BufferID transform_buffer[MAX_BUFFERED_FRAMES];
-		std::array<glm::mat4, MIN_ENTITIES> entity_transforms;
-	};
-
 	class EntityGlobals : public Singleton<EntityGlobals>
 	{
 	friend class Singleton;
@@ -20,6 +15,20 @@ namespace Sunset
 		void initialize() { }
 
 	public:
-		EntityTransformData transforms;
+		EntitySceneDataShared entity_data;
+	};
+
+	class MaterialGlobals : public Singleton<MaterialGlobals>
+	{
+		friend class Singleton;
+
+	public:
+		void initialize() { }
+
+		MaterialData* new_shared_data();
+		uint32_t get_shared_data_index(MaterialData* data);
+
+	public:
+		MaterialDataShared material_data;
 	};
 }

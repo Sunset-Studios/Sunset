@@ -6,17 +6,12 @@ namespace Sunset
 {
 	Sunset::BufferID BufferFactory::create(class GraphicsContext* const gfx_context, const BufferConfig& config, bool auto_delete)
 	{
-		BufferID buffer_id = BufferCache::get()->fetch_or_add(config.name, gfx_context);
-		Buffer* buffer = CACHE_FETCH(Buffer, buffer_id);
-		buffer->initialize(gfx_context, config);
-		if (auto_delete)
+		bool b_added{ false };
+		BufferID buffer_id = BufferCache::get()->fetch_or_add(config.name, gfx_context, b_added, auto_delete);
+		if (b_added)
 		{
-			gfx_context->add_resource_deletion_execution([buffer_id, buffer, gfx_context]()
-			{
-				BufferCache::get()->remove(buffer_id);
-				buffer->destroy(gfx_context);
-				GlobalAssetPools<Buffer>::get()->deallocate(buffer);
-			});
+			Buffer* buffer = CACHE_FETCH(Buffer, buffer_id);
+			buffer->initialize(gfx_context, config);
 		}
 		return buffer_id;
 	}

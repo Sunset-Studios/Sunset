@@ -37,7 +37,6 @@ namespace Sunset
 	{
 		Identity name;
 		RenderPassFlags flags;
-		std::vector<ImageID> samplers;
 		std::vector<ImageID> attachments;
 		bool b_is_present_pass = false;
 	};

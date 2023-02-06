@@ -5,8 +5,6 @@
 
 namespace Sunset
 {
-	using ImagePathList = std::vector<const char*>;
-
 	enum class ImageFilter : uint16_t
 	{
 		Nearest = 0,

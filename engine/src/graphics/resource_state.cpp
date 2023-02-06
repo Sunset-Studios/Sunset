@@ -52,10 +52,14 @@ namespace Sunset
 
 	Sunset::ResourceStateID ResourceStateBuilder::finish()
 	{
+		bool b_state_added{ false };
 		Identity cache_id = std::hash<ResourceStateData>{}(state_data);
-		ResourceStateID resource_state_id = ResourceStateCache::get()->fetch_or_add(cache_id, context);
-		ResourceState* const resource_state = CACHE_FETCH(ResourceState, resource_state_id);
-		resource_state->initialize(context, state_data);
+		ResourceStateID resource_state_id = ResourceStateCache::get()->fetch_or_add(cache_id, context, b_state_added);
+		if (b_state_added)
+		{
+			ResourceState* const resource_state = CACHE_FETCH(ResourceState, resource_state_id);
+			resource_state->initialize(context, state_data);
+		}
 		return resource_state_id;
 	}
 

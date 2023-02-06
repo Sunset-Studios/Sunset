@@ -31,105 +31,39 @@ namespace Sunset
 			MeshComponent* const mesh_comp = scene->get_component<MeshComponent>(entity);
 			TransformComponent* const transform_comp = scene->get_component<TransformComponent>(entity);
 
-			EntityGlobals::get()->transforms.entity_transforms[entity_index] = transform_comp->transform.local_matrix;
+			EntitySceneData& entity_data = EntityGlobals::get()->entity_data[entity_index];
+			entity_data.local_transform = transform_comp->transform.local_matrix;
 
 			if (mesh_comp->resource_state == 0)
 			{
 				mesh_comp->resource_state = ResourceStateBuilder::create()
 					.set_vertex_buffer(mesh_vertex_buffer(mesh_comp))
 					.set_index_buffer(mesh_index_buffer(mesh_comp))
-					.set_instance_index(entity_index)
 					.set_vertex_count(mesh_vertex_count(mesh_comp))
 					.set_index_count(mesh_index_count(mesh_comp))
+					.set_instance_index(entity_index)
 					.finish();
 			}
 
 			Material* const material = CACHE_FETCH(Material, mesh_comp->material);
 			assert(material != nullptr && "Cannot process mesh with a null material");
 
-			material->descriptor_datas[static_cast<int16_t>(DescriptorSetType::Global)] = Renderer::get()->get_global_descriptor_data(current_buffered_frame);
-			material->descriptor_datas[static_cast<int16_t>(DescriptorSetType::Object)] = Renderer::get()->get_object_descriptor_data(current_buffered_frame);
-
-			DescriptorData& material_descriptor = material->descriptor_datas[static_cast<int16_t>(DescriptorSetType::Material)];
-
-			PushConstantPipelineData push_constants_data = PushConstantPipelineData::create(&mesh_comp->additional_data);
-
-			// TODO_BEGIN: Material stuff can probably be moved out into some sort of material factory or material processor
-			// Ultimately pipeline state structures are render pass dependent so we'll need to either build those in the render
-			// graph compilation somewhere or specify pass information up front
-			if (material_descriptor.descriptor_set == nullptr)
-			{
-				std::vector<DescriptorBuildData> texture_bindings;
-				for (int i = 0; i < material->textures.size(); ++i)
-				{
-					ImageID texture = ImageFactory::load(
-						gfx_context,
-						{
-							.name = material->textures[i],
-							.path = material->textures[i],
-							.flags = (ImageFlags::Sampled | ImageFlags::TransferDst),
-							.usage_type = MemoryUsageType::OnlyGPU,
-							.image_filter = ImageFilter::Nearest
-						}
-					);
-
-					texture_bindings.push_back(
-					DescriptorBuildData{
-						.binding = static_cast<uint16_t>(i),
-						.image = texture,
-						.type = DescriptorType::Image,
-						.shader_stages = PipelineShaderStageType::Fragment
-					});
-				}
-				DescriptorHelpers::inject_descriptors(gfx_context, material_descriptor, texture_bindings);
-			}
-
-			if (material->pipeline_state == 0)
-			{
-				PipelineStateBuilder state_builder = PipelineStateBuilder::create_default(gfx_context->get_window())
-					.clear_shader_stages()
-					.set_shader_layout(
-						ShaderPipelineLayoutFactory::create(
-							gfx_context,
-							push_constants_data,
-							{
-								Renderer::get()->global_descriptor_layout(current_buffered_frame),
-								Renderer::get()->object_descriptor_layout(current_buffered_frame),
-								material_descriptor.descriptor_layout
-							}
-						)
-					)
-					.value();
-
-				for (const std::pair<PipelineShaderStageType, const char*>& shader : material->shaders)
-				{
-					state_builder.set_shader_stage(shader.first, shader.second);
-				}
-
-				material->pipeline_state = state_builder.finish();
-
-				PipelineStateCache::get()
-					->fetch(material->pipeline_state)
-					->build(
-						gfx_context,
-						Renderer::get()->pass(RenderPassFlags::Main)->get_data()
-					);
-			}
-			// TODO_END: Material stuff can probably be moved out into some sort of material factory or material processor
+			entity_data.material_index = material->gpu_data_buffer_offset;
 
 			Renderer::get()
 				->fresh_rendertask()
 				->setup(mesh_comp->material, mesh_comp->resource_state, 0)
-				->set_push_constants(std::move(push_constants_data))
+				->set_push_constants(PushConstantPipelineData::create(&mesh_comp->additional_data))
 				->set_entity(entity)
 				->submit(Renderer::get()->get_mesh_task_queue());
 		}
 
-		Buffer* const transform_buffer = CACHE_FETCH(Buffer, EntityGlobals::get()->transforms.transform_buffer[current_buffered_frame]);
+		// TODO: Only update dirtied entities instead of re-uploading the buffer every frame
+		Buffer* const transform_buffer = CACHE_FETCH(Buffer, EntityGlobals::get()->entity_data.data_buffer[current_buffered_frame]);
 		transform_buffer->copy_from(
 			gfx_context,
-			EntityGlobals::get()->transforms.entity_transforms.data(),
-			EntityGlobals::get()->transforms.entity_transforms.size() * sizeof(glm::mat4)
+			EntityGlobals::get()->entity_data.data.data(),
+			EntityGlobals::get()->entity_data.data.size() * sizeof(EntitySceneData)
 		);
 	}
 }

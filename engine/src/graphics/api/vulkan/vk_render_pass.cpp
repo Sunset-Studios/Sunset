@@ -169,7 +169,7 @@ namespace Sunset
 		vkCmdEndRenderPass(static_cast<VkCommandBuffer>(command_buffer));
 	}
 
-	void VulkanRenderPass::create_default_output_framebuffers(GraphicsContext* const gfx_context, Swapchain* const swapchain, const RenderPassConfig& config, const std::initializer_list<ImageID>& attachments)
+	void VulkanRenderPass::create_default_output_framebuffers(GraphicsContext* const gfx_context, Swapchain* const swapchain, const RenderPassConfig& config, const std::vector<ImageID>& attachments)
 	{
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
 
@@ -183,7 +183,7 @@ namespace Sunset
 			for (size_t i = 0; i < swapchain_image_count; ++i)
 			{
 				std::vector<ImageID> all_attachments = { swapchain_data->swapchain_images[i] };
-				all_attachments.insert(all_attachments.end(), attachments);
+				all_attachments.insert(all_attachments.end(), attachments.begin(), attachments.end());
 				data.output_framebuffers[i] = FramebufferFactory::create(gfx_context, &data.render_pass, all_attachments);
 			}
 		}

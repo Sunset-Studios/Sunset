@@ -21,7 +21,7 @@ namespace Sunset
 	};
 
 	void set_mesh(MeshComponent* mesh_comp, MeshID mesh);
-	void set_material(MeshComponent* mesh_comp, const Material& material);
+	void set_material(MeshComponent* mesh_comp, MaterialID material);
 
 	size_t mesh_vertex_count(MeshComponent* mesh_comp);
 	size_t mesh_index_count(MeshComponent* mesh_comp);

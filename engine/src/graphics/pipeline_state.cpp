@@ -28,8 +28,6 @@ namespace Sunset
 		return create()
 			.add_viewport(0.0f, 0.0f, static_cast<float>(window->get_extent().x), static_cast<float>(window->get_extent().y), 0.0f, 1.0f)
 			.add_scissor(0, 0, window->get_extent().x, window->get_extent().y)
-			.set_shader_stage(PipelineShaderStageType::Vertex, "../../shaders/default_mesh.vert.spv")
-			.set_shader_stage(PipelineShaderStageType::Fragment, "../../shaders/default_lit.frag.spv")
 			.set_vertex_input_description(Vertex::get_description())
 			.set_primitive_topology_type(PipelinePrimitiveTopologyType::TriangleList)
 			.set_rasterizer_state(PipelineRasterizerPolygonMode::Fill, 1.0f, PipelineRasterizerCullMode::None)
@@ -50,7 +48,7 @@ namespace Sunset
 		return *this;
 	}
 
-	Sunset::PipelineStateBuilder& PipelineStateBuilder::set_shader_layout(class ShaderPipelineLayout* layout)
+	Sunset::PipelineStateBuilder& PipelineStateBuilder::set_shader_layout(ShaderLayoutID layout)
 	{
 		state_data.layout = layout;
 		return *this;
@@ -62,7 +60,7 @@ namespace Sunset
 		return *this;
 	}
 
-	Sunset::PipelineStateBuilder& PipelineStateBuilder::set_shader_stage(PipelineShaderStageType stage, class Shader* shader)
+	Sunset::PipelineStateBuilder& PipelineStateBuilder::set_shader_stage(PipelineShaderStageType stage, ShaderID shader)
 	{
 		state_data.shader_stages.emplace_back(stage, shader);
 		return *this;
@@ -70,10 +68,8 @@ namespace Sunset
 
 	Sunset::PipelineStateBuilder& PipelineStateBuilder::set_shader_stage(PipelineShaderStageType stage, const char* shader_path)
 	{
-		// TODO: Defer creation of shaders until builder finish is called, and think about creating a separate cache for shaders
-		// so we don't potentially create duplicates
-		const ShaderID new_shader = ShaderCache::get()->fetch_or_add(shader_path, context);
-		state_data.shader_stages.emplace_back(stage, CACHE_FETCH(Shader, new_shader));
+		const ShaderID shader_id = ShaderFactory::create(context, shader_path);
+		state_data.shader_stages.emplace_back(stage, shader_id);
 		return *this;
 	}
 
@@ -112,16 +108,30 @@ namespace Sunset
 		return *this;
 	}
 
+	PipelineStateBuilder& PipelineStateBuilder::set_pass(RenderPassID pass)
+	{
+		state_data.render_pass = pass;
+		return *this;
+	}
+
 	Sunset::PipelineStateID PipelineStateBuilder::finish()
 	{
-		if (state_data.layout == nullptr)
+		if (state_data.layout == 0)
 		{
 			state_data.layout = ShaderPipelineLayoutFactory::get_default(Renderer::get()->context());
 		}
-		const Identity cache_id = std::hash<PipelineStateData>{}(state_data);
-		const PipelineStateID new_pipeline_state_id = PipelineStateCache::get()->fetch_or_add(cache_id, context);
-		PipelineState* const new_pipeline_state = CACHE_FETCH(PipelineState, new_pipeline_state_id);
-		new_pipeline_state->initialize(context, state_data);
+
+		const Identity cache_id{ static_cast<uint32_t>(std::hash<PipelineStateData>{}(state_data)) };
+		bool b_added{ false };
+		const PipelineStateID new_pipeline_state_id = PipelineStateCache::get()->fetch_or_add(cache_id, context, b_added);
+		if (b_added)
+		{
+			PipelineState* const new_pipeline_state = CACHE_FETCH(PipelineState, new_pipeline_state_id);
+			new_pipeline_state->initialize(context, state_data);
+
+			RenderPass* const render_pass = CACHE_FETCH(RenderPass, state_data.render_pass);
+			new_pipeline_state->build(context, render_pass->get_data());
+		}
 		return new_pipeline_state_id;
 	}
 }

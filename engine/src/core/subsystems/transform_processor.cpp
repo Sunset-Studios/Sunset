@@ -11,13 +11,13 @@ namespace Sunset
 	{
 		for (int i = 0; i < MAX_BUFFERED_FRAMES; ++i)
 		{
-			if (EntityGlobals::get()->transforms.transform_buffer[i] == 0)
+			if (EntityGlobals::get()->entity_data.data_buffer[i] == 0)
 			{
-				EntityGlobals::get()->transforms.transform_buffer[i] = BufferFactory::create(
+				EntityGlobals::get()->entity_data.data_buffer[i] = BufferFactory::create(
 					Renderer::get()->context(),
 					{
-						.name = "entity_transforms",
-						.buffer_size = sizeof(glm::mat4) * MIN_ENTITIES,
+						.name = "entity_datas",
+						.buffer_size = sizeof(EntitySceneData) * MIN_ENTITIES,
 						.type = BufferType::StorageBuffer
 					}
 				);

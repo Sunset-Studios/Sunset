@@ -71,7 +71,7 @@ namespace Sunset
 
 		void bind(class GraphicsContext* const gfx_context, void* command_buffer)
 		{
-			buffer_policy.bind(gfx_context, buffer_type, command_buffer);
+			buffer_policy.bind(gfx_context, buffer_config.type, command_buffer);
 		}
 
 		void destroy(class GraphicsContext* const gfx_context)
@@ -92,6 +92,11 @@ namespace Sunset
 		size_t get_size() const
 		{
 			return buffer_policy.get_size();
+		}
+
+		BufferConfig& get_buffer_config()
+		{
+			return buffer_config;
 		}
 
 	private:
