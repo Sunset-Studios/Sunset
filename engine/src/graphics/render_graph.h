@@ -13,7 +13,6 @@ namespace Sunset
 {
 	using RGPassHandle = uint32_t;
 	using RGResourceHandle = uint64_t;
-
 	using RGResourceIndex = uint32_t;
 	using RGResourceVersion = uint16_t;
 	using RGResourceType = uint16_t;
@@ -66,7 +65,7 @@ namespace Sunset
 	struct RGResourceMetadata
 	{
 		int32_t reference_count{ 0 };
-		int32_t physical_id{ 0 };
+		size_t physical_id{ 0 };
 		std::vector<RGPassHandle> producers;
 		std::vector<RGPassHandle> consumers;
 		RGPassHandle first_user;
@@ -76,7 +75,6 @@ namespace Sunset
 
 	struct RGFrameData
 	{
-		std::vector<DescriptorLayoutID> descriptor_layouts;
 		RenderPassID current_pass{ 0 };
 		class GraphicsContext* gfx_context{ nullptr };
 	};
@@ -89,15 +87,30 @@ namespace Sunset
 		bool b_supports_bindless{ false };
 	};
 
+	struct RGPipelineShaders
+	{
+		
+	};
+
 	struct RGShaderDataSetup
 	{
+		// For now the description declarations are needed to know how to create the per-pass descriptor layouts and sets. Ideally we won't need
+		// this in the future after we make descriptors entirely dependent on spirv-reflect generated layouts/sets.
 		std::vector<RGShaderDescriptorDeclaration> declarations;
+		// This is auxiliary and only used for passes that only need to bind a single pipeline state to run. Graph passes that don't specify
+		// pipeline shaders will have to handle pipeline state creation and/or binding internally within the pass callback.
+		std::vector<std::pair<PipelineShaderStageType, const char*>> pipeline_shaders;
+		// Same note as above, this is entirely optional data within a graph pass definition
+		PushConstantPipelineData push_constant_data;
 	};
 
 	struct RGPassParameters
 	{
+		// See above, used to describe shader and pipeline setup for a given pass
 		RGShaderDataSetup shader_setup;
+		// Our input resources/attachments
 		std::vector<RGResourceHandle> inputs;
+		// Outputs that this pass either writes to or produces
 		std::vector<RGResourceHandle> outputs;
 	};
 
@@ -109,8 +122,9 @@ namespace Sunset
 		RenderPassConfig pass_config;
 		RGPassParameters parameters;
 		std::function<void(class RenderGraph&, RGFrameData&, void*)> executor;
+		size_t physical_id{ 0 };
+		size_t pipeline_state_id{ 0 };
 		int32_t reference_count{ 0 };
-		int32_t physical_id{ 0 };
 	};
 
 	using ImageResourceFrameAllocator = StaticFrameAllocator<RGImageResource, 256>;
@@ -130,6 +144,7 @@ namespace Sunset
 		std::vector<RGResourceHandle> all_resource_handles;
 		std::unordered_map<RGResourceHandle, RGResourceMetadata> resource_metadata;
 		std::unordered_set<Identity> pass_cache;
+		std::unordered_map<Identity, DescriptorData[MAX_BUFFERED_FRAMES]> pass_descriptor_cache;
 	};
 
 	class RenderGraph
@@ -161,6 +176,12 @@ namespace Sunset
 			class GraphicsContext* const gfx_context,
 			Identity name,
 			RenderPassFlags pass_type,
+			std::function<void(RenderGraph&, RGFrameData&, void*)> execution_callback);
+
+		RGPassHandle add_pass(
+			class GraphicsContext* const gfx_context,
+			Identity name,
+			RenderPassFlags pass_type,
 			const RGPassParameters& params,
 			std::function<void(RenderGraph&, RGFrameData&, void*)> execution_callback);
 
@@ -168,7 +189,7 @@ namespace Sunset
 
 		void inject_global_descriptors(class GraphicsContext* const gfx_context, uint16_t buffered_frame_index, const std::initializer_list<DescriptorBuildData>& descriptor_build_datas);
 
-		int32_t get_physical_resource(RGResourceHandle resource);
+		size_t get_physical_resource(RGResourceHandle resource);
 
 	protected:
 		void update_reference_counts(RGPass* pass);
@@ -183,6 +204,7 @@ namespace Sunset
 		void setup_physical_pass_and_resources(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGPassHandle pass, void* command_buffer);
 		void setup_physical_resource(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGResourceHandle pass);
 		void tie_resource_to_pass_config_attachments(class GraphicsContext* const gfx_context, RGResourceHandle resource, RGPass* pass);
+		void setup_pass_pipeline_state_if_necessary(class GraphicsContext* const gfx_context, RGPass* pass, void* command_buffer);
 		void setup_pass_descriptors(class GraphicsContext* const gfx_context, RGPass* pass, void* command_buffer);
 		void bind_global_descriptors(class GraphicsContext* const gfx_context, void* command_buffer);
 		void bind_pass_descriptors(class GraphicsContext* const gfx_context, RGPass* pass, void* command_buffer);

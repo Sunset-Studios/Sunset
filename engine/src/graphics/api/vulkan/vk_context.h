@@ -2,7 +2,7 @@
 
 #include <utility/execution_queue.h>
 #include <graphics/pipeline_types.h>
-#include <graphics/push_constants.h>
+#include <graphics/pipeline_types.h>
 #include <graphics/command_queue_types.h>
 
 #include <vk_types.h>
@@ -67,6 +67,7 @@ namespace Sunset
 			void draw(void* buffer, uint32_t vertex_count, uint32_t instance_count, uint32_t instance_index = 0);
 			void draw_indexed(void* buffer, uint32_t index_count, uint32_t instance_count, uint32_t instance_index = 0);
 			void draw_indexed_indirect(void* buffer, class Buffer* indirect_buffer, uint32_t draw_count, uint32_t draw_first = 0);
+			void dispatch_compute(void* buffer, uint32_t count_x, uint32_t count_y, uint32_t count_z);
 
 			void* get_state()
 			{
@@ -121,6 +122,7 @@ namespace Sunset
 			void push_descriptor_writes(const std::vector<DescriptorWrite>& descriptor_writes);
 			size_t get_min_ubo_offset_alignment();
 			void update_indirect_draw_command(void* commands, uint32_t command_index, uint32_t index_count, uint32_t first_index, uint32_t instance_count, uint32_t first_instance, uint64_t object_id, uint32_t batch_id);
+			ShaderLayoutID derive_layout_for_shader_stages(class GraphicsContext* const gfx_context, const std::vector<PipelineShaderStage>& stages);
 
 		public:
 			VulkanContextState state;

@@ -46,6 +46,31 @@ namespace Sunset
 					);
 				}
 			}
+
+			// TODO: Only do this for the active camera
+			const glm::mat4 projection = camera_control_comp->data.matrices.projection_matrix;
+			const glm::mat4 projection_transpose = glm::transpose(projection);
+			const glm::vec4 frustum_x = glm::normalize(projection_transpose[3] + projection_transpose[0]);
+			const glm::vec4 frustum_y = glm::normalize(projection_transpose[3] + projection_transpose[1]);
+
+			DrawCullData new_draw_cull_data
+			{
+				.view = camera_control_comp->data.matrices.view_matrix,
+				.p00 = projection[0][0],
+				.p11 = projection[1][1],
+				.z_near = 0.1f,
+				.z_far = 1000.0f,
+				.frustum = { frustum_x.x, frustum_x.z, frustum_y.y, frustum_y.z },
+				.culling_enabled = true,
+				.occlusion_enabled = true
+			};
+			
+			// Queueing this up as a render graph command as the renderer will eventually be on a separate thread, and we want some ordering
+			// guarantee as to when this data first gets set for re-use in a later render graph pass
+			QUEUE_RENDERGRAPH_COMMAND(SetDrawCullData, [new_draw_cull_data](class RenderGraph& render_graph, RGFrameData& frame_data, void* command_buffer)
+			{
+				Renderer::get()->set_draw_cull_data(new_draw_cull_data);
+			});
 		}
 	}
 }

@@ -52,18 +52,13 @@ namespace Sunset
 		graphics_context->destroy();
 	}
 
-	Sunset::RenderGraph& Renderer::get_render_graph()
+	void Renderer::queue_graph_command(Identity name, std::function<void(class RenderGraph&, RGFrameData&, void*)> command_callback)
 	{
-		return render_graph;
-	}
-
-	Sunset::MeshTaskQueue& Renderer::get_mesh_task_queue()
-	{
-		return mesh_task_queue;
-	}
-
-	Sunset::MeshRenderTask* Renderer::fresh_rendertask()
-	{
-		return task_allocator.get_new();
+		render_graph.add_pass(
+			graphics_context.get(),
+			name,
+			RenderPassFlags::GraphLocal,
+			command_callback
+		);
 	}
 }

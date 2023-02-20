@@ -9,7 +9,6 @@ namespace Sunset
 {
 	void VulkanPipelineState::initialize(class GraphicsContext* const gfx_context, PipelineStateData* state_data)
 	{
-
 	}
 
 	void VulkanPipelineState::destroy(class GraphicsContext* const gfx_context, PipelineStateData* state_data)
@@ -83,9 +82,42 @@ namespace Sunset
 		pipeline = new_pipeline;
 	}
 
-	void VulkanPipelineState::bind(class GraphicsContext* const gfx_context, void* buffer)
+	void VulkanPipelineState::build_compute(class GraphicsContext* const gfx_context, PipelineStateData* state_data, void* render_pass_data)
 	{
-		vkCmdBindPipeline(static_cast<VkCommandBuffer>(buffer), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+		if (state_data->shader_stages.empty())
+		{
+			std::cout << "Vulkan pipeline error: Cannot create compute pipeline without shader stages" << std::endl;
+			return;
+		}
+
+		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
+		VkPipelineLayout pipeline_layout = static_cast<VkPipelineLayout>(CACHE_FETCH(ShaderPipelineLayout, state_data->layout)->get_data());
+
+		PipelineShaderStage& stage = state_data->shader_stages.back();
+		VulkanShaderData* shader_data = static_cast<VulkanShaderData*>(CACHE_FETCH(Shader, stage.shader_module)->get_data());
+		VkPipelineShaderStageCreateInfo shader_stage = new_shader_stage_create_info(VK_FROM_SUNSET_SHADER_STAGE_TYPE(stage.stage_type), shader_data->shader_module);
+
+		VkComputePipelineCreateInfo pipeline_create_info = {};
+		pipeline_create_info.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+		pipeline_create_info.pNext = nullptr;
+		pipeline_create_info.stage = shader_stage;
+		pipeline_create_info.layout = pipeline_layout;
+		
+		pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE;
+
+		VkPipeline new_pipeline;
+		if (vkCreateComputePipelines(context_state->get_device(), VK_NULL_HANDLE, 1, &pipeline_create_info, nullptr, &new_pipeline) != VK_SUCCESS)
+		{
+			std::cout << "Vulkan pipeline error: Failed to create compute pipeline" << std::endl;
+			return;
+		}
+
+		pipeline = new_pipeline;
+	}
+
+	void VulkanPipelineState::bind(class GraphicsContext* const gfx_context, PipelineStateType type, void* buffer)
+	{
+		vkCmdBindPipeline(static_cast<VkCommandBuffer>(buffer), VK_FROM_SUNSET_PIPELINE_STATE_BIND_TYPE(type), pipeline);
 	}
 
 	VkPipelineViewportStateCreateInfo VulkanPipelineState::new_viewport_state_create_info(const std::vector<VkViewport>& viewports, const std::vector<VkRect2D>& scissors)

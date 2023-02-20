@@ -154,7 +154,8 @@ namespace Sunset
 		void initialize(class GraphicsContext* const gfx_context, struct PipelineStateData* state_data);
 		void destroy(class GraphicsContext* const gfx_context, struct PipelineStateData* state_data);
 		void build(class GraphicsContext* const gfx_context, struct PipelineStateData* state_data, void* render_pass_data);
-		void bind(class GraphicsContext* const gfx_context, void* buffer);
+		void build_compute(class GraphicsContext* const gfx_context, struct PipelineStateData* state_data, void* render_pass_data);
+		void bind(class GraphicsContext* const gfx_context, PipelineStateType type, void* buffer);
 
 		void* get_handle()
 		{

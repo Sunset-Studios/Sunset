@@ -8,6 +8,7 @@
 #include <window/window.h>
 
 #include <SDL_vulkan.h>
+#include <spirv_reflect.h>
 
 namespace Sunset
 {
@@ -31,6 +32,7 @@ namespace Sunset
 		state.physical_device = device_selector
 			.set_minimum_version(1, 1)
 			.set_surface(state.surface)
+			.add_required_extension("VK_EXT_descriptor_indexing")
 			.select()
 			.value();
 
@@ -59,6 +61,11 @@ namespace Sunset
 			state.frame_sync_primitives[frame_number].render_semaphore = state.sync_pool.new_semaphore(&state);
 			state.frame_sync_primitives[frame_number].present_semaphore = state.sync_pool.new_semaphore(&state);
 			state.frame_sync_primitives[frame_number].render_fence = state.sync_pool.new_fence(&state);
+		}
+
+		for (int16_t queue_num = 0; queue_num < static_cast<int16_t>(DeviceQueueType::Num); ++queue_num)
+		{
+			state.queues[queue_num] = nullptr;
 		}
 	}
 
@@ -105,6 +112,11 @@ namespace Sunset
 		VkDeviceSize indirect_offset = draw_first * sizeof(VulkanGPUIndirectObject);
 		uint32_t stride = sizeof(VulkanGPUIndirectObject);
 		vkCmdDrawIndexedIndirect(static_cast<VkCommandBuffer>(buffer), static_cast<VkBuffer>(indirect_buffer->get()), indirect_offset, draw_count, stride);
+	}
+
+	void VulkanContext::dispatch_compute(void* buffer, uint32_t count_x, uint32_t count_y, uint32_t count_z)
+	{
+		vkCmdDispatch(static_cast<VkCommandBuffer>(buffer), count_x, count_y, count_z);
 	}
 
 	void VulkanContext::register_command_queue(DeviceQueueType queue_type)
@@ -208,6 +220,111 @@ namespace Sunset
 		vk_commands[command_index].indirect_command.firstInstance = first_instance;
 		vk_commands[command_index].object_instance.object_id = object_id;
 		vk_commands[command_index].object_instance.batch_id = batch_id;
+	}
+
+	Sunset::ShaderLayoutID VulkanContext::derive_layout_for_shader_stages(class GraphicsContext* const gfx_context, const std::vector<PipelineShaderStage>& stages)
+	{
+		std::vector<uint64_t> set_binding_pairs;
+		std::vector<DescriptorBinding> all_bindings;
+		std::vector<PushConstantPipelineData> push_constant_data;
+
+		for (const PipelineShaderStage& stage : stages)
+		{
+			Shader* const shader = CACHE_FETCH(Shader, stage.shader_module);
+
+			SpvReflectShaderModule spv_module;
+			SpvReflectResult result = spvReflectCreateShaderModule(shader->get_code_size(), shader->get_code(), &spv_module);
+
+			uint32_t count = 0;
+			result = spvReflectEnumerateDescriptorSets(&spv_module, &count, nullptr);
+			assert(result == SPV_REFLECT_RESULT_SUCCESS);
+
+			std::vector<SpvReflectDescriptorSet*> sets(count);
+			result = spvReflectEnumerateDescriptorSets(&spv_module, &count, sets.data());
+			assert(result == SPV_REFLECT_RESULT_SUCCESS);
+
+			for (size_t s = 0; s < sets.size(); ++s)
+			{
+				const SpvReflectDescriptorSet& reflected_set = *(sets[s]);
+
+				for (int b = 0; b < reflected_set.binding_count; ++b)
+				{
+					const SpvReflectDescriptorBinding& reflected_binding = *(reflected_set.bindings[b]);
+
+					DescriptorBinding& binding = all_bindings.emplace_back();
+					binding.slot = reflected_binding.binding;
+					binding.count = reflected_binding.count;
+					binding.type = SUNSET_FROM_VK_DESCRIPTOR_TYPE(static_cast<VkDescriptorType>(reflected_binding.descriptor_type));
+					binding.pipeline_stages = stage.stage_type;
+
+					set_binding_pairs.push_back(((uint64_t)reflected_set.set << 32) | (uint32_t)(all_bindings.size() - 1));
+				}
+			}
+
+			result = spvReflectEnumeratePushConstantBlocks(&spv_module, &count, NULL);
+			assert(result == SPV_REFLECT_RESULT_SUCCESS);
+
+			std::vector<SpvReflectBlockVariable*> push_constants(count);
+			result = spvReflectEnumeratePushConstantBlocks(&spv_module, &count, push_constants.data());
+			assert(result == SPV_REFLECT_RESULT_SUCCESS);
+
+			if (count > 0)
+			{
+				PushConstantPipelineData& pc_data = push_constant_data.emplace_back();
+				pc_data.offset = push_constants[0]->offset;
+				pc_data.size = push_constants[0]->size;
+				pc_data.shader_stage = stage.stage_type;
+			}
+		}
+
+		std::sort(set_binding_pairs.begin(), set_binding_pairs.end());
+
+		std::vector<DescriptorLayoutID> built_layouts;
+		{
+			uint32_t previous_set_number{ std::numeric_limits<uint32_t>::max() };
+			std::unordered_map<uint32_t, DescriptorBinding> unique_bindings;
+
+			auto build_unique_bindings_into_layout = [&]()
+			{
+				std::vector<DescriptorBinding> bindings_to_build;
+				for (auto pair : unique_bindings)
+				{
+					bindings_to_build.emplace_back(pair.second);
+				}
+				built_layouts.push_back
+				(
+					DescriptorLayoutFactory::create(gfx_context, bindings_to_build)
+				);
+				unique_bindings.clear();
+			};
+
+			for (uint64_t set_binding_pair : set_binding_pairs)
+			{
+				uint32_t set_number = set_binding_pair >> 32;
+				uint32_t binding_index = set_binding_pair;
+
+				if (set_number != previous_set_number)
+				{
+					build_unique_bindings_into_layout();
+				}
+
+				previous_set_number = set_number;
+
+				DescriptorBinding& binding = all_bindings[binding_index];
+				if (unique_bindings.find(binding.slot) != unique_bindings.end())
+				{
+					unique_bindings[binding.slot].pipeline_stages |= binding.pipeline_stages;
+				}
+				else
+				{
+					unique_bindings[binding.slot] = binding;
+				}
+			}
+
+			build_unique_bindings_into_layout();
+		}
+
+		return ShaderPipelineLayoutFactory::create(gfx_context, push_constant_data, built_layouts);
 	}
 
 	void create_surface(VulkanContext* const vulkan_context, Window* const window)

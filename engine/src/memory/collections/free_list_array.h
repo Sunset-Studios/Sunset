@@ -12,7 +12,7 @@ namespace Sunset
 			: array_size(size)
 		{
 			elements.resize(size);
-			for (uint32_t i = size - 1; i >= 0; --i)
+			for (int32_t i = size - 1; i >= 0; --i)
 			{
 				free_indices.push_back(i);
 			}

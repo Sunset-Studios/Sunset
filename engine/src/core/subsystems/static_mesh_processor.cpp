@@ -10,7 +10,7 @@
 #include <graphics/resource/buffer.h>
 #include <graphics/resource/mesh.h>
 #include <graphics/render_pass.h>
-#include <graphics/push_constants.h>
+#include <graphics/pipeline_types.h>
 #include <graphics/resource/buffer.h>
 #include <graphics/descriptor.h>
 #include <graphics/resource/image.h>
@@ -18,7 +18,25 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 namespace Sunset
-{
+{	
+	void StaticMeshProcessor::initialize(class Scene* scene)
+	{
+		for (int i = 0; i < MAX_BUFFERED_FRAMES; ++i)
+		{
+			if (MaterialGlobals::get()->material_data.data_buffer[i] == 0)
+			{
+				MaterialGlobals::get()->material_data.data_buffer[i] = BufferFactory::create(
+					Renderer::get()->context(),
+					{
+						.name = "material_datas",
+						.buffer_size = sizeof(MaterialData) * MAX_MATERIALS,
+						.type = BufferType::StorageBuffer
+					}
+				);
+			}
+		}
+	}
+
 	void StaticMeshProcessor::update(class Scene* scene, double delta_time)
 	{
 		GraphicsContext* const gfx_context = Renderer::get()->context();
@@ -32,7 +50,15 @@ namespace Sunset
 			TransformComponent* const transform_comp = scene->get_component<TransformComponent>(entity);
 
 			EntitySceneData& entity_data = EntityGlobals::get()->entity_data[entity_index];
-			entity_data.local_transform = transform_comp->transform.local_matrix;
+
+			if (EntityGlobals::get()->entity_transform_dirty_states.test(entity_index))
+			{
+				Bounds transformed_bounds = transform_mesh_bounds(mesh_comp, transform_comp->transform.local_matrix);
+				entity_data.bounds_extent = glm::vec4(transformed_bounds.extents, 1.0f);
+				entity_data.bounds_pos_radius = glm::vec4(transformed_bounds.origin, transformed_bounds.radius);
+				entity_data.local_transform = transform_comp->transform.local_matrix;
+				EntityGlobals::get()->entity_transform_dirty_states.unset(entity_index);
+			}
 
 			if (mesh_comp->resource_state == 0)
 			{

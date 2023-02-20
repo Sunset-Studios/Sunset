@@ -10,28 +10,22 @@ namespace Sunset
 	void MeshTaskQueue::submit_compute_cull(class GraphicsContext* const gfx_context, void* command_buffer)
 	{
 		std::sort(queue.begin(), queue.end(), [](MeshRenderTask* const first, MeshRenderTask* const second) -> bool
-			{
-				// Sort by pipeline state first (i.e. pipeline settings, blending modes, shaders, etc.)
-				// then sort by resource state (i.e. vertex buffer)
-				// then sort by world z-depth to minimize overdraw
-				return first->material < second->material ||
-					(first->material == second->material && first->resource_state < second->resource_state) ||
-					(first->resource_state == second->resource_state && first->render_depth < second->render_depth);
-			});
+		{
+			// Sort by pipeline state first (i.e. pipeline settings, blending modes, shaders, etc.)
+			// then sort by resource state (i.e. vertex buffer)
+			// then sort by world z-depth to minimize overdraw
+			return first->material < second->material ||
+				(first->material == second->material && first->resource_state < second->resource_state) ||
+				(first->resource_state == second->resource_state && first->render_depth < second->render_depth);
+		});
+
+		Renderer::get()->get_draw_cull_data().draw_count = queue.size();
 
 		indirect_draw_data.indirect_draws = batch_indirect_draws(gfx_context);
 
 		update_indirect_draw_buffers(gfx_context, command_buffer, indirect_draw_data.indirect_draws);
 
-		Buffer* const object_instance_buffer = CACHE_FETCH(Buffer, indirect_draw_data.object_instance_buffer);
-		object_instance_buffer->barrier(
-			gfx_context,
-			command_buffer,
-			AccessFlags::TransferWrite,
-			AccessFlags::ShaderRead | AccessFlags::ShaderWrite,
-			PipelineStageType::Transfer,
-			PipelineStageType::ComputeShader
-		);
+		gfx_context->dispatch_compute(command_buffer, queue.size() / 256, 1, 1);
 
 		// Cache off task hashes so we can diff the task queue in the next frame to determine whether we should
 		// recompute or re-upload relevant data
@@ -43,18 +37,17 @@ namespace Sunset
 		}
 	}
 
-	void MeshTaskQueue::submit_draws(class GraphicsContext* const gfx_context, void* command_buffer, RenderPassID render_pass, const std::vector<DescriptorLayoutID>& descriptor_layouts, bool b_flush /*= true*/)
+	void MeshTaskQueue::submit_draws(class GraphicsContext* const gfx_context, void* command_buffer, RenderPassID render_pass, bool b_flush /*= true*/)
 	{
 		for (const IndirectDrawBatch& draw : indirect_draw_data.indirect_draws)
 		{
-			executor(
+			draw_executor(
 				gfx_context,
 				command_buffer,
 				render_pass,
 				draw,
 				CACHE_FETCH(Buffer, indirect_draw_data.draw_indirect_buffer),
-				draw.push_constants,
-				descriptor_layouts
+				draw.push_constants
 			);
 		}
 
@@ -63,7 +56,7 @@ namespace Sunset
 			queue.clear();
 		}
 
-		executor.reset();
+		draw_executor.reset();
 	}
 
 	std::vector<Sunset::IndirectDrawBatch> MeshTaskQueue::batch_indirect_draws(class GraphicsContext* const gfx_context)
@@ -102,6 +95,8 @@ namespace Sunset
 
 	void MeshTaskQueue::update_indirect_draw_buffers(class GraphicsContext* const gfx_context, void* command_buffer, const std::vector<IndirectDrawBatch>& indirect_batches)
 	{
+		// TODO: Batch all barriers in here and only commit them right before pipeline execution
+
 		// A lot of these checks are unnecessary given that we are now recreating these buffers each frame in order to (hopefully) alias some memory
 		// later on as part of each render graph run, but leaving them here in case we decide to make these buffers persistent in the future
 
@@ -161,6 +156,26 @@ namespace Sunset
 					);
 				}
 			}
+			
+			// Copy cleared draw indirect buffer to GPU bound draw indirect buffer
+			{
+				Buffer* const cleared_draw_indirect_buffer = CACHE_FETCH(Buffer, indirect_draw_data.cleared_draw_indirect_buffer);
+				Buffer* const draw_indirect_buffer = CACHE_FETCH(Buffer, indirect_draw_data.draw_indirect_buffer);
+				CACHE_FETCH(Buffer, indirect_draw_data.draw_indirect_buffer)->copy_buffer(
+					gfx_context,
+					command_buffer,
+					cleared_draw_indirect_buffer,
+					cleared_draw_indirect_buffer->get_size());
+
+				draw_indirect_buffer->barrier(
+					gfx_context,
+					command_buffer,
+					AccessFlags::TransferWrite,
+					AccessFlags::ShaderRead | AccessFlags::ShaderWrite,
+					PipelineStageType::Transfer,
+					PipelineStageType::ComputeShader
+				);
+			}
 
 			// Re-upload object instance buffer data to GPU
 			{
@@ -192,20 +207,37 @@ namespace Sunset
 					}
 				}
 
-				CACHE_FETCH(Buffer, indirect_draw_data.object_instance_buffer)->copy_buffer(gfx_context, command_buffer, CACHE_FETCH(Buffer, staging_buffer), queue.size() * sizeof(GPUObjectInstance));
+				Buffer* const object_instance_buffer = CACHE_FETCH(Buffer, indirect_draw_data.object_instance_buffer);
+
+				object_instance_buffer->copy_buffer(gfx_context, command_buffer, CACHE_FETCH(Buffer, staging_buffer), queue.size() * sizeof(GPUObjectInstance));
 				CACHE_DELETE(Buffer, staging_buffer, gfx_context);
+
+				object_instance_buffer->barrier(
+					gfx_context,
+					command_buffer,
+					AccessFlags::TransferWrite,
+					AccessFlags::ShaderRead | AccessFlags::ShaderWrite,
+					PipelineStageType::Transfer,
+					PipelineStageType::ComputeShader
+				);
 			}
 
 			indirect_draw_data.b_needs_refresh = false;
 		}
 	}
 
-	void MeshRenderTaskExecutor::operator()(GraphicsContext* const gfx_context, void* command_buffer, RenderPassID render_pass, MaterialID material, ResourceStateID resource_state, const PushConstantPipelineData& push_constants, const std::vector<DescriptorLayoutID>& descriptor_layouts)
+	void MeshRenderTaskExecutor::operator()(
+		GraphicsContext* const gfx_context,
+		void* command_buffer,
+		RenderPassID render_pass,
+		MaterialID material,
+		ResourceStateID resource_state,
+		const PushConstantPipelineData& push_constants)
 	{
 		bool b_pipeline_changed = false;
 		if (cached_material != material)
 		{
-			material_setup_pipeline_state(gfx_context, material, push_constants, render_pass);
+			material_setup_pipeline_state(gfx_context, material, render_pass);
 			material_bind_pipeline(gfx_context, command_buffer, material);
 			material_bind_descriptors(gfx_context, command_buffer, material);
 			cached_material = material;
@@ -233,12 +265,18 @@ namespace Sunset
 			CACHE_FETCH(ResourceState, resource_state)->state_data.instance_index);
 	}
 
-	void MeshRenderTaskExecutor::operator()(class GraphicsContext* const gfx_context, void* command_buffer, RenderPassID render_pass, const IndirectDrawBatch& indirect_draw, class Buffer* indirect_buffer, const PushConstantPipelineData& push_constants, const std::vector<DescriptorLayoutID>& descriptor_layouts)
+	void MeshRenderTaskExecutor::operator()(
+		class GraphicsContext* const gfx_context,
+		void* command_buffer,
+		RenderPassID render_pass,
+		const IndirectDrawBatch& indirect_draw,
+		class Buffer* indirect_buffer,
+		const PushConstantPipelineData& push_constants)
 	{
 		bool b_pipeline_changed = false;
 		if (cached_material != indirect_draw.material)
 		{
-			material_setup_pipeline_state(gfx_context, indirect_draw.material, push_constants, render_pass, descriptor_layouts);
+			material_setup_pipeline_state(gfx_context, indirect_draw.material, render_pass);
 			material_bind_pipeline(gfx_context, command_buffer, indirect_draw.material);
 			material_bind_descriptors(gfx_context, command_buffer, indirect_draw.material);
 			cached_material = indirect_draw.material;
@@ -254,11 +292,30 @@ namespace Sunset
 			cached_resource_state = indirect_draw.resource_state;
 		}
 
+		if (push_constants.data != nullptr)
+		{
+			gfx_context->push_constants(command_buffer, material_get_pipeline(cached_material), push_constants);
+		}
+
 		gfx_context->draw_indexed_indirect(
 			command_buffer,
 			indirect_buffer,
 			indirect_draw.count,
 			indirect_draw.first
 		);
+	}
+
+	void MeshComputeCullTaskExecutor::operator()(
+		class GraphicsContext* const gfx_context,
+		void* command_buffer,
+		RenderPassID render_pass,
+		PipelineStateID pipeline_state,
+		const PushConstantPipelineData& push_constants,
+		const std::vector<DescriptorLayoutID>& descriptor_layouts)
+	{
+		if (push_constants.data != nullptr)
+		{
+			gfx_context->push_constants(command_buffer, pipeline_state, push_constants);
+		}
 	}
 }

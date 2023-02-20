@@ -94,7 +94,7 @@ namespace Sunset
 				AttachmentConfig image_config = config;
 				image_config.format = image_format;
 				image_config.extent = glm::vec3(image_info.extent[0], image_info.extent[1], image_info.extent[2]);
-				image->initialize(gfx_context, config);
+				image->initialize(gfx_context, image_config);
 
 				gfx_context->get_command_queue(DeviceQueueType::Graphics)->submit_immediate(gfx_context, [image, staging_buffer, gfx_context](void* command_buffer)
 				{

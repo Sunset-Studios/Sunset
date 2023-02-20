@@ -127,7 +127,7 @@ namespace Sunset
 					.buffer_range = sizeof(CameraMatrices),
 					.count = 1,
 					.type = DescriptorType::DynamicUniformBuffer,
-					.shader_stages = PipelineShaderStageType::Vertex
+					.shader_stages = PipelineShaderStageType::All
 				},
 				{
 					.binding = 1,

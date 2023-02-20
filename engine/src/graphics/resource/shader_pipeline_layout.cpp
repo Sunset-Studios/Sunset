@@ -18,9 +18,13 @@ namespace Sunset
 		return layout;
 	}
 
-	Sunset::ShaderLayoutID ShaderPipelineLayoutFactory::create(class GraphicsContext* const gfx_context, const PushConstantPipelineData& push_constant_data, const std::vector<DescriptorLayoutID> descriptor_layouts)
+	Sunset::ShaderLayoutID ShaderPipelineLayoutFactory::create(class GraphicsContext* const gfx_context, const std::vector<PushConstantPipelineData>& push_constant_data, const std::vector<DescriptorLayoutID> descriptor_layouts)
 	{
-		size_t hash = std::hash<PushConstantPipelineData>{}(push_constant_data);
+		size_t hash = 0;
+		for (const PushConstantPipelineData& pc_data : push_constant_data)
+		{
+			hash = Maths::cantor_pair_hash(hash, std::hash<PushConstantPipelineData>{}(pc_data));
+		}
 		for (DescriptorLayoutID layout : descriptor_layouts)
 		{
 			hash = Maths::cantor_pair_hash(hash, layout);

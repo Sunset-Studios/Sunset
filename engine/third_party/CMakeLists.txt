@@ -68,3 +68,12 @@ target_link_libraries(imgui PUBLIC Vulkan::Vulkan sdl2)
 
 target_include_directories(stb_image INTERFACE stb_image)
 target_include_directories(json INTERFACE json)
+
+add_library(spirv_reflect STATIC)
+
+target_include_directories(spirv_reflect PUBLIC spirv)
+
+target_sources(spirv_reflect PRIVATE 
+    spirv/spirv_reflect.h
+    spirv/spirv_reflect.c
+)

@@ -34,6 +34,7 @@ namespace Sunset
 					remove_and_delete(gfx_context, resource_id);
 				});
 				cache.insert({ resource_id, new_resource });
+				b_added = true;
 			}
 			return resource_id;
 		}

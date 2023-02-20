@@ -90,23 +90,35 @@ namespace Sunset
 
 	void ImGUICore::new_frame(class Window* const window)
 	{
-		ImGui_ImplVulkan_NewFrame();
-		ImGui_ImplSDL2_NewFrame(static_cast<SDL_Window*>(window->get_window_handle()));
-		ImGui::NewFrame();
+		if (b_initialized)
+		{
+			ImGui_ImplVulkan_NewFrame();
+			ImGui_ImplSDL2_NewFrame(static_cast<SDL_Window*>(window->get_window_handle()));
+			ImGui::NewFrame();
+		}
 	}
 
 	void ImGUICore::poll_events()
 	{
-		ImGui_ImplSDL2_ProcessEvent(&sdl_event);
+		if (b_initialized)
+		{
+			ImGui_ImplSDL2_ProcessEvent(&sdl_event);
+		}
 	}
 
 	void ImGUICore::begin_draw()
 	{
-		ImGui::Render();
+		if (b_initialized)
+		{
+			ImGui::Render();
+		}
 	}
 
 	void ImGUICore::end_draw(void* command_buffer)
 	{
-		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), static_cast<VkCommandBuffer>(command_buffer));
+		if (b_initialized)
+		{
+			ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), static_cast<VkCommandBuffer>(command_buffer));
+		}
 	}
 }

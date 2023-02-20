@@ -39,6 +39,7 @@ namespace Sunset
 			return;
 		}
 
+		data.shader_code = std::move(buffer);
 		data.shader_module = out_shader_module;
 		data.shader_path = file_path;
 	}

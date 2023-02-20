@@ -9,22 +9,7 @@
 
 namespace Sunset
 {
-	void VulkanRenderPass::initialize_default_compute(GraphicsContext* const gfx_context, const RenderPassConfig& config)
-	{
-		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
-
-		VkSubpassDescription subpass = {};
-		subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;
-
-		VkRenderPassCreateInfo render_pass_create_info = {};
-		render_pass_create_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-		render_pass_create_info.subpassCount = 1;
-		render_pass_create_info.pSubpasses = &subpass;
-
-		VK_CHECK(vkCreateRenderPass(context_state->get_device(), &render_pass_create_info, nullptr, &data.render_pass));
-	}
-
-	void VulkanRenderPass::initialize_default_graphics(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, const RenderPassConfig& config)
+	void VulkanRenderPass::initialize_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, const RenderPassConfig& config)
 	{
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
 
@@ -143,7 +128,7 @@ namespace Sunset
 		rp_begin_info.renderArea.extent.height = context_state->window->get_extent().y;
 
 		// A null framebuffer probably means we're using this pass for compute work
-		if (data.output_framebuffers[frambuffer_index] != 0)
+		if (!data.output_framebuffers.empty() && data.output_framebuffers[frambuffer_index] != 0)
 		{
 			rp_begin_info.framebuffer = static_cast<VkFramebuffer>(CACHE_FETCH(Framebuffer, data.output_framebuffers[frambuffer_index])->get_framebuffer_handle());
 

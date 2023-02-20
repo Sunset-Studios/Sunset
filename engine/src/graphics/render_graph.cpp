@@ -7,6 +7,7 @@
 #include <graphics/resource/image.h>
 #include <graphics/descriptor.h>
 #include <graphics/resource/shader_pipeline_layout.h>
+#include <graphics/pipeline_state.h>
 
 #include <unordered_set>
 
@@ -22,8 +23,10 @@ namespace Sunset
 		{
 			if (pass != nullptr)
 			{
-				RenderPass* const physical_pass = CACHE_FETCH(RenderPass, pass->physical_id);
-				physical_pass->destroy(gfx_context);
+				if (RenderPass* const physical_pass = CACHE_FETCH(RenderPass, pass->physical_id))
+				{
+					physical_pass->destroy(gfx_context);
+				}
 			}
 		}
 	}
@@ -111,6 +114,22 @@ namespace Sunset
 
 		update_reference_counts(pass);
 		update_resource_param_producers_and_consumers(pass);
+
+		return index;
+	}
+
+	Sunset::RGPassHandle RenderGraph::add_pass(class GraphicsContext* const gfx_context, Identity name, RenderPassFlags pass_type, std::function<void(RenderGraph&, RGFrameData&, void*)> execution_callback)
+	{
+		RGPass* const pass = render_pass_allocator.get_new();
+		pass->pass_config = { .name = name, .flags = pass_type };
+		pass->executor = execution_callback;
+
+		const uint32_t index = registry.render_passes.size();
+		registry.render_passes.push_back(pass);
+		nonculled_passes.push_back(index);
+
+		pass->handle = index;
+		pass->reference_count = 1;
 
 		return index;
 	}
@@ -265,7 +284,8 @@ namespace Sunset
 	{
 		if (dummy_pipeline_layout == 0)
 		{
-			// Used to bind top level descriptor sets early so individual passes only need to worry about more granular descriptor set binds
+			// Used to bind top level descriptor sets early so individual passes only need to worry about more granular descriptor set binds.
+			// Descriptor sets will not be rebound if the corresponding descriptor set slot layout does not change on subsequent pipeline state changes.
 			dummy_pipeline_layout = ShaderPipelineLayoutFactory::create(
 				gfx_context,
 				{},
@@ -297,7 +317,6 @@ namespace Sunset
 		{
 			RGFrameData frame_data
 			{
-				.descriptor_layouts = { global_descriptor_datas[gfx_context->get_buffered_frame_number()].descriptor_layout },
 				.gfx_context = gfx_context
 			};
 
@@ -320,13 +339,13 @@ namespace Sunset
 		DescriptorHelpers::inject_descriptors(gfx_context, global_descriptor_datas[buffered_frame_index], descriptor_build_datas);
 	}
 
-	int32_t RenderGraph::get_physical_resource(RGResourceHandle resource)
+	size_t RenderGraph::get_physical_resource(RGResourceHandle resource)
 	{
 		if (registry.resource_metadata.find(resource) != registry.resource_metadata.end())
 		{
 			return registry.resource_metadata[resource].physical_id;
 		}
-		return -1;
+		return 0;
 	}
 
 	void RenderGraph::reset()
@@ -346,26 +365,43 @@ namespace Sunset
 
 	void RenderGraph::execute_pass(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGPass* pass, RGFrameData& frame_data, void* command_buffer)
 	{
-		assert(pass != nullptr && pass->physical_id != 0);
+		assert(pass != nullptr);
 
-		setup_physical_pass_and_resources(gfx_context, swapchain, pass->handle, command_buffer);
+		if ((pass->pass_config.flags & RenderPassFlags::GraphLocal) != RenderPassFlags::None)
+		{
+			pass->executor(*this, frame_data, command_buffer);
+		}
+		else
+		{
+			setup_physical_pass_and_resources(gfx_context, swapchain, pass->handle, command_buffer);
 
-		RenderPass* const physical_pass = CACHE_FETCH(RenderPass, pass->physical_id);
+			if ((pass->pass_config.flags & RenderPassFlags::Compute) != RenderPassFlags::None)
+			{
+				pass->executor(*this, frame_data, command_buffer);
+			}
+			else
+			{
+				RenderPass* const physical_pass = CACHE_FETCH(RenderPass, pass->physical_id);
+				assert(physical_pass != nullptr);
 
-		frame_data.current_pass = pass->physical_id;
-		frame_data.descriptor_layouts.push_back(physical_pass->get_descriptor_data(gfx_context->get_buffered_frame_number()).descriptor_layout);
+				frame_data.current_pass = pass->physical_id;
 
-		physical_pass->begin_pass(gfx_context, pass->pass_config.b_is_present_pass ? swapchain->get_current_image_index() : 0, command_buffer);
-		pass->executor(*this, frame_data, command_buffer);
-		physical_pass->end_pass(gfx_context, command_buffer);
+				physical_pass->begin_pass(gfx_context, pass->pass_config.b_is_present_pass ? swapchain->get_current_image_index() : 0, command_buffer);
+				pass->executor(*this, frame_data, command_buffer);
+				physical_pass->end_pass(gfx_context, command_buffer);
+			}
 
-		update_transient_resources(gfx_context, pass);
+			update_transient_resources(gfx_context, pass);
+		}
 	}
 
 	void RenderGraph::setup_physical_pass_and_resources(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGPassHandle pass, void* command_buffer)
 	{
 		RGPass* const graph_pass = registry.render_passes[pass];
 
+		const bool b_is_graphics_pass = (graph_pass->pass_config.flags & RenderPassFlags::Main) != RenderPassFlags::None;
+
+		// Setup resource used by the render pass. If they are output/input attachments we will handle those here as well.
 		for (RGResourceHandle input_resource : graph_pass->parameters.inputs)
 		{
 			setup_physical_resource(gfx_context, swapchain, input_resource);
@@ -377,19 +413,19 @@ namespace Sunset
 			tie_resource_to_pass_config_attachments(gfx_context, output_resource, graph_pass);
 		}
 
-		if (!registry.pass_cache.contains(graph_pass->pass_config.name))
+		// Create our physical render pass and cache it if necessary
+		if (!registry.pass_cache.contains(graph_pass->pass_config.name) && b_is_graphics_pass)
 		{
-			if ((graph_pass->pass_config.flags | RenderPassFlags::Compute) != RenderPassFlags::None)
-			{
-				graph_pass->physical_id = RenderPassFactory::create_default_compute(gfx_context, graph_pass->pass_config);
-			}
-			else if ((graph_pass->pass_config.flags | RenderPassFlags::Main) != RenderPassFlags::None)
-			{
-				graph_pass->physical_id = RenderPassFactory::create_default_graphics(gfx_context, swapchain, graph_pass->pass_config);
-			}
+			graph_pass->physical_id = RenderPassFactory::create_default(gfx_context, swapchain, graph_pass->pass_config);
 			registry.pass_cache.insert(graph_pass->pass_config.name);
 		}
 
+		// Setup render pass pipeline state if render pass-level shader stages were provided. Otherwise, pipeline state should be handled
+		// and bound by render pass callbacks.
+		setup_pass_pipeline_state_if_necessary(gfx_context, graph_pass, command_buffer);
+		// Sparsely bind our descriptors for the render pass.
+		// TODO: Modify these because they do no work for physically pass-less compute passes. We need to store the descriptor datas outside
+		//		 of the render passes somewhere
 		setup_pass_descriptors(gfx_context, graph_pass, command_buffer);
 		bind_pass_descriptors(gfx_context, graph_pass, command_buffer);
 	}
@@ -427,31 +463,97 @@ namespace Sunset
 			RGImageResource* const image_resource = registry.image_resources[resource_index];
 			const bool b_is_sampled = (image_resource->config.flags | ImageFlags::Sampled) != ImageFlags::None;
 			const bool b_is_local_load = (image_resource->config.flags | ImageFlags::LocalLoad) != ImageFlags::None;
+			const bool b_is_present_resource = (image_resource->config.flags | ImageFlags::Present) != ImageFlags::None;
 			if (!b_is_sampled || b_is_local_load)
 			{
 				pass->pass_config.attachments.push_back(registry.resource_metadata[resource].physical_id);
 			}
+			if (b_is_present_resource)
+			{
+				pass->pass_config.b_is_present_pass = true;
+			}
+		}
+	}
+
+	void RenderGraph::setup_pass_pipeline_state_if_necessary(class GraphicsContext* const gfx_context, RGPass* pass, void* command_buffer)
+	{
+		RGShaderDataSetup& shader_setup = pass->parameters.shader_setup;
+		if (!shader_setup.pipeline_shaders.empty())
+		{
+			const bool b_is_compute_pass = (pass->pass_config.flags & RenderPassFlags::Compute) != RenderPassFlags::None;
+			if (b_is_compute_pass)
+			{
+				PipelineComputeStateBuilder state_builder = PipelineComputeStateBuilder::create()
+					.clear_shader_stages()
+					.value();
+
+				if (shader_setup.push_constant_data.data != nullptr)
+				{
+					state_builder.set_push_constants(shader_setup.push_constant_data);
+				}
+
+				for (const auto& shader_stage : shader_setup.pipeline_shaders)
+				{
+					state_builder.set_shader_stage(shader_stage.second);
+				}
+
+				state_builder.derive_shader_layout();
+
+				pass->pipeline_state_id = state_builder.finish();
+			}
+			else
+			{
+				PipelineGraphicsStateBuilder state_builder = PipelineGraphicsStateBuilder::create()
+					.clear_shader_stages()
+					.set_pass(pass->physical_id)
+					.value();
+
+				if (shader_setup.push_constant_data.data != nullptr)
+				{
+					state_builder.set_push_constants(shader_setup.push_constant_data);
+				}
+
+				for (const auto& shader_stage : shader_setup.pipeline_shaders)
+				{
+					state_builder.set_shader_stage(shader_stage.first, shader_stage.second);
+				}
+
+				state_builder.derive_shader_layout();
+
+				pass->pipeline_state_id = state_builder.finish();
+			}
+		}
+
+		if (pass->pipeline_state_id != 0)
+		{
+			CACHE_FETCH(PipelineState, pass->pipeline_state_id)->bind(gfx_context, command_buffer);
 		}
 	}
 
 	void RenderGraph::setup_pass_descriptors(class GraphicsContext* const gfx_context, RGPass* pass, void* command_buffer)
 	{
-		RenderPass* const physical_pass = CACHE_FETCH(RenderPass, pass->physical_id);
 		for (int i = 0; i < MAX_BUFFERED_FRAMES; ++i)
 		{
-			DescriptorData& pass_descriptor_data = physical_pass->get_descriptor_data(i);
+			if (registry.pass_descriptor_cache.find(pass->pass_config.name) == registry.pass_descriptor_cache.end())
+			{
+				registry.pass_descriptor_cache[pass->pass_config.name][i] = DescriptorData();
+			}
+
+			DescriptorData& pass_descriptor_data = registry.pass_descriptor_cache[pass->pass_config.name][i];
 			if (pass_descriptor_data.descriptor_set == nullptr)
 			{
 				std::vector<DescriptorBuildData> descriptor_build_datas;
-				for (uint32_t i = 0; i < pass->parameters.shader_setup.declarations.size(); ++i)
+				// TODO: Figure out how to skip shader setup declarations if the RG pass was created with shader stages,
+				//		 and so has it's own pipeline state.
+				for (uint32_t j = 0; j < pass->parameters.shader_setup.declarations.size(); ++j)
 				{
-					const RGShaderDescriptorDeclaration& decl = pass->parameters.shader_setup.declarations[i];
+					const RGShaderDescriptorDeclaration& decl = pass->parameters.shader_setup.declarations[j];
 
 					if (decl.type == DescriptorType::Image)
 					{
 						DescriptorBuildData& build_data = descriptor_build_datas.emplace_back();
-						build_data.binding = i;
-						build_data.image = registry.resource_metadata[pass->parameters.inputs[i]].physical_id;
+						build_data.binding = j;
+						build_data.image = registry.resource_metadata[pass->parameters.inputs[j]].physical_id;
 						build_data.count = decl.count;
 						build_data.type = decl.type;
 						build_data.shader_stages = decl.shader_stages;
@@ -460,8 +562,8 @@ namespace Sunset
 					else
 					{
 						DescriptorBuildData& build_data = descriptor_build_datas.emplace_back();
-						build_data.binding = i;
-						build_data.buffer = registry.resource_metadata[pass->parameters.inputs[i]].physical_id;
+						build_data.binding = j;
+						build_data.buffer = registry.resource_metadata[pass->parameters.inputs[j]].physical_id;
 						build_data.buffer_offset = 0;
 						build_data.buffer_range = CACHE_FETCH(Buffer, build_data.buffer)->get_size(); // Do we want to explicitly provide this? (i.e. dynamic uniform buffers)
 						build_data.count = decl.count;
@@ -473,14 +575,21 @@ namespace Sunset
 
 				DescriptorHelpers::inject_descriptors(gfx_context, pass_descriptor_data, descriptor_build_datas);
 
-				pass_descriptor_data.pipeline_layout = ShaderPipelineLayoutFactory::create(
-					gfx_context,
-					{},
-					{
-						global_descriptor_datas[i].descriptor_layout,
-						pass_descriptor_data.descriptor_layout
-					}
-				);
+				if (pass->pipeline_state_id != 0)
+				{
+					pass_descriptor_data.pipeline_layout = CACHE_FETCH(PipelineState, pass->pipeline_state_id)->get_state_data().layout;
+				}
+				else
+				{
+					pass_descriptor_data.pipeline_layout = ShaderPipelineLayoutFactory::create(
+						gfx_context,
+						{},
+						{
+							global_descriptor_datas[i].descriptor_layout,
+							pass_descriptor_data.descriptor_layout
+						}
+					);
+				}
 			}
 		}
 	}
@@ -490,7 +599,7 @@ namespace Sunset
 		DescriptorData& descriptor_data = global_descriptor_datas[gfx_context->get_buffered_frame_number()];
 		if (descriptor_data.descriptor_set != nullptr)
 		{
-			descriptor_data.descriptor_set->bind(gfx_context, command_buffer, dummy_pipeline_layout, descriptor_data.dynamic_buffer_offsets, static_cast<uint16_t>(DescriptorSetType::Global));
+			descriptor_data.descriptor_set->bind(gfx_context, command_buffer, dummy_pipeline_layout, PipelineStateType::Graphics, descriptor_data.dynamic_buffer_offsets, static_cast<uint16_t>(DescriptorSetType::Global));
 		}
 	}
 
@@ -498,15 +607,16 @@ namespace Sunset
 	{
 		const uint16_t buffered_frame_index = gfx_context->get_buffered_frame_number();
 
-		RenderPass* const physical_pass = CACHE_FETCH(RenderPass, pass->physical_id);
-		DescriptorData& pass_descriptor_data = physical_pass->get_descriptor_data(buffered_frame_index);
+		DescriptorData& pass_descriptor_data = registry.pass_descriptor_cache[pass->pass_config.name][buffered_frame_index];
 
 		if (pass_descriptor_data.descriptor_set != nullptr)
 		{
+			const bool b_is_compute_pass = (pass->pass_config.flags & RenderPassFlags::Compute) != RenderPassFlags::None;
 			pass_descriptor_data.descriptor_set->bind(
 				gfx_context,
 				command_buffer,
 				pass_descriptor_data.pipeline_layout,
+				b_is_compute_pass ? PipelineStateType::Compute : PipelineStateType::Graphics,
 				pass_descriptor_data.dynamic_buffer_offsets,
 				static_cast<uint16_t>(DescriptorSetType::Pass)
 			);

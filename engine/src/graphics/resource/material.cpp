@@ -17,7 +17,7 @@ namespace Sunset
 		CACHE_FETCH(PipelineState, material_ptr->pipeline_state)->bind(gfx_context, cmd_buffer);
 	}
 
-	void material_setup_pipeline_state(class GraphicsContext* const gfx_context, MaterialID material, const PushConstantPipelineData& push_constant_data, RenderPassID render_pass, const std::vector<DescriptorLayoutID>& descriptor_layouts)
+	void material_setup_pipeline_state(class GraphicsContext* const gfx_context, MaterialID material, RenderPassID render_pass)
 	{
 		Material* const material_ptr = CACHE_FETCH(Material, material);
 		assert(material_ptr != nullptr && "Cannot setup pipeline for null material!");
@@ -28,24 +28,14 @@ namespace Sunset
 
 			RenderPass* const pass = CACHE_FETCH(RenderPass, render_pass);
 
-			std::vector<DescriptorLayoutID> layouts = descriptor_layouts;
-			layouts.push_back(material_ptr->descriptor_data.descriptor_layout);
-
-			PipelineStateBuilder state_builder = PipelineStateBuilder::create_default(gfx_context->get_window())
-				.clear_shader_stages()
-				.set_shader_layout(
-					ShaderPipelineLayoutFactory::create(
-						gfx_context,
-						push_constant_data,
-						layouts
-					)
-				)
-				.value();
+			PipelineGraphicsStateBuilder state_builder = PipelineGraphicsStateBuilder::create_default(gfx_context->get_window()).clear_shader_stages().value();
 
 			for (const std::pair<PipelineShaderStageType, const char*>& shader : material_ptr->description.shaders)
 			{
 				state_builder.set_shader_stage(shader.first, shader.second);
 			}
+
+			state_builder.derive_shader_layout();
 
 			state_builder.set_pass(render_pass);
 
@@ -63,16 +53,19 @@ namespace Sunset
 		material_ptr->textures.resize(material_ptr->description.textures.size());
 		for (int i = 0; i < material_ptr->textures.size(); ++i)
 		{
-			material_ptr->textures[i] = ImageFactory::load(
-				gfx_context,
-				{
-					.name = material_ptr->description.textures[i],
-					.path = material_ptr->description.textures[i],
-					.flags = (ImageFlags::Sampled | ImageFlags::TransferDst),
-					.usage_type = MemoryUsageType::OnlyGPU,
-					.image_filter = ImageFilter::Nearest
-				}
-			);
+			if (material_ptr->description.textures[i] != nullptr)
+			{
+				material_ptr->textures[i] = ImageFactory::load(
+					gfx_context,
+					{
+						.name = material_ptr->description.textures[i],
+						.path = material_ptr->description.textures[i],
+						.flags = (ImageFlags::Sampled | ImageFlags::TransferDst),
+						.usage_type = MemoryUsageType::OnlyGPU,
+						.image_filter = ImageFilter::Nearest
+					}
+				);
+			}
 		}
 	}
 
@@ -126,7 +119,7 @@ namespace Sunset
 		if (material_ptr->descriptor_data.descriptor_set != nullptr)
 		{
 			const uint16_t material_descriptor_set_index = static_cast<uint16_t>(DescriptorSetType::Material);
-			material_ptr->descriptor_data.descriptor_set->bind(gfx_context, cmd_buffer, pipeline_layout, material_ptr->descriptor_data.dynamic_buffer_offsets, material_descriptor_set_index);
+			material_ptr->descriptor_data.descriptor_set->bind(gfx_context, cmd_buffer, pipeline_layout, PipelineStateType::Graphics, material_ptr->descriptor_data.dynamic_buffer_offsets, material_descriptor_set_index);
 		}
 	}
 

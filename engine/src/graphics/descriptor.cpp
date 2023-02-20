@@ -47,26 +47,12 @@ namespace Sunset
 
 	bool DescriptorSetBuilder::build(DescriptorSet*& out_descriptor_set, DescriptorLayoutID& out_descriptor_layout)
 	{
-		Identity cache_id;
-		for (const DescriptorBinding& binding : bindings)
-		{
-			cache_id = Maths::cantor_pair_hash(static_cast<int32_t>(cache_id), static_cast<int32_t>(std::hash<DescriptorBinding>{}(binding)));
-		}
+		out_descriptor_layout = DescriptorLayoutFactory::create(gfx_context, bindings);
+		out_descriptor_set = gfx_context->get_descriptor_set_allocator()->allocate(gfx_context, CACHE_FETCH(DescriptorLayout, out_descriptor_layout));
 
-		bool b_layout_changed = false;
-		if (!CACHE_EXISTS(DescriptorLayout, cache_id))
+		if (out_descriptor_set == nullptr)
 		{
-			out_descriptor_layout = DescriptorLayoutFactory::create(gfx_context, bindings);
-			b_layout_changed = true;
-		}
-		
-		if (b_layout_changed)
-		{
-			out_descriptor_set = gfx_context->get_descriptor_set_allocator()->allocate(gfx_context, CACHE_FETCH(DescriptorLayout, out_descriptor_layout));
-			if (out_descriptor_set == nullptr)
-			{
-				return false;
-			}
+			return false;
 		}
 
 		for (DescriptorWrite& write : descriptor_writes)

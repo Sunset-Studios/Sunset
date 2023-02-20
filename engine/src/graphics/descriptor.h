@@ -59,6 +59,11 @@ namespace Sunset
 			return descriptor_layout_policy.get();
 		}
 
+		bool supports_bindless() const
+		{
+			return descriptor_layout_policy.supports_bindless();
+		}
+
 	private:
 		Policy descriptor_layout_policy;
 		std::vector<DescriptorBinding> bindings;
@@ -78,6 +83,11 @@ namespace Sunset
 		void* get() const
 		{
 			return nullptr;
+		}
+
+		bool supports_bindless() const
+		{
+			return false;
 		}
 	};
 
@@ -110,9 +120,9 @@ namespace Sunset
 			return descriptor_set_policy.build(gfx_context, descriptor_layout, descriptor_pool);
 		}
 
-		void bind(class GraphicsContext* const gfx_context, void* cmd_buffer, ShaderLayoutID layout, const std::vector<uint32_t>& dynamic_buffer_offsets = {}, uint32_t set_index = 0)
+		void bind(class GraphicsContext* const gfx_context, void* cmd_buffer, ShaderLayoutID layout, PipelineStateType pipeline_state_type = PipelineStateType::Graphics, const std::vector<uint32_t>& dynamic_buffer_offsets = {}, uint32_t set_index = 0)
 		{
-			descriptor_set_policy.bind(gfx_context, cmd_buffer, layout, dynamic_buffer_offsets, set_index);
+			descriptor_set_policy.bind(gfx_context, cmd_buffer, layout, pipeline_state_type, dynamic_buffer_offsets, set_index);
 		}
 
 		void* get() const
@@ -144,6 +154,9 @@ namespace Sunset
 		{ }
 
 		void bind(class GraphicsContext* const gfx_context, void* cmd_buffer, ShaderLayoutID layout, const std::vector<uint32_t>& dynamic_buffer_offsets = {}, uint32_t set_index = 0)
+		{ }
+
+		void bind(class GraphicsContext* const gfx_context, void* cmd_buffer, ShaderLayoutID layout, PipelineStateType pipeline_state_type = PipelineStateType::Graphics, const std::vector<uint32_t>& dynamic_buffer_offsets = {}, uint32_t set_index = 0)
 		{ }
 
 		void* get() const

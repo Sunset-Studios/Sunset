@@ -32,6 +32,16 @@ namespace Sunset
 			return shader_policy.is_compiled();
 		}
 
+		size_t get_code_size()
+		{
+			return shader_policy.get_code_size();
+		}
+
+		uint32_t* get_code()
+		{
+			return shader_policy.get_code();
+		}
+
 	private:
 		Policy shader_policy;
 	};
@@ -47,14 +57,32 @@ namespace Sunset
 		void destroy(class GraphicsContext* const gfx_context)
 		{ }
 
+		void reflect_shader_layout(class GraphicsContext* const gfx_context)
+		{ }
+
 		void* get_data()
 		{
 			return nullptr;
 		}
 
+		ShaderLayoutID get_shader_layout()
+		{
+			return 0;
+		}
+
 		bool is_compiled() const
 		{
 			return false;
+		}
+
+		size_t get_code_size()
+		{
+			return 0;
+		}
+
+		uint32_t* get_code()
+		{
+			return nullptr;
 		}
 	};
 

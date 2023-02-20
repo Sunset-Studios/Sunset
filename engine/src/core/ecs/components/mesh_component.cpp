@@ -62,4 +62,26 @@ namespace Sunset
 		}
 		return 0;
 	}
+
+	Sunset::Bounds mesh_local_bounds(MeshComponent* mesh_comp)
+	{
+		assert(mesh_comp != nullptr && "Cannot get mesh bounds via null mesh component");
+		Mesh* const mesh = CACHE_FETCH(Mesh, mesh_comp->mesh);
+		if (mesh != nullptr)
+		{
+			return mesh->local_bounds;
+		}
+		return Bounds();
+	}
+
+	Sunset::Bounds transform_mesh_bounds(MeshComponent* mesh_comp, glm::mat4 transform)
+	{
+		assert(mesh_comp != nullptr && "Cannot calculate mesh bounds via null mesh component");
+		Mesh* const mesh = CACHE_FETCH(Mesh, mesh_comp->mesh);
+		if (mesh != nullptr)
+		{
+			return calculate_mesh_bounds(mesh, transform);
+		}
+		return Bounds();
+	}
 }

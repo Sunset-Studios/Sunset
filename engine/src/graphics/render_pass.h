@@ -12,16 +12,10 @@ namespace Sunset
 	public:
 		GenericRenderPass() = default;
 
-		void initialize_default_compute(class GraphicsContext* const gfx_context, const RenderPassConfig& config)
+		void initialize_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, const RenderPassConfig& config)
 		{
 			pass_config = config;
-			render_pass_policy.initialize_default_compute(gfx_context, config);
-		}
-
-		void initialize_default_graphics(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, const RenderPassConfig& config)
-		{
-			pass_config = config;
-			render_pass_policy.initialize_default_graphics(gfx_context, swapchain, pass_config);
+			render_pass_policy.initialize_default(gfx_context, swapchain, pass_config);
 		}
 
 		void destroy(class GraphicsContext* const gfx_context)
@@ -54,16 +48,9 @@ namespace Sunset
 			render_pass_policy.end_pass(gfx_context, command_buffer);
 		}
 
-		DescriptorData& get_descriptor_data(uint16_t buffered_frame)
-		{
-			assert(buffered_frame >= 0 && buffered_frame < MAX_BUFFERED_FRAMES);
-			return pass_descriptor_data[buffered_frame];
-		}
-
 	private:
 		Policy render_pass_policy;
 		RenderPassConfig pass_config;
-		DescriptorData pass_descriptor_data[MAX_BUFFERED_FRAMES];
 	};
 
 	class NoopRenderPass
@@ -71,10 +58,7 @@ namespace Sunset
 	public:
 		NoopRenderPass() = default;
 
-		void initialize_default_compute(class GraphicsContext* const gfx_context, const RenderPassConfig& config)
-		{ }
-
-		void initialize_default_graphics(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, const RenderPassConfig& config)
+		void initialize_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, const RenderPassConfig& config)
 		{ }
 
 		void destroy(class GraphicsContext* const gfx_context)
@@ -111,8 +95,7 @@ namespace Sunset
 	class RenderPassFactory
 	{
 	public:
-		static RenderPassID create_default_compute(class GraphicsContext* const gfx_context, const RenderPassConfig& config, bool b_auto_delete = false);
-		static RenderPassID create_default_graphics(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, const RenderPassConfig& config, bool b_auto_delete = false);
+		static RenderPassID create_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, const RenderPassConfig& config, bool b_auto_delete = false);
 	};
 
 	DEFINE_RESOURCE_CACHE(RenderPassCache, RenderPassID, RenderPass);

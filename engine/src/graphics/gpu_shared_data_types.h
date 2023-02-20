@@ -25,6 +25,8 @@ namespace Sunset
 	struct EntitySceneData
 	{
 		glm::mat4 local_transform;
+		glm::vec4 bounds_pos_radius;
+		glm::vec4 bounds_extent;
 		int32_t material_index{ -1 };
 	};
 

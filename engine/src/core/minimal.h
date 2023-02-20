@@ -209,4 +209,11 @@ namespace Sunset
 	constexpr uint16_t MAX_BUFFERED_FRAMES = 2;
 	constexpr uint16_t MAX_MATERIALS = 16536;
 	constexpr uint16_t MAX_MATERIAL_TEXTURES = 16;
+
+	struct Bounds
+	{
+		glm::vec3 extents;
+		glm::vec3 origin;
+		float radius;
+	};
 }

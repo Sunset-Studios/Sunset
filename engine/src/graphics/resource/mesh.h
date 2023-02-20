@@ -25,10 +25,16 @@ namespace Sunset
 		std::vector<uint32_t> indices;
 		BufferID vertex_buffer;
 		BufferID index_buffer;
+		Bounds local_bounds;
 
-		void upload(class GraphicsContext* const gfx_context);
-		void destroy(class GraphicsContext* const gfx_context);
+		void destroy(class GraphicsContext* gfx_context) { }
 	};
+
+	void upload_mesh(class GraphicsContext* const gfx_context, Mesh* mesh);
+	void destroy_mesh(class GraphicsContext* const gfx_context, Mesh* mesh);
+	Bounds calculate_mesh_bounds(Mesh* mesh, const glm::mat4& transform);
+
+	Bounds get_mesh_bounds(MeshID mesh);
 
 	class MeshFactory
 	{

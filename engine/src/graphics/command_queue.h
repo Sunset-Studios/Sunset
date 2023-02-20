@@ -114,9 +114,9 @@ namespace Sunset
 	public:
 		static CommandQueue* create(void* gfx_context_state, DeviceQueueType queue_type)
 		{
-			CommandQueue* gfx = new CommandQueue;
-			gfx->initialize(gfx_context_state, queue_type);
-			return gfx;
+			CommandQueue* queue = new CommandQueue;
+			queue->initialize(gfx_context_state, queue_type);
+			return queue;
 		}
 	};
 }

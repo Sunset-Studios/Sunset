@@ -23,8 +23,7 @@ namespace Sunset
 		~VulkanRenderPass() = default;
 
 	public:
-		void initialize_default_compute(class GraphicsContext* const gfx_context, const RenderPassConfig& config);
-		void initialize_default_graphics(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, const RenderPassConfig& config);
+		void initialize_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, const RenderPassConfig& config);
 		void destroy(class GraphicsContext* const gfx_context);
 
 		void* get_data()
@@ -50,7 +49,5 @@ namespace Sunset
 
 	protected:
 		VulkanRenderPassData data;
-		std::vector<PipelineStateID> pass_pipelines_states;
-		size_t current_pso_index{ 0 };
 	};
 }

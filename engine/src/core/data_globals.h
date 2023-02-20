@@ -2,6 +2,7 @@
 
 #include <minimal.h>
 #include <singleton.h>
+#include <bit_vector.h>
 #include <entity.h>
 #include <gpu_shared_data_types.h>
 
@@ -16,6 +17,7 @@ namespace Sunset
 
 	public:
 		EntitySceneDataShared entity_data;
+		BitVector entity_transform_dirty_states{ MIN_ENTITIES };
 	};
 
 	class MaterialGlobals : public Singleton<MaterialGlobals>

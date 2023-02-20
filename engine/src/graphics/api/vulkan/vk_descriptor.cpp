@@ -17,16 +17,33 @@ namespace Sunset
 
 		VkDescriptorSetLayoutCreateInfo set_create_info = {};
 		set_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		set_create_info.pNext = nullptr;
 		set_create_info.bindingCount = static_cast<uint32_t>(bindings.size());
 		set_create_info.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT_EXT;
 		set_create_info.pBindings = vk_bindings.data();
 
-		VkDescriptorBindingFlags bindless_flags = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT | VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT_EXT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT_EXT;
-		VkDescriptorSetLayoutBindingFlagsCreateInfoEXT extended_info{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO_EXT, nullptr };
-		extended_info.bindingCount = 1;
-		extended_info.pBindingFlags = &bindless_flags;
+		{
+			bool b_has_bindless_binding{ false };
+			std::vector<VkDescriptorBindingFlags> bindless_flags(bindings.size(), 0);
+			for (uint32_t i = 0; i < bindings.size(); ++i)
+			{
+				if (bindings[i].b_supports_bindless)
+				{
+					bindless_flags.push_back(VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT | VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT_EXT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT_EXT);
+					b_has_bindless_binding = true;
+				}
+			}
+			if (b_has_bindless_binding)
+			{
+				VkDescriptorSetLayoutBindingFlagsCreateInfoEXT extended_info{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO_EXT, nullptr };
+				extended_info.bindingCount = static_cast<uint32_t>(bindless_flags.size());
+				extended_info.pBindingFlags = bindless_flags.data();
 
-		set_create_info.pNext = &extended_info;
+				set_create_info.pNext = &extended_info;
+
+				b_supports_bindless = b_has_bindless_binding;
+			}
+		}
 
 		vkCreateDescriptorSetLayout(context_state->get_device(), &set_create_info, nullptr, &layout);
 	}
@@ -53,14 +70,17 @@ namespace Sunset
 		set_alloc_info.descriptorPool = static_cast<VkDescriptorPool>(descriptor_pool);
 		set_alloc_info.descriptorSetCount = 1;
 
-		uint32_t max_binding = MAX_DESCRIPTOR_BINDINGS - 1;
-		VkDescriptorSetVariableDescriptorCountAllocateInfoEXT count_info = {};
-		count_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO_EXT;
-		count_info.pNext = nullptr;
-		count_info.descriptorSetCount = 1;
-		count_info.pDescriptorCounts = &max_binding;
+		if (descriptor_layout->supports_bindless())
+		{
+			uint32_t max_binding = MAX_DESCRIPTOR_BINDINGS - 1;
+			VkDescriptorSetVariableDescriptorCountAllocateInfoEXT count_info = {};
+			count_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO_EXT;
+			count_info.pNext = nullptr;
+			count_info.descriptorSetCount = 1;
+			count_info.pDescriptorCounts = &max_binding;
 
-		set_alloc_info.pNext = &count_info;
+			set_alloc_info.pNext = &count_info;
+		}
 
 		VkResult alloc_result = vkAllocateDescriptorSets(context_state->get_device(), &set_alloc_info, &descriptor_set);
 		switch (alloc_result)
@@ -72,7 +92,7 @@ namespace Sunset
 		}
 	}
 
-	void VulkanDescriptorSet::bind(class GraphicsContext* const gfx_context, void* cmd_buffer, ShaderLayoutID layout, const std::vector<uint32_t>& dynamic_buffer_offsets, uint32_t set_index)
+	void VulkanDescriptorSet::bind(class GraphicsContext* const gfx_context, void* cmd_buffer, ShaderLayoutID layout, PipelineStateType pipeline_state_type, const std::vector<uint32_t>& dynamic_buffer_offsets, uint32_t set_index)
 	{
 		assert(layout != 0);
 
@@ -84,7 +104,16 @@ namespace Sunset
 		assert(vk_layout != nullptr);
 		assert(vk_buffer != nullptr);
 
-		vkCmdBindDescriptorSets(vk_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_layout, set_index, 1, &descriptor_set, static_cast<uint32_t>(dynamic_buffer_offsets.size()), dynamic_buffer_offsets.data());
+		vkCmdBindDescriptorSets(
+			vk_buffer,
+			VK_FROM_SUNSET_PIPELINE_STATE_BIND_TYPE(pipeline_state_type),
+			vk_layout,
+			set_index,
+			1,
+			&descriptor_set,
+			static_cast<uint32_t>(dynamic_buffer_offsets.size()),
+			dynamic_buffer_offsets.data()
+		);
 	}
 
 	void VulkanDescriptorSetAllocator::configure_pool_sizes(const std::initializer_list<std::pair<DescriptorType, uint32_t>>& sizes)

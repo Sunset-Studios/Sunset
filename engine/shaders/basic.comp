@@ -1,0 +1,117 @@
+#version 460
+
+layout (local_size_x = 256) in;
+
+layout (set = 0, binding = 0) uniform CameraBuffer
+{
+	mat4 view;
+	mat4 proj;
+	mat4 view_proj;
+	mat4 inverse_view_proj;
+} camera_data;
+
+struct EntitySceneData
+{
+	mat4 transform;
+	vec4 bounds_pos_radius;
+	vec4 bounds_extent;
+	uint material_index;
+};
+
+layout (std140, set = 1, binding = 0) readonly buffer EntitySceneDataBuffer
+{
+	EntitySceneData entities[];
+} entity_data;
+
+struct ObjectInstance
+{
+	uint object_id;
+	uint batch_id;
+};
+
+layout (set = 1, binding = 1) readonly buffer ObjectInstanceBuffer
+{
+	ObjectInstance instances[];
+} object_instance_buffer;
+
+layout (set = 1, binding = 2) buffer CompactedObjectInstanceBuffer
+{
+	uint ids[];
+} compacted_object_instance_buffer;
+
+struct DrawCommand
+{
+	uint index_count;
+    uint instance_count;
+    uint first_index;
+    int  vertex_offset;
+    uint first_instance;
+	uint object_id;
+	uint batch_id;
+};
+
+layout (set = 1, binding = 3) readonly buffer ClearedDrawIndirectBuffer
+{
+	DrawCommand commands[];
+} cleared_draw_indirect_buffer;
+
+layout (set = 1, binding = 4) buffer DrawIndirectBuffer
+{
+	DrawCommand commands[];
+} draw_indirect_buffer;
+
+layout (push_constant) uniform constants
+{
+	mat4 view;
+	float p00;
+	float p11;
+	float z_near;
+	float z_far;
+	float frustum[4];
+	uint draw_count;
+	uint culling_enabled;
+	uint occlusion_enabled;
+	uint distance_check;
+} draw_cull_constants;
+
+bool is_occluded(uint object_index)
+{
+	return false;
+}
+
+bool is_in_frustum(uint object_index)
+{
+	const vec4 sphere_bounds = entity_data.entities[object_index].bounds_pos_radius;
+	vec3 center = sphere_bounds.xyz;
+	center = (draw_cull_constants.view * vec4(center, 1.0f)).xyz;
+	const float radius = sphere_bounds.w;
+
+	bool visible = true;
+	visible = visible && (center.z * draw_cull_constants.frustum[1]) - (abs(center.x) * draw_cull_constants.frustum[0]) > -radius;
+	visible = visible && (center.z * draw_cull_constants.frustum[3]) - (abs(center.y) * draw_cull_constants.frustum[2]) > -radius;
+
+	if (draw_cull_constants.distance_check != 0)
+	{
+		visible = visible && (center.z + radius) > draw_cull_constants.z_near && (center.z - radius) < draw_cull_constants.z_far;
+	}
+
+	return visible || draw_cull_constants.culling_enabled == 0;
+}
+
+void main()
+{
+	uint g_id = gl_GlobalInvocationID.x;
+	if (g_id < draw_cull_constants.draw_count)
+	{
+		const uint object_id = object_instance_buffer.instances[g_id].object_id;
+		const bool in_frustum = is_in_frustum(object_id);
+		const bool occluded = is_occluded(object_id);
+		if (in_frustum && !occluded)
+		{
+			const uint batch_index = object_instance_buffer.instances[g_id].batch_id;
+			const uint count_index = atomicAdd(draw_indirect_buffer.commands[batch_index].instance_count, 1);
+			const uint instance_index = draw_indirect_buffer.commands[batch_index].first_instance + count_index;
+			compacted_object_instance_buffer.ids[instance_index] = object_id;
+		}
+	}
+}

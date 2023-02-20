@@ -250,6 +250,23 @@ inline VkDescriptorType VK_FROM_SUNSET_DESCRIPTOR_TYPE(Sunset::DescriptorType de
 	}
 }
 
+inline Sunset::DescriptorType SUNSET_FROM_VK_DESCRIPTOR_TYPE(VkDescriptorType descriptor_type)
+{
+	switch (descriptor_type)
+	{
+	case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+		return Sunset::DescriptorType::UniformBuffer;
+	case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+		return Sunset::DescriptorType::DynamicUniformBuffer;
+	case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+		return Sunset::DescriptorType::Image;
+	case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+		return Sunset::DescriptorType::StorageBuffer;
+	default:
+		return Sunset::DescriptorType::StorageBuffer;
+	}
+}
+
 inline VkShaderStageFlagBits VK_FROM_SUNSET_SHADER_STAGE_TYPE(Sunset::PipelineShaderStageType shader_stage_type)
 {
 	uint32_t sunset_shader_stages{ static_cast<uint32_t>(shader_stage_type) };
@@ -271,6 +288,19 @@ inline VkShaderStageFlagBits VK_FROM_SUNSET_SHADER_STAGE_TYPE(Sunset::PipelineSh
 		vk_shader_stages |= VK_SHADER_STAGE_COMPUTE_BIT;
 	}
 	return static_cast<VkShaderStageFlagBits>(vk_shader_stages);
+}
+
+inline VkPipelineBindPoint VK_FROM_SUNSET_PIPELINE_STATE_BIND_TYPE(Sunset::PipelineStateType state_type)
+{
+	switch (state_type)
+	{
+	case Sunset::PipelineStateType::Graphics:
+		return VK_PIPELINE_BIND_POINT_GRAPHICS;
+	case Sunset::PipelineStateType::Compute:
+		return VK_PIPELINE_BIND_POINT_COMPUTE;
+	default:
+		return VK_PIPELINE_BIND_POINT_GRAPHICS;
+	}
 }
 
 inline VkPipelineStageFlagBits VK_FROM_SUNSET_PIPELINE_STAGE_TYPE(Sunset::PipelineStageType pipeline_stage_type)

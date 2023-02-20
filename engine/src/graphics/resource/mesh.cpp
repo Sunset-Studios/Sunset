@@ -8,13 +8,13 @@
 
 namespace Sunset
 {
-	void Mesh::upload(GraphicsContext* const gfx_context)
+	void upload_mesh(GraphicsContext* const gfx_context, Mesh* mesh)
 	{
 		{
 			// Upload vertex buffer
-			const size_t vertex_data_size = vertices.size() * sizeof(Vertex);
+			const size_t vertex_data_size = mesh->vertices.size() * sizeof(Vertex);
 
-			std::string buffer_name = std::string(name);
+			std::string buffer_name = std::string(mesh->name);
 			buffer_name += "_vertex_staging";
 			const BufferID vertex_staging_buffer_id = BufferFactory::create(
 				gfx_context,
@@ -28,11 +28,11 @@ namespace Sunset
 			);
 			Buffer* const vertex_staging_buffer = CACHE_FETCH(Buffer, vertex_staging_buffer_id);
 
-			vertex_staging_buffer->copy_from(gfx_context, vertices.data(), vertex_data_size);
+			vertex_staging_buffer->copy_from(gfx_context, mesh->vertices.data(), vertex_data_size);
 
-			buffer_name = std::string(name);
+			buffer_name = std::string(mesh->name);
 			buffer_name += "_vertex";
-			vertex_buffer = BufferFactory::create(
+			mesh->vertex_buffer = BufferFactory::create(
 				gfx_context,
 				{
 					.name = buffer_name.c_str(),
@@ -42,9 +42,9 @@ namespace Sunset
 				}
 			);
 
-			gfx_context->get_command_queue(DeviceQueueType::Graphics)->submit_immediate(gfx_context, [this, gfx_context, vertex_staging_buffer, vertex_data_size](void* command_buffer)
+			gfx_context->get_command_queue(DeviceQueueType::Graphics)->submit_immediate(gfx_context, [mesh, gfx_context, vertex_staging_buffer, vertex_data_size](void* command_buffer)
 			{
-				Buffer* const vertex_buffer_obj = CACHE_FETCH(Buffer, vertex_buffer);
+				Buffer* const vertex_buffer_obj = CACHE_FETCH(Buffer, mesh->vertex_buffer);
 				vertex_buffer_obj->copy_buffer(gfx_context, command_buffer, vertex_staging_buffer, vertex_data_size);
 			});
 
@@ -54,9 +54,9 @@ namespace Sunset
 
 		{
 			// Upload index buffer
-			const size_t index_data_size = indices.size() * sizeof(uint32_t);
+			const size_t index_data_size = mesh->indices.size() * sizeof(uint32_t);
 
-			std::string buffer_name = std::string(name);
+			std::string buffer_name = std::string(mesh->name);
 			buffer_name += "_index_staging";
 			const BufferID index_staging_buffer_id = BufferFactory::create(
 				gfx_context,
@@ -70,11 +70,11 @@ namespace Sunset
 			);
 			Buffer* const index_staging_buffer = CACHE_FETCH(Buffer, index_staging_buffer_id);
 
-			index_staging_buffer->copy_from(gfx_context, indices.data(), index_data_size);
+			index_staging_buffer->copy_from(gfx_context, mesh->indices.data(), index_data_size);
 
-			buffer_name = std::string(name);
+			buffer_name = std::string(mesh->name);
 			buffer_name += "_index";
-			index_buffer = BufferFactory::create(
+			mesh->index_buffer = BufferFactory::create(
 				gfx_context,
 				{
 					.name = buffer_name.c_str(),
@@ -84,9 +84,9 @@ namespace Sunset
 				}
 			);
 
-			gfx_context->get_command_queue(DeviceQueueType::Graphics)->submit_immediate(gfx_context, [this, gfx_context, index_staging_buffer, index_data_size](void* command_buffer)
+			gfx_context->get_command_queue(DeviceQueueType::Graphics)->submit_immediate(gfx_context, [mesh, gfx_context, index_staging_buffer, index_data_size](void* command_buffer)
 			{
-				Buffer* const index_buffer_obj = CACHE_FETCH(Buffer, index_buffer);
+				Buffer* const index_buffer_obj = CACHE_FETCH(Buffer, mesh->index_buffer);
 				index_buffer_obj->copy_buffer(gfx_context, command_buffer, index_staging_buffer, index_data_size);
 			});
 
@@ -95,8 +95,50 @@ namespace Sunset
 		}
 	}
 
-	void Mesh::destroy(GraphicsContext* const gfx_context)
+	void destroy_mesh(GraphicsContext* const gfx_context, Mesh* mesh)
 	{
+	}
+
+	Bounds calculate_mesh_bounds(Mesh* mesh, const glm::mat4& transform)
+	{
+		std::array<glm::vec3, 8> bounding_verts;
+
+		bounding_verts[0] = mesh->local_bounds.origin + mesh->local_bounds.extents * glm::vec3(1, 1, 1);
+		bounding_verts[1] = mesh->local_bounds.origin + mesh->local_bounds.extents * glm::vec3(1, 1, -1);
+		bounding_verts[2] = mesh->local_bounds.origin + mesh->local_bounds.extents * glm::vec3(1, -1, 1);
+		bounding_verts[3] = mesh->local_bounds.origin + mesh->local_bounds.extents * glm::vec3(1, -1, -1);
+		bounding_verts[4] = mesh->local_bounds.origin + mesh->local_bounds.extents * glm::vec3(-1, 1, 1);
+		bounding_verts[5] = mesh->local_bounds.origin + mesh->local_bounds.extents * glm::vec3(-1, 1, -1);
+		bounding_verts[6] = mesh->local_bounds.origin + mesh->local_bounds.extents * glm::vec3(-1, -1, 1);
+		bounding_verts[7] = mesh->local_bounds.origin + mesh->local_bounds.extents * glm::vec3(-1, -1, -1);
+		
+		glm::vec3 min{ std::numeric_limits<float>::max() };
+		glm::vec3 max{ std::numeric_limits<float>::min() };
+
+		for (uint8_t i = 0; i < 8; ++i)
+		{
+			bounding_verts[i] = transform * glm::vec4(bounding_verts[i], 1.0f);
+			min = glm::min(min, bounding_verts[i]);
+			max = glm::max(max, bounding_verts[i]);
+		}
+
+		float max_scale = 0.0f;
+		max_scale = glm::max(glm::length(glm::vec3(transform[0][0], transform[0][1], transform[0][2])), max_scale);
+		max_scale = glm::max(glm::length(glm::vec3(transform[1][0], transform[1][1], transform[1][2])), max_scale);
+		max_scale = glm::max(glm::length(glm::vec3(transform[2][0], transform[2][1], transform[2][2])), max_scale);
+
+		Bounds new_bounds;
+		new_bounds.extents = (max - min) / 2.0f;
+		new_bounds.origin = min + mesh->local_bounds.extents;
+		new_bounds.radius = mesh->local_bounds.radius > 0 ? max_scale * mesh->local_bounds.radius : new_bounds.extents.x;
+
+		return new_bounds;
+	}
+
+	Sunset::Bounds get_mesh_bounds(MeshID mesh)
+	{
+		assert(mesh != 0 && "Cannot fetch bounds on null mesh!");
+		return CACHE_FETCH(Mesh, mesh)->local_bounds;
 	}
 
 	Sunset::PipelineVertexInputDescription Vertex::get_description()
@@ -133,8 +175,9 @@ namespace Sunset
 			mesh->vertices[2].color = { 0.0f, 1.0f, 0.0f };
 
 			mesh->name = id;
+			mesh->local_bounds = calculate_mesh_bounds(mesh, glm::mat4());
 
-			mesh->upload(gfx_context);
+			upload_mesh(gfx_context, mesh);
 		}
 
 		return mesh_id;
@@ -226,8 +269,9 @@ namespace Sunset
 			}
 
 			mesh->name = id;
+			mesh->local_bounds = calculate_mesh_bounds(mesh, glm::mat4());
 
-			mesh->upload(gfx_context);
+			upload_mesh(gfx_context, mesh);
 		}
 
 		return mesh_id;

@@ -36,9 +36,14 @@ namespace Sunset
 			pipeline_state_policy.build(gfx_context, &state_data, render_pass_data);
 		}
 
+		void build_compute(class GraphicsContext* const gfx_context, void* render_pass_data)
+		{
+			pipeline_state_policy.build_compute(gfx_context, &state_data, render_pass_data);
+		}
+
 		void bind(class GraphicsContext* const gfx_context, void* buffer)
 		{
-			pipeline_state_policy.bind(gfx_context, buffer);
+			pipeline_state_policy.bind(gfx_context, state_data.type, buffer);
 		}
 
 		void* get_handle()
@@ -139,7 +144,10 @@ namespace Sunset
 		void build(class GraphicsContext* const gfx_context, PipelineStateData* state_data, void* render_pass_data)
 		{ }
 
-		void bind(class GraphicsContext* const gfx_context, void* buffer)
+		void build_compute(class GraphicsContext* const gfx_context, struct PipelineStateData* state_data, void* render_pass_data)
+		{ }
+
+		void bind(class GraphicsContext* const gfx_context, PipelineStateType type, void* buffer)
 		{ }
 
 		void* get_handle()
@@ -156,29 +164,31 @@ namespace Sunset
 	{ };
 #endif
 
-	class PipelineStateBuilder
+	class PipelineGraphicsStateBuilder
 	{
 		public:
-			static PipelineStateBuilder create();
-			static PipelineStateBuilder create(const PipelineStateData& data);
-			static PipelineStateBuilder create_default(class Window* window);
+			static PipelineGraphicsStateBuilder create();
+			static PipelineGraphicsStateBuilder create(const PipelineStateData& data);
+			static PipelineGraphicsStateBuilder create_default(class Window* window);
 
-			PipelineStateBuilder& add_viewport(float x_pos, float y_pos, float width, float height, float min_depth, float max_depth);
-			PipelineStateBuilder& add_scissor(int32_t x_pos, int32_t y_pos, int32_t width, int32_t height);
-			PipelineStateBuilder& set_shader_layout(ShaderLayoutID layout);
-			PipelineStateBuilder& clear_shader_stages();
-			PipelineStateBuilder& set_shader_stage(PipelineShaderStageType stage, ShaderID shader);
-			PipelineStateBuilder& set_shader_stage(PipelineShaderStageType stage, const char* shader_path);
-			PipelineStateBuilder& set_vertex_input_description(PipelineVertexInputDescription vertex_input_description);
-			PipelineStateBuilder& set_primitive_topology_type(PipelinePrimitiveTopologyType topology_type);
-			PipelineStateBuilder& set_rasterizer_state(PipelineRasterizerPolygonMode polygon_mode, float line_width, PipelineRasterizerCullMode cull_mode);
-			PipelineStateBuilder& set_multisample_count(uint16_t count);
-			PipelineStateBuilder& set_depth_stencil_state(bool b_depth_test_enabled, bool b_depth_write_enabled, CompareOperation compare_op);
-			PipelineStateBuilder& set_pass(RenderPassID pass);
+			PipelineGraphicsStateBuilder& add_viewport(float x_pos, float y_pos, float width, float height, float min_depth, float max_depth);
+			PipelineGraphicsStateBuilder& add_scissor(int32_t x_pos, int32_t y_pos, int32_t width, int32_t height);
+			PipelineGraphicsStateBuilder& set_shader_layout(ShaderLayoutID layout);
+			PipelineGraphicsStateBuilder& clear_shader_stages();
+			PipelineGraphicsStateBuilder& set_shader_stage(PipelineShaderStageType stage, ShaderID shader);
+			PipelineGraphicsStateBuilder& set_shader_stage(PipelineShaderStageType stage, const char* shader_path);
+			PipelineGraphicsStateBuilder& set_vertex_input_description(PipelineVertexInputDescription vertex_input_description);
+			PipelineGraphicsStateBuilder& set_primitive_topology_type(PipelinePrimitiveTopologyType topology_type);
+			PipelineGraphicsStateBuilder& set_rasterizer_state(PipelineRasterizerPolygonMode polygon_mode, float line_width, PipelineRasterizerCullMode cull_mode);
+			PipelineGraphicsStateBuilder& set_multisample_count(uint16_t count);
+			PipelineGraphicsStateBuilder& set_depth_stencil_state(bool b_depth_test_enabled, bool b_depth_write_enabled, CompareOperation compare_op);
+			PipelineGraphicsStateBuilder& set_pass(RenderPassID pass);
+			PipelineGraphicsStateBuilder& set_push_constants(const PushConstantPipelineData& push_constant_data);
+			PipelineGraphicsStateBuilder& derive_shader_layout();
 
 			PipelineStateID finish();
 
-			PipelineStateBuilder value() const
+			PipelineGraphicsStateBuilder value() const
 			{
 				return *this;
 			}
@@ -192,6 +202,38 @@ namespace Sunset
 			PipelineStateData state_data;
 			PipelineStateID pipeline_state;
 			class GraphicsContext* context{ nullptr };
+	};
+
+	class PipelineComputeStateBuilder
+	{
+	public:
+		static PipelineComputeStateBuilder create();
+		static PipelineComputeStateBuilder create(const PipelineStateData& data);
+
+		PipelineComputeStateBuilder& set_shader_layout(ShaderLayoutID layout);
+		PipelineComputeStateBuilder& clear_shader_stages();
+		PipelineComputeStateBuilder& set_shader_stage(ShaderID shader);
+		PipelineComputeStateBuilder& set_shader_stage(const char* shader_path);
+		PipelineComputeStateBuilder& set_pass(RenderPassID pass);
+		PipelineComputeStateBuilder& set_push_constants(const PushConstantPipelineData& push_constant_data);
+		PipelineComputeStateBuilder& derive_shader_layout();
+
+		PipelineStateID finish();
+
+		PipelineComputeStateBuilder value() const
+		{
+			return *this;
+		}
+
+		PipelineStateID get_state() const
+		{
+			return pipeline_state;
+		}
+
+	protected:
+		PipelineStateData state_data;
+		PipelineStateID pipeline_state;
+		class GraphicsContext* context{ nullptr };
 	};
 
 	DEFINE_RESOURCE_CACHE(PipelineStateCache, PipelineStateID, PipelineState);

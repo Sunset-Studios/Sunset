@@ -30,7 +30,7 @@ namespace Sunset
 		void destroy(class GraphicsContext* const context) { }
 	};
 
-	void material_setup_pipeline_state(class GraphicsContext* const gfx_context, MaterialID material, const PushConstantPipelineData& push_constant_data, RenderPassID render_pass, const std::vector<DescriptorLayoutID>& descriptor_layouts = {});
+	void material_setup_pipeline_state(class GraphicsContext* const gfx_context, MaterialID material, RenderPassID render_pass);
 	void material_load_textures(class GraphicsContext* const gfx_context, MaterialID material);
 	void material_upload_textures(class GraphicsContext* const gfx_context, MaterialID material, class DescriptorSet* descriptor_set);
 	PipelineStateID material_get_pipeline(MaterialID material);

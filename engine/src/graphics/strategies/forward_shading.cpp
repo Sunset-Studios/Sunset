@@ -14,19 +14,6 @@ namespace Sunset
 {
 	void ForwardShadingStrategy::render(GraphicsContext* gfx_context, RenderGraph& render_graph, class Swapchain* swapchain)
 	{
-		{
-			render_graph.add_pass(
-				gfx_context,
-				"general_compute_pass",
-				RenderPassFlags::Compute,
-				{},
-				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
-				{
-
-				}
-			);
-		}
-
 		// Compute mesh cull pass
 		{
 			// Shader layout setup
@@ -54,10 +41,25 @@ namespace Sunset
 						.type = DescriptorType::StorageBuffer,
 						.shader_stages = PipelineShaderStageType::Compute
 					},
-				}
+					RGShaderDescriptorDeclaration{
+						.count = 1,
+						.type = DescriptorType::StorageBuffer,
+						.shader_stages = PipelineShaderStageType::Compute
+					},
+				},
+				.pipeline_shaders =
+				{
+					{ PipelineShaderStageType::Compute, "../../shaders/basic.comp.spv" }
+				},
+				.push_constant_data = PushConstantPipelineData::create(&Renderer::get()->get_draw_cull_data())
 			};
 
 			// Input resources
+			RGResourceHandle entity_data_buffer_desc = render_graph.register_buffer(
+				gfx_context,
+				EntityGlobals::get()->entity_data.data_buffer[gfx_context->get_buffered_frame_number()]
+			);
+
 			RGResourceHandle object_instance_buffer_desc = render_graph.create_buffer(
 				gfx_context,
 				{
@@ -105,7 +107,7 @@ namespace Sunset
 				RenderPassFlags::Compute,
 				{
 					.shader_setup = shader_setup,
-					.inputs = { object_instance_buffer_desc, compacted_object_instance_buffer_desc, cleared_draw_indirect_buffer_desc, draw_indirect_buffer_desc },
+					.inputs = { entity_data_buffer_desc, object_instance_buffer_desc, compacted_object_instance_buffer_desc, cleared_draw_indirect_buffer_desc, draw_indirect_buffer_desc },
 					.outputs = { draw_indirect_buffer_desc }
 				},
 				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
@@ -127,6 +129,8 @@ namespace Sunset
 		}
 
 		// Forward pass
+		RGResourceHandle main_color_image_desc;
+		RGResourceHandle main_depth_image_desc;
 		{
 			// Shader layout setup
 			RGShaderDataSetup shader_setup
@@ -170,7 +174,7 @@ namespace Sunset
 
 			// Output resources
 			const glm::vec2 image_extent = gfx_context->get_window()->get_extent();
-			RGResourceHandle color_image_desc = render_graph.create_image(
+			main_color_image_desc = render_graph.create_image(
 				gfx_context,
 				{
 					.name = "main_color",
@@ -184,7 +188,7 @@ namespace Sunset
 					.has_store_op = true,
 				}
 			);
-			RGResourceHandle depth_image_desc = render_graph.create_image(
+			main_depth_image_desc = render_graph.create_image(
 				gfx_context,
 				{
 					.name = "main_depth",
@@ -207,15 +211,14 @@ namespace Sunset
 				{
 					.shader_setup = shader_setup,
 					.inputs = { entity_data_buffer_desc, default_image_desc, material_data_buffer_desc },
-					.outputs = { color_image_desc, depth_image_desc }
+					.outputs = { main_color_image_desc, main_depth_image_desc }
 				},
 				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
 				{
 					Renderer::get()->get_mesh_task_queue().submit_draws(
 						gfx_context,
 						command_buffer,
-						frame_data.current_pass,
-						frame_data.descriptor_layouts
+						frame_data.current_pass
 					);
 				}
 			);
@@ -228,7 +231,9 @@ namespace Sunset
 			gfx_context,
 			"tools_gui",
 			RenderPassFlags::Main,
-			{},
+			{
+				.outputs = { main_color_image_desc, main_depth_image_desc }
+			},
 			[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
 			{
 				global_gui_core.initialize(gfx_context, gfx_context->get_window(), frame_data.current_pass);

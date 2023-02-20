@@ -42,9 +42,32 @@ namespace Sunset
 				return graphics_context.get();
 			}
 
-			RenderGraph& get_render_graph();
-			MeshTaskQueue& get_mesh_task_queue();
-			MeshRenderTask* fresh_rendertask();
+			inline RenderGraph& get_render_graph()
+			{
+				return render_graph;
+			}
+
+			inline MeshTaskQueue& get_mesh_task_queue()
+			{
+				return mesh_task_queue;
+			}
+
+			inline MeshRenderTask* fresh_rendertask()
+			{
+				return task_allocator.get_new();
+			}
+
+			inline DrawCullData& get_draw_cull_data()
+			{
+				return current_draw_cull_data;
+			}
+
+			inline void set_draw_cull_data(DrawCullData draw_cull_data)
+			{
+				current_draw_cull_data = draw_cull_data;
+			}
+
+			void queue_graph_command(Identity name, std::function<void(class RenderGraph&, RGFrameData&, void*)> command_callback);
 
 		private:
 			Renderer() = default;
@@ -60,5 +83,8 @@ namespace Sunset
 			MeshRenderTaskFrameAllocator task_allocator;
 			MeshTaskQueue mesh_task_queue;
 			RenderGraph render_graph;
+			DrawCullData current_draw_cull_data;
 	};
 }
+
+#define QUEUE_RENDERGRAPH_COMMAND(CommandName, Lambda) Renderer::get()->queue_graph_command(#CommandName, Lambda)

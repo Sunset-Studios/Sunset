@@ -10,7 +10,8 @@ namespace Sunset
 	{
 		None = 0x00000000,
 		Compute = 0x00000001,
-		Main = 0x00000002
+		Main = 0x00000002,
+		GraphLocal = 0x00000004 // For graph passes that should run locally, without creating and executing an actual GPU pass
 	};
 
 	inline RenderPassFlags operator|(RenderPassFlags lhs, RenderPassFlags rhs)
