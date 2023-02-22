@@ -22,14 +22,14 @@ namespace Sunset
 		set_create_info.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT_EXT;
 		set_create_info.pBindings = vk_bindings.data();
 
+		std::vector<VkDescriptorBindingFlags> bindless_flags(bindings.size(), VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT);
 		{
 			bool b_has_bindless_binding{ false };
-			std::vector<VkDescriptorBindingFlags> bindless_flags(bindings.size(), 0);
 			for (uint32_t i = 0; i < bindings.size(); ++i)
 			{
 				if (bindings[i].b_supports_bindless)
 				{
-					bindless_flags.push_back(VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT | VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT_EXT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT_EXT);
+					bindless_flags[i] = (VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT | VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT_EXT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT_EXT);
 					b_has_bindless_binding = true;
 				}
 			}

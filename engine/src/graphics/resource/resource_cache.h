@@ -29,10 +29,13 @@ namespace Sunset
 			if (cache.find(resource_id) == cache.end())
 			{
 				ResourceType* const new_resource = GlobalAssetPools<ResourceType>::get()->allocate();
-				gfx_context->add_resource_deletion_execution([this, resource_id, gfx_context]()
+				if (b_auto_delete_if_added)
 				{
-					remove_and_delete(gfx_context, resource_id);
-				});
+					gfx_context->add_resource_deletion_execution([this, resource_id, gfx_context]()
+					{
+						remove_and_delete(gfx_context, resource_id);
+					});
+				}
 				cache.insert({ resource_id, new_resource });
 				b_added = true;
 			}
@@ -41,7 +44,6 @@ namespace Sunset
 
 		ResourceType* fetch(ResourceIDType id)
 		{
-			assert(cache.find(id) != cache.end());
 			return cache[id];
 		}
 
@@ -52,10 +54,12 @@ namespace Sunset
 
 		void remove_and_delete(class GraphicsContext* const gfx_context, ResourceIDType id)
 		{
-			ResourceType* resource = fetch(id);
-			cache.erase(id);
-			resource->destroy(gfx_context);
-			GlobalAssetPools<ResourceType>::get()->deallocate(resource);
+			if (ResourceType* resource = fetch(id))
+			{
+				cache.erase(id);
+				resource->destroy(gfx_context);
+				GlobalAssetPools<ResourceType>::get()->deallocate(resource);
+			}
 		}
 
 		void destroy(class GraphicsContext* const gfx_context)

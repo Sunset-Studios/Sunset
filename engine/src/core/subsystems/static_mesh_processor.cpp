@@ -79,7 +79,7 @@ namespace Sunset
 			Renderer::get()
 				->fresh_rendertask()
 				->setup(mesh_comp->material, mesh_comp->resource_state, 0)
-				->set_push_constants(PushConstantPipelineData::create(&mesh_comp->additional_data))
+				->set_push_constants(PushConstantPipelineData::create(&mesh_comp->additional_data, PipelineShaderStageType::Vertex | PipelineShaderStageType::Fragment))
 				->set_entity(entity)
 				->submit(Renderer::get()->get_mesh_task_queue());
 		}

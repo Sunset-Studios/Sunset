@@ -16,6 +16,9 @@ namespace Sunset
 	{
 		// Compute mesh cull pass
 		{
+			MeshTaskQueue& mesh_task_queue = Renderer::get()->get_mesh_task_queue();
+			mesh_task_queue.prepare_batches(gfx_context);
+
 			// Shader layout setup
 			RGShaderDataSetup shader_setup
 			{
@@ -51,7 +54,7 @@ namespace Sunset
 				{
 					{ PipelineShaderStageType::Compute, "../../shaders/basic.comp.spv" }
 				},
-				.push_constant_data = PushConstantPipelineData::create(&Renderer::get()->get_draw_cull_data())
+				.push_constant_data = PushConstantPipelineData::create(&Renderer::get()->get_draw_cull_data(), PipelineShaderStageType::Compute)
 			};
 
 			// Input resources
@@ -64,7 +67,7 @@ namespace Sunset
 				gfx_context,
 				{
 					.name = "object_instance_buffer",
-					.buffer_size = 256,
+					.buffer_size = mesh_task_queue.get_queue_size() * sizeof(GPUObjectInstance),
 					.type = BufferType::TransferDestination | BufferType::StorageBuffer,
 					.memory_usage = MemoryUsageType::OnlyGPU
 				}
@@ -74,7 +77,7 @@ namespace Sunset
 				gfx_context,
 				{
 					.name = "compacted_object_instance_buffer",
-					.buffer_size = 256,
+					.buffer_size = mesh_task_queue.get_queue_size() * sizeof(uint32_t),
 					.type = BufferType::TransferDestination | BufferType::StorageBuffer,
 					.memory_usage = MemoryUsageType::OnlyGPU
 				}
@@ -84,7 +87,7 @@ namespace Sunset
 				gfx_context,
 				{
 					.name = "cleared_draw_indirect_buffer",
-					.buffer_size = 1,
+					.buffer_size = mesh_task_queue.get_num_indirect_batches(),
 					.type = BufferType::TransferSource | BufferType::StorageBuffer | BufferType::Indirect,
 					.memory_usage = MemoryUsageType::CPUToGPU
 				}
@@ -95,7 +98,7 @@ namespace Sunset
 				gfx_context,
 				{
 					.name = "draw_indirect_buffer",
-					.buffer_size = 256,
+					.buffer_size = mesh_task_queue.get_num_indirect_batches(),
 					.type = BufferType::TransferDestination | BufferType::StorageBuffer | BufferType::Indirect,
 					.memory_usage = MemoryUsageType::OnlyGPU
 				}
@@ -143,15 +146,15 @@ namespace Sunset
 						.shader_stages = PipelineShaderStageType::All
 					},
 					RGShaderDescriptorDeclaration{
-						.count = MAX_DESCRIPTOR_BINDINGS,
-						.type = DescriptorType::Image,
-						.shader_stages = PipelineShaderStageType::Fragment,
-						.b_supports_bindless = true
-					},
-					RGShaderDescriptorDeclaration{
 						.count = 1,
 						.type = DescriptorType::StorageBuffer,
 						.shader_stages = PipelineShaderStageType::Fragment,
+					},
+					RGShaderDescriptorDeclaration{
+						.count = MAX_DESCRIPTOR_BINDINGS - 1,
+						.type = DescriptorType::Image,
+						.shader_stages = PipelineShaderStageType::Fragment,
+						.b_supports_bindless = true
 					}
 				}
 			};
@@ -162,14 +165,14 @@ namespace Sunset
 				EntityGlobals::get()->entity_data.data_buffer[gfx_context->get_buffered_frame_number()]
 			);
 
-			RGResourceHandle default_image_desc = render_graph.register_image(
-				gfx_context,
-				ImageFactory::create_default(gfx_context)
-			);
-
 			RGResourceHandle material_data_buffer_desc = render_graph.register_buffer(
 				gfx_context,
 				MaterialGlobals::get()->material_data.data_buffer[gfx_context->get_buffered_frame_number()]
+			);
+
+			RGResourceHandle default_image_desc = render_graph.register_image(
+				gfx_context,
+				ImageFactory::create_default(gfx_context)
 			);
 
 			// Output resources
@@ -210,7 +213,7 @@ namespace Sunset
 				RenderPassFlags::Main,
 				{
 					.shader_setup = shader_setup,
-					.inputs = { entity_data_buffer_desc, default_image_desc, material_data_buffer_desc },
+					.inputs = { entity_data_buffer_desc, material_data_buffer_desc, default_image_desc },
 					.outputs = { main_color_image_desc, main_depth_image_desc }
 				},
 				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
@@ -237,7 +240,9 @@ namespace Sunset
 			[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
 			{
 				global_gui_core.initialize(gfx_context, gfx_context->get_window(), frame_data.current_pass);
+				global_gui_core.new_frame(Renderer::get()->context()->get_window());
 				global_gui_core.begin_draw();
+
 				global_gui_core.end_draw(command_buffer);
 			}
 		);

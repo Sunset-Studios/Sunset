@@ -15,6 +15,5 @@ namespace Sunset
 	void EditorGui::update(double delta_time)
 	{
 		global_gui_core.poll_events();
-		global_gui_core.new_frame(Renderer::get()->context()->get_window());
 	}
 }

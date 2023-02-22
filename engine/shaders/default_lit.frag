@@ -35,12 +35,12 @@ layout (std140, set = 1, binding = 0) readonly buffer EntitySceneDataBuffer
 	EntitySceneData entities[];
 } entity_data;
 
-layout (set = 1, binding = 1) uniform sampler2D albedo_textures[];
-
-layout (std140, set = 1, binding = 2) readonly buffer MaterialDataBuffer
+layout (std140, set = 1, binding = 1) readonly buffer MaterialDataBuffer
 {
 	MaterialData materials[];
 } material_data;
+
+layout (set = 1, binding = 2) uniform sampler2D albedo_textures[];
 
 void main()
 {

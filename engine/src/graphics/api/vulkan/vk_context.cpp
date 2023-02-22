@@ -46,6 +46,11 @@ namespace Sunset
 		VkPhysicalDeviceDescriptorIndexingFeatures indexing_features = {};
 		indexing_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT;
 		indexing_features.pNext = nullptr;
+		indexing_features.descriptorBindingPartiallyBound = VK_TRUE;
+		indexing_features.descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE;
+		indexing_features.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
+		indexing_features.descriptorBindingVariableDescriptorCount = VK_TRUE;
+		indexing_features.descriptorBindingUpdateUnusedWhilePending = VK_TRUE;
 
 		state.device = device_builder
 			.add_pNext(&shader_draw_parameters_features)
@@ -160,8 +165,8 @@ namespace Sunset
 		std::vector<VkDescriptorImageInfo> vk_image_infos;
 		std::vector<VkWriteDescriptorSet> vk_writes;
 
-		vk_buffer_infos.reserve(descriptor_writes.size());
-		vk_image_infos.reserve(descriptor_writes.size());
+		vk_buffer_infos.reserve(descriptor_writes.size() * MAX_DESCRIPTOR_BINDINGS);
+		vk_image_infos.reserve(descriptor_writes.size() * MAX_DESCRIPTOR_BINDINGS);
 
 		for (const DescriptorWrite& write : descriptor_writes)
 		{
@@ -169,34 +174,44 @@ namespace Sunset
 			{
 				Image* const image = static_cast<Image*>(write.buffer);
 
-				VkDescriptorImageInfo& image_info = vk_image_infos.emplace_back();
-				image_info.sampler = static_cast<VkSampler>(image->get_sampler());
-				image_info.imageView = static_cast<VkImageView>(image->get_image_view());
-				image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+				uint32_t image_infos_write_start = vk_image_infos.size();
+				for (int i = 0; i < write.count; ++i)
+				{
+					VkDescriptorImageInfo& image_info = vk_image_infos.emplace_back();
+					image_info.sampler = static_cast<VkSampler>(image->get_sampler());
+					image_info.imageView = static_cast<VkImageView>(image->get_image_view());
+					image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+				}
+				auto data_it = vk_image_infos.begin() + image_infos_write_start;
 
 				VkWriteDescriptorSet& new_vk_write = vk_writes.emplace_back();
 				new_vk_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 				new_vk_write.pNext = nullptr;
 				new_vk_write.descriptorCount = write.count;
 				new_vk_write.descriptorType = VK_FROM_SUNSET_DESCRIPTOR_TYPE(write.type);
-				new_vk_write.pImageInfo = &image_info;
+				new_vk_write.pImageInfo = &(*data_it);
 				new_vk_write.dstBinding = write.slot;
 				new_vk_write.dstSet = static_cast<VkDescriptorSet>(write.set->get());
 				new_vk_write.dstArrayElement = write.array_index;
 			}
 			else
 			{
-				VkDescriptorBufferInfo& buffer_info = vk_buffer_infos.emplace_back();
-				buffer_info.buffer = static_cast<VkBuffer>(write.buffer);
-				buffer_info.offset = 0;
-				buffer_info.range = write.buffer_range;
+				uint32_t buffer_infos_write_start = vk_buffer_infos.size();
+				for (uint32_t i = 0; i < write.count; ++i)
+				{
+					VkDescriptorBufferInfo& buffer_info = vk_buffer_infos.emplace_back();
+					buffer_info.buffer = static_cast<VkBuffer>(write.buffer);
+					buffer_info.offset = 0;
+					buffer_info.range = write.buffer_range;
+				}
+				auto data_it = vk_buffer_infos.begin() + buffer_infos_write_start;
 
 				VkWriteDescriptorSet& new_vk_write = vk_writes.emplace_back();
 				new_vk_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 				new_vk_write.pNext = nullptr;
 				new_vk_write.descriptorCount = write.count;
 				new_vk_write.descriptorType = VK_FROM_SUNSET_DESCRIPTOR_TYPE(write.type);
-				new_vk_write.pBufferInfo = &buffer_info;
+				new_vk_write.pBufferInfo = &(*data_it);
 				new_vk_write.dstBinding = write.slot;
 				new_vk_write.dstSet = static_cast<VkDescriptorSet>(write.set->get());
 				new_vk_write.dstArrayElement = write.array_index;
@@ -303,12 +318,16 @@ namespace Sunset
 				uint32_t set_number = set_binding_pair >> 32;
 				uint32_t binding_index = set_binding_pair;
 
+				if (previous_set_number == std::numeric_limits<uint32_t>::max())
+				{
+					previous_set_number = set_number;
+				}
+
 				if (set_number != previous_set_number)
 				{
 					build_unique_bindings_into_layout();
+					previous_set_number = set_number;
 				}
-
-				previous_set_number = set_number;
 
 				DescriptorBinding& binding = all_bindings[binding_index];
 				if (unique_bindings.find(binding.slot) != unique_bindings.end())

@@ -47,25 +47,29 @@ namespace Sunset
 
 	bool DescriptorSetBuilder::build(DescriptorSet*& out_descriptor_set, DescriptorLayoutID& out_descriptor_layout)
 	{
-		out_descriptor_layout = DescriptorLayoutFactory::create(gfx_context, bindings);
-		out_descriptor_set = gfx_context->get_descriptor_set_allocator()->allocate(gfx_context, CACHE_FETCH(DescriptorLayout, out_descriptor_layout));
-
+		if (out_descriptor_layout == 0)
+		{
+			out_descriptor_layout = DescriptorLayoutFactory::create(gfx_context, bindings);
+		}
 		if (out_descriptor_set == nullptr)
 		{
-			return false;
+			out_descriptor_set = gfx_context->get_descriptor_set_allocator()->allocate(gfx_context, CACHE_FETCH(DescriptorLayout, out_descriptor_layout));
+			if (out_descriptor_set == nullptr)
+			{
+				return false;
+			}
+			for (const DescriptorBinding& binding : bindings)
+			{
+				if (binding.b_supports_bindless)
+				{
+					out_descriptor_set->register_bindless_slot(binding.slot, binding.count);
+				}
+			}
 		}
 
 		for (DescriptorWrite& write : descriptor_writes)
 		{
 			write.set = out_descriptor_set;
-		}
-
-		for (const DescriptorBinding& binding : bindings)
-		{
-			if (binding.b_supports_bindless)
-			{
-				out_descriptor_set->register_bindless_slot(binding.slot, binding.count);
-			}
 		}
 
 		if (!descriptor_writes.empty())
@@ -78,28 +82,27 @@ namespace Sunset
 
 	void DescriptorHelpers::inject_descriptors(GraphicsContext* const context, DescriptorData& out_descriptor_data, const std::vector<DescriptorBuildData>& descriptor_build_datas)
 	{
-		if (out_descriptor_data.descriptor_set == nullptr)
-		{
-			DescriptorSetBuilder builder = DescriptorSetBuilder::begin(context);
-			for (const DescriptorBuildData& descriptor_build_data : descriptor_build_datas)
-			{
-				// TODO: Switch on descriptor type to determine whether to bind buffer or image
-				if (descriptor_build_data.type == DescriptorType::Image)
-				{
-					builder.bind_image(descriptor_build_data);
-				}
-				else
-				{
-					builder.bind_buffer(descriptor_build_data);
-				}
+		out_descriptor_data.dynamic_buffer_offsets.clear();
+		out_descriptor_data.dynamic_buffer_offsets.reserve(descriptor_build_datas.size());
 
-				if (descriptor_build_data.type == DescriptorType::DynamicUniformBuffer)
-				{
-					out_descriptor_data.dynamic_buffer_offsets.push_back(descriptor_build_data.buffer_offset);
-				}
+		DescriptorSetBuilder builder = DescriptorSetBuilder::begin(context);
+		for (const DescriptorBuildData& descriptor_build_data : descriptor_build_datas)
+		{
+			if (descriptor_build_data.type == DescriptorType::Image)
+			{
+				builder.bind_image(descriptor_build_data);
 			}
-			builder.build(out_descriptor_data.descriptor_set, out_descriptor_data.descriptor_layout);
+			else
+			{
+				builder.bind_buffer(descriptor_build_data);
+			}
+
+			if (descriptor_build_data.type == DescriptorType::DynamicUniformBuffer)
+			{
+				out_descriptor_data.dynamic_buffer_offsets.push_back(descriptor_build_data.buffer_offset);
+			}
 		}
+		builder.build(out_descriptor_data.descriptor_set, out_descriptor_data.descriptor_layout);
 	}
 
 	void DescriptorHelpers::write_bindless_descriptors(class GraphicsContext* const context, const std::vector<DescriptorBindlessWrite>& descriptor_writes, int32_t* out_array_indices)
@@ -171,7 +174,7 @@ namespace Sunset
 		binding_table[slot].bound_indices.clear();
 
 		binding_table[slot].free_indices.reserve(binding_table[slot].total_bindings_count);
-		for (uint32_t i = binding_table[slot].total_bindings_count - 1; i >= 0; --i)
+		for (int32_t i = binding_table[slot].total_bindings_count - 1; i >= 0; --i)
 		{
 			binding_table[slot].free_indices.push_back(i);
 		}

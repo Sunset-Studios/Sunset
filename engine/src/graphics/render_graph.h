@@ -194,6 +194,7 @@ namespace Sunset
 	protected:
 		void update_reference_counts(RGPass* pass);
 		void update_resource_param_producers_and_consumers(RGPass* pass);
+		void update_present_pass_status(RGPass* pass);
 		void cull_graph_passes(class GraphicsContext* const gfx_context);
 		void compute_resource_first_and_last_users(class GraphicsContext* const gfx_context);
 		void create_dummy_pipeline_layout(class GraphicsContext* const gfx_context);
@@ -203,14 +204,16 @@ namespace Sunset
 
 		void setup_physical_pass_and_resources(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGPassHandle pass, void* command_buffer);
 		void setup_physical_resource(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGResourceHandle pass);
-		void tie_resource_to_pass_config_attachments(class GraphicsContext* const gfx_context, RGResourceHandle resource, RGPass* pass);
+		void tie_resource_to_pass_config_attachments(class GraphicsContext* const gfx_context, RGResourceHandle resource, RGPass* pass, bool b_is_input_resource = false);
 		void setup_pass_pipeline_state_if_necessary(class GraphicsContext* const gfx_context, RGPass* pass, void* command_buffer);
 		void setup_pass_descriptors(class GraphicsContext* const gfx_context, RGPass* pass, void* command_buffer);
 		void bind_global_descriptors(class GraphicsContext* const gfx_context, void* command_buffer);
 		void bind_pass_descriptors(class GraphicsContext* const gfx_context, RGPass* pass, void* command_buffer);
+		void push_pass_constants(class GraphicsContext* const gfx_context, RGPass* pass, void* command_buffer);
 		void update_transient_resources(class GraphicsContext* const gfx_context, RGPass* pass);
+		void free_physical_resources(class GraphicsContext* const gfx_context);
 
-		void reset();
+		void reset(class GraphicsContext* const gfx_context);
 
 	protected:
 		ImageResourceFrameAllocator image_resource_allocator;

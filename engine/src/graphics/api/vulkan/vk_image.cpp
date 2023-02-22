@@ -15,7 +15,7 @@ namespace Sunset
 		{
 			usage_flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 		}
-		if (static_cast<int32_t>(flags & (ImageFlags::Depth | ImageFlags::Stencil)) > 0)
+		if (static_cast<int32_t>(flags & (ImageFlags::DepthStencil)) > 0)
 		{
 			usage_flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 		}
@@ -41,11 +41,11 @@ namespace Sunset
 		{
 			aspect_flags |= VK_IMAGE_ASPECT_COLOR_BIT;
 		}
-		else if (static_cast<int32_t>(flags & ImageFlags::Depth) > 0)
+		else if (static_cast<int32_t>(flags & (ImageFlags::Depth | ImageFlags::DepthStencil)) > 0)
 		{
 			aspect_flags |= VK_IMAGE_ASPECT_DEPTH_BIT;
 		}
-		else if (static_cast<int32_t>(flags & ImageFlags::Stencil) > 0)
+		else if (static_cast<int32_t>(flags & (ImageFlags::Depth | ImageFlags::DepthStencil)) > 0)
 		{
 			aspect_flags |= VK_IMAGE_ASPECT_STENCIL_BIT;
 		}

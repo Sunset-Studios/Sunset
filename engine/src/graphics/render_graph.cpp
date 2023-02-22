@@ -114,6 +114,7 @@ namespace Sunset
 
 		update_reference_counts(pass);
 		update_resource_param_producers_and_consumers(pass);
+		update_present_pass_status(pass);
 
 		return index;
 	}
@@ -167,6 +168,25 @@ namespace Sunset
 		}
 	}
 
+	void RenderGraph::update_present_pass_status(RGPass* pass)
+	{
+		for (RGResourceHandle resource : pass->parameters.outputs)
+		{
+			const ResourceType resource_type = static_cast<ResourceType>(get_graph_resource_type(resource));
+			const RGResourceIndex resource_index = get_graph_resource_index(resource);
+			if (resource_type == ResourceType::Image)
+			{
+				RGImageResource* const image_resource = registry.image_resources[resource_index];
+				const bool b_is_present_resource = (image_resource->config.flags | ImageFlags::Present) != ImageFlags::None;
+				if (b_is_present_resource)
+				{
+					pass->pass_config.b_is_present_pass = true;
+					return;
+				}
+			}
+		}
+	}
+
 	void RenderGraph::cull_graph_passes(class GraphicsContext* const gfx_context)
 	{
 		std::unordered_set<RGPassHandle> passes_to_cull;
@@ -178,6 +198,12 @@ namespace Sunset
 			for (RGPassHandle pass_handle : producers)
 			{
 				RGPass* const producer_pass = registry.render_passes[pass_handle];
+
+				// Do not cull present passes as these are usually last and have resources that have not future uses, so would get culled otherwise
+				if (producer_pass->pass_config.b_is_present_pass)
+				{
+					continue;
+				}
 
 				--producer_pass->reference_count;
 
@@ -307,6 +333,8 @@ namespace Sunset
 
 	void RenderGraph::submit(GraphicsContext* const gfx_context, class Swapchain* const swapchain)
 	{
+		free_physical_resources(gfx_context);
+
 		compile(gfx_context, swapchain);
 
 		// TODO: switch the queue based on the pass type
@@ -331,7 +359,7 @@ namespace Sunset
 		// TODO: switch the queue based on the pass type
 		gfx_context->get_command_queue(DeviceQueueType::Graphics)->submit(gfx_context);
 
-		reset();
+		reset(gfx_context);
 	}
 
 	void RenderGraph::inject_global_descriptors(class GraphicsContext* const gfx_context, uint16_t buffered_frame_index, const std::initializer_list<DescriptorBuildData>& descriptor_build_datas)
@@ -348,7 +376,7 @@ namespace Sunset
 		return 0;
 	}
 
-	void RenderGraph::reset()
+	void RenderGraph::reset(class GraphicsContext* const gfx_context)
 	{
 		nonculled_passes.clear();
 
@@ -405,12 +433,12 @@ namespace Sunset
 		for (RGResourceHandle input_resource : graph_pass->parameters.inputs)
 		{
 			setup_physical_resource(gfx_context, swapchain, input_resource);
-			tie_resource_to_pass_config_attachments(gfx_context, input_resource, graph_pass);
+			tie_resource_to_pass_config_attachments(gfx_context, input_resource, graph_pass, true);
 		}
 		for (RGResourceHandle output_resource : graph_pass->parameters.outputs)
 		{
 			setup_physical_resource(gfx_context, swapchain, output_resource);
-			tie_resource_to_pass_config_attachments(gfx_context, output_resource, graph_pass);
+			tie_resource_to_pass_config_attachments(gfx_context, output_resource, graph_pass, false);
 		}
 
 		// Create our physical render pass and cache it if necessary
@@ -424,10 +452,9 @@ namespace Sunset
 		// and bound by render pass callbacks.
 		setup_pass_pipeline_state_if_necessary(gfx_context, graph_pass, command_buffer);
 		// Sparsely bind our descriptors for the render pass.
-		// TODO: Modify these because they do no work for physically pass-less compute passes. We need to store the descriptor datas outside
-		//		 of the render passes somewhere
 		setup_pass_descriptors(gfx_context, graph_pass, command_buffer);
 		bind_pass_descriptors(gfx_context, graph_pass, command_buffer);
+		push_pass_constants(gfx_context, graph_pass, command_buffer);
 	}
 
 	void RenderGraph::setup_physical_resource(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGResourceHandle resource)
@@ -454,23 +481,17 @@ namespace Sunset
 		}
 	}
 
-	void RenderGraph::tie_resource_to_pass_config_attachments(class GraphicsContext* const gfx_context, RGResourceHandle resource, RGPass* pass)
+	void RenderGraph::tie_resource_to_pass_config_attachments(class GraphicsContext* const gfx_context, RGResourceHandle resource, RGPass* pass, bool b_is_input_resource)
 	{
 		const ResourceType resource_type = static_cast<ResourceType>(get_graph_resource_type(resource));
 		const RGResourceIndex resource_index = get_graph_resource_index(resource);
 		if (resource_type == ResourceType::Image)
 		{
 			RGImageResource* const image_resource = registry.image_resources[resource_index];
-			const bool b_is_sampled = (image_resource->config.flags | ImageFlags::Sampled) != ImageFlags::None;
-			const bool b_is_local_load = (image_resource->config.flags | ImageFlags::LocalLoad) != ImageFlags::None;
-			const bool b_is_present_resource = (image_resource->config.flags | ImageFlags::Present) != ImageFlags::None;
-			if (!b_is_sampled || b_is_local_load)
+			const bool b_is_local_load = (image_resource->config.flags & ImageFlags::LocalLoad) != ImageFlags::None;
+			if (!b_is_input_resource || b_is_local_load)
 			{
 				pass->pass_config.attachments.push_back(registry.resource_metadata[resource].physical_id);
-			}
-			if (b_is_present_resource)
-			{
-				pass->pass_config.b_is_present_pass = true;
 			}
 		}
 	}
@@ -540,7 +561,6 @@ namespace Sunset
 			}
 
 			DescriptorData& pass_descriptor_data = registry.pass_descriptor_cache[pass->pass_config.name][i];
-			if (pass_descriptor_data.descriptor_set == nullptr)
 			{
 				std::vector<DescriptorBuildData> descriptor_build_datas;
 				// TODO: Figure out how to skip shader setup declarations if the RG pass was created with shader stages,
@@ -574,22 +594,22 @@ namespace Sunset
 				}
 
 				DescriptorHelpers::inject_descriptors(gfx_context, pass_descriptor_data, descriptor_build_datas);
+			}
 
-				if (pass->pipeline_state_id != 0)
-				{
-					pass_descriptor_data.pipeline_layout = CACHE_FETCH(PipelineState, pass->pipeline_state_id)->get_state_data().layout;
-				}
-				else
-				{
-					pass_descriptor_data.pipeline_layout = ShaderPipelineLayoutFactory::create(
-						gfx_context,
-						{},
-						{
-							global_descriptor_datas[i].descriptor_layout,
-							pass_descriptor_data.descriptor_layout
-						}
-					);
-				}
+			if (pass->pipeline_state_id != 0)
+			{
+				pass_descriptor_data.pipeline_layout = CACHE_FETCH(PipelineState, pass->pipeline_state_id)->get_state_data().layout;
+			}
+			else
+			{
+				pass_descriptor_data.pipeline_layout = ShaderPipelineLayoutFactory::create(
+				gfx_context,
+				{},
+					{
+						global_descriptor_datas[i].descriptor_layout,
+						pass_descriptor_data.descriptor_layout
+					}
+				);
 			}
 		}
 	}
@@ -623,6 +643,14 @@ namespace Sunset
 		}
 	}
 
+	void RenderGraph::push_pass_constants(class GraphicsContext* const gfx_context, RGPass* pass, void* command_buffer)
+	{
+		if (pass->parameters.shader_setup.push_constant_data.is_valid())
+		{
+			gfx_context->push_constants(command_buffer, pass->pipeline_state_id, pass->parameters.shader_setup.push_constant_data);
+		}
+	}
+
 	void RenderGraph::update_transient_resources(class GraphicsContext* const gfx_context, RGPass* pass)
 	{
 		// TODO: Look into aliasing memory for expired resources as opposed to just flat out deleting them (though that should also be done)
@@ -631,16 +659,7 @@ namespace Sunset
 			RGResourceMetadata& resource_meta = registry.resource_metadata[input_resource];
 			if (resource_meta.physical_id != 0 && resource_meta.last_user == pass->handle && !resource_meta.b_is_external)
 			{
-				const ResourceType resource_type = static_cast<ResourceType>(get_graph_resource_type(input_resource));
-				if (resource_type == ResourceType::Image)
-				{
-					CACHE_DELETE(Image, resource_meta.physical_id, gfx_context);
-				}
-				else if (resource_type == ResourceType::Buffer)
-				{
-					CACHE_DELETE(Buffer, resource_meta.physical_id, gfx_context);
-				}
-				resource_meta.physical_id = 0;
+				// TODO: Aliasing
 			}
 		}
 		for (RGResourceHandle output_resource : pass->parameters.outputs)
@@ -648,7 +667,20 @@ namespace Sunset
 			RGResourceMetadata& resource_meta = registry.resource_metadata[output_resource];
 			if (resource_meta.physical_id != 0 && resource_meta.last_user == pass->handle && !resource_meta.b_is_external)
 			{
-				const ResourceType resource_type = static_cast<ResourceType>(get_graph_resource_type(output_resource));
+				// TODO: Aliasing
+			}
+		}
+	}
+
+	void RenderGraph::free_physical_resources(class GraphicsContext* const gfx_context)
+	{
+		// TODO: Look into aliasing memory for expired resources as opposed to just flat out deleting them (though that should also be done)
+		for (RGResourceHandle resource : registry.all_resource_handles)
+		{
+			RGResourceMetadata& resource_meta = registry.resource_metadata[resource];
+			if (resource_meta.physical_id != 0 && !resource_meta.b_is_external)
+			{
+				const ResourceType resource_type = static_cast<ResourceType>(get_graph_resource_type(resource));
 				if (resource_type == ResourceType::Image)
 				{
 					CACHE_DELETE(Image, resource_meta.physical_id, gfx_context);

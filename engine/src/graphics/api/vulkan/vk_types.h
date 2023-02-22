@@ -196,6 +196,7 @@ inline Sunset::Format SUNSET_FROM_VK_FORMAT(VkFormat format)
 	case VK_FORMAT_D32_SFLOAT:
 		return Sunset::Format::FloatDepth32;
 
+	case VK_FORMAT_B8G8R8A8_SRGB:
 	case VK_FORMAT_R8G8B8A8_SRGB:
 		return Sunset::Format::SRGB8x4;
 

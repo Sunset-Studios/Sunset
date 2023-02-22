@@ -162,11 +162,12 @@ namespace Sunset
 		void* data;
 
 		template<class T>
-		static PushConstantPipelineData create(T* type_data)
+		static PushConstantPipelineData create(T* type_data, PipelineShaderStageType shader_stages)
 		{
 			PushConstantPipelineData push_constant_data;
 			push_constant_data.size = sizeof(T);
 			push_constant_data.data = type_data;
+			push_constant_data.shader_stage = shader_stages;
 			return push_constant_data;
 		}
 
@@ -176,6 +177,11 @@ namespace Sunset
 				&& size == other.size
 				&& shader_stage == other.shader_stage
 				&& data == other.data;
+		}
+
+		bool is_valid() const
+		{
+			return data != nullptr;
 		}
 	};
 

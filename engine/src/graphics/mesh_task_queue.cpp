@@ -7,7 +7,13 @@
 
 namespace Sunset
 {
-	void MeshTaskQueue::submit_compute_cull(class GraphicsContext* const gfx_context, void* command_buffer)
+	void MeshTaskQueue::prepare_batches(class GraphicsContext* const gfx_context)
+	{
+		sort_and_batch(gfx_context);
+		Renderer::get()->get_draw_cull_data().draw_count = queue.size();
+	}
+
+	void MeshTaskQueue::sort_and_batch(class GraphicsContext* const gfx_context)
 	{
 		std::sort(queue.begin(), queue.end(), [](MeshRenderTask* const first, MeshRenderTask* const second) -> bool
 		{
@@ -19,11 +25,12 @@ namespace Sunset
 				(first->resource_state == second->resource_state && first->render_depth < second->render_depth);
 		});
 
-		Renderer::get()->get_draw_cull_data().draw_count = queue.size();
-
 		indirect_draw_data.indirect_draws = batch_indirect_draws(gfx_context);
+	}
 
-		update_indirect_draw_buffers(gfx_context, command_buffer, indirect_draw_data.indirect_draws);
+	void MeshTaskQueue::submit_compute_cull(class GraphicsContext* const gfx_context, void* command_buffer)
+	{
+		update_indirect_draw_buffers(gfx_context, command_buffer);
 
 		gfx_context->dispatch_compute(command_buffer, queue.size() / 256, 1, 1);
 
@@ -93,57 +100,21 @@ namespace Sunset
 		return indirect_draws;
 	}
 
-	void MeshTaskQueue::update_indirect_draw_buffers(class GraphicsContext* const gfx_context, void* command_buffer, const std::vector<IndirectDrawBatch>& indirect_batches)
+	void MeshTaskQueue::update_indirect_draw_buffers(class GraphicsContext* const gfx_context, void* command_buffer)
 	{
 		// TODO: Batch all barriers in here and only commit them right before pipeline execution
 
 		// A lot of these checks are unnecessary given that we are now recreating these buffers each frame in order to (hopefully) alias some memory
 		// later on as part of each render graph run, but leaving them here in case we decide to make these buffers persistent in the future
-
-		// Reallocate GPU-only draw indirect buffer
-		if (indirect_draw_data.draw_indirect_buffer != 0)
-		{
-			Buffer* const buffer = CACHE_FETCH(Buffer, indirect_draw_data.draw_indirect_buffer);
-			if (buffer->get_size() < indirect_batches.size())
-			{
-				buffer->reallocate(gfx_context, indirect_batches.size());
-			}
-		}
-
-		// Reallocate GPU-only compacted object instance buffer
-		if (indirect_draw_data.compacted_object_instance_buffer != 0)
-		{
-			Buffer* const buffer = CACHE_FETCH(Buffer, indirect_draw_data.compacted_object_instance_buffer);
-			if (buffer->get_size() < queue.size() * sizeof(uint32_t))
-			{
-				buffer->reallocate(gfx_context, queue.size() * sizeof(uint32_t));
-			}
-		}
-
-		// Reallocate GPU-only object instance buffer
-		if (indirect_draw_data.object_instance_buffer == 0)
-		{
-			Buffer* const buffer = CACHE_FETCH(Buffer, indirect_draw_data.object_instance_buffer);
-			if (buffer->get_size() < queue.size() * sizeof(GPUObjectInstance))
-			{
-				buffer->reallocate(gfx_context, queue.size() * sizeof(GPUObjectInstance));
-			}
-		}
-
 		if (indirect_draw_data.b_needs_refresh)
 		{
 			// Re-upload cleared draw indirect buffer data to GPU
-			if (indirect_draw_data.cleared_draw_indirect_buffer != 0)
-			{
-				CACHE_FETCH(Buffer, indirect_draw_data.cleared_draw_indirect_buffer)->reallocate(gfx_context, indirect_batches.size());
-			}
-
 			{
 				ScopedGPUBufferMapping scoped_mapping(gfx_context, CACHE_FETCH(Buffer, indirect_draw_data.cleared_draw_indirect_buffer));
 				
-				for (int i = 0; i < indirect_batches.size(); ++i)
+				for (int i = 0; i < indirect_draw_data.indirect_draws.size(); ++i)
 				{
-					ResourceState* const resource_state = CACHE_FETCH(ResourceState, indirect_batches[i].resource_state);
+					ResourceState* const resource_state = CACHE_FETCH(ResourceState, indirect_draw_data.indirect_draws[i].resource_state);
 					gfx_context->update_indirect_draw_command(
 						scoped_mapping.mapped_memory,
 						i,
@@ -195,9 +166,9 @@ namespace Sunset
 					GPUObjectInstance* object_data = static_cast<GPUObjectInstance*>((void*)scoped_mapping.mapped_memory);
 
 					int32_t object_data_idx = 0;
-					for (int i = 0; i < indirect_batches.size(); ++i)
+					for (int i = 0; i < indirect_draw_data.indirect_draws.size(); ++i)
 					{
-						IndirectDrawBatch batch = indirect_batches[i];
+						IndirectDrawBatch batch = indirect_draw_data.indirect_draws[i];
 						for (int b = 0; b < batch.count; ++b)
 						{
 							object_data[object_data_idx].object_id = queue[batch.first + b]->entity;
