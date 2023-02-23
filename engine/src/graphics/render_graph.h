@@ -70,7 +70,7 @@ namespace Sunset
 		std::vector<RGPassHandle> consumers;
 		RGPassHandle first_user;
 		RGPassHandle last_user;
-		bool b_is_external{ false };
+		bool b_is_persistent{ false };
 	};
 
 	struct RGFrameData
@@ -143,7 +143,6 @@ namespace Sunset
 		std::vector<RGPass*> render_passes;
 		std::vector<RGResourceHandle> all_resource_handles;
 		std::unordered_map<RGResourceHandle, RGResourceMetadata> resource_metadata;
-		std::unordered_set<Identity> pass_cache;
 		std::unordered_map<Identity, DescriptorData[MAX_BUFFERED_FRAMES]> pass_descriptor_cache;
 	};
 
@@ -155,6 +154,8 @@ namespace Sunset
 
 		void initialize(class GraphicsContext* const gfx_context);
 		void destroy(class GraphicsContext* const gfx_context);
+
+		void begin(class GraphicsContext* const gfx_context);
 
 		RGResourceHandle create_image(
 			class GraphicsContext* const gfx_context,
@@ -203,7 +204,7 @@ namespace Sunset
 		void execute_pass(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGPass* pass, RGFrameData& frame_data, void* command_buffer);
 
 		void setup_physical_pass_and_resources(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGPassHandle pass, void* command_buffer);
-		void setup_physical_resource(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGResourceHandle pass);
+		void setup_physical_resource(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGResourceHandle pass, bool b_is_graphics_pass = true, bool b_is_input_resource = false);
 		void tie_resource_to_pass_config_attachments(class GraphicsContext* const gfx_context, RGResourceHandle resource, RGPass* pass, bool b_is_input_resource = false);
 		void setup_pass_pipeline_state_if_necessary(class GraphicsContext* const gfx_context, RGPass* pass, void* command_buffer);
 		void setup_pass_descriptors(class GraphicsContext* const gfx_context, RGPass* pass, void* command_buffer);

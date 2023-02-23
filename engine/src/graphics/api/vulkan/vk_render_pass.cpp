@@ -9,7 +9,7 @@
 
 namespace Sunset
 {
-	void VulkanRenderPass::initialize_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, const RenderPassConfig& config)
+	void VulkanRenderPass::initialize_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RenderPassConfig& config)
 	{
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
 
@@ -138,15 +138,15 @@ namespace Sunset
 	{
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
 
-		vkDestroyRenderPass(context_state->get_device(), data.render_pass, nullptr);
-
 		for (int i = 0; i < data.output_framebuffers.size(); ++i)
 		{
-			CACHE_FETCH(Framebuffer, data.output_framebuffers[i])->destroy(gfx_context);
+			CACHE_DELETE(Framebuffer, data.output_framebuffers[i], gfx_context);
 		}
+
+		vkDestroyRenderPass(context_state->get_device(), data.render_pass, nullptr);
 	}
 
-	void VulkanRenderPass::begin_pass(GraphicsContext* const gfx_context, uint32_t frambuffer_index, void* command_buffer)
+	void VulkanRenderPass::begin_pass(GraphicsContext* const gfx_context, uint32_t frambuffer_index, void* command_buffer, const RenderPassConfig& pass_config)
 	{
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
 
@@ -161,14 +161,34 @@ namespace Sunset
 
 		rp_begin_info.framebuffer = static_cast<VkFramebuffer>(CACHE_FETCH(Framebuffer, data.output_framebuffers[frambuffer_index])->get_framebuffer_handle());
 
-		VkClearValue clear_value;
-		const float flash = std::abs(std::sin(gfx_context->get_frame_number() / 120.0f));
-		clear_value.color = { { 0.0f, 0.0f, flash, 1.0f } };
+		std::vector<VkClearValue> clear_values;
+		{
+			clear_values.reserve(pass_config.attachments.size() + static_cast<size_t>(pass_config.b_is_present_pass));
 
-		VkClearValue depth_clear_value;
-		depth_clear_value.depthStencil.depth = 1.0f;
+			const float flash = std::abs(std::sin(gfx_context->get_frame_number() / 120.0f));
 
-		std::vector<VkClearValue> clear_values{ clear_value, depth_clear_value };
+			if (pass_config.b_is_present_pass)
+			{
+				VkClearValue& clear_value = clear_values.emplace_back();
+				clear_value.color = { { 0.0f, 0.0f, flash, 1.0f } };
+			}
+
+			for (ImageID image_attachment_id : pass_config.attachments)
+			{
+				Image* const image_attachment = CACHE_FETCH(Image, image_attachment_id);
+				AttachmentConfig& image_attachment_config = image_attachment->get_attachment_config();
+				if ((image_attachment_config.flags & ImageFlags::DepthStencil) != ImageFlags::None)
+				{
+					VkClearValue& depth_clear_value = clear_values.emplace_back();
+					depth_clear_value.depthStencil.depth = 1.0f;
+				}
+				else if ((image_attachment_config.flags & ImageFlags::Color) != ImageFlags::None)
+				{
+					VkClearValue& clear_value = clear_values.emplace_back();
+					clear_value.color = { { 0.0f, 0.0f, flash, 1.0f } };
+				}
+			}
+		}
 
 		rp_begin_info.clearValueCount = clear_values.size();
 		rp_begin_info.pClearValues = clear_values.data();
@@ -177,7 +197,7 @@ namespace Sunset
 	}
 
 
-	void VulkanRenderPass::end_pass(class GraphicsContext* const gfx_context, void* command_buffer)
+	void VulkanRenderPass::end_pass(class GraphicsContext* const gfx_context, void* command_buffer, const RenderPassConfig& pass_config)
 	{
 		vkCmdEndRenderPass(static_cast<VkCommandBuffer>(command_buffer));
 	}

@@ -24,25 +24,24 @@ namespace Sunset
 
 		std::vector<VkDescriptorBindingFlags> bindless_flags(bindings.size(), VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT);
 		{
-			bool b_has_bindless_binding{ false };
 			for (uint32_t i = 0; i < bindings.size(); ++i)
 			{
 				if (bindings[i].b_supports_bindless)
 				{
-					bindless_flags[i] = (VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT | VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT_EXT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT_EXT);
-					b_has_bindless_binding = true;
+					bindless_flags[i] |= VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT_EXT;
+					b_supports_bindless = true;
+				}
+				if (bindings[i].type != DescriptorType::DynamicUniformBuffer)
+				{
+					bindless_flags[i] |= VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT_EXT;
 				}
 			}
-			if (b_has_bindless_binding)
-			{
-				VkDescriptorSetLayoutBindingFlagsCreateInfoEXT extended_info{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO_EXT, nullptr };
-				extended_info.bindingCount = static_cast<uint32_t>(bindless_flags.size());
-				extended_info.pBindingFlags = bindless_flags.data();
 
-				set_create_info.pNext = &extended_info;
+			VkDescriptorSetLayoutBindingFlagsCreateInfoEXT extended_info{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO_EXT, nullptr };
+			extended_info.bindingCount = static_cast<uint32_t>(bindless_flags.size());
+			extended_info.pBindingFlags = bindless_flags.data();
 
-				b_supports_bindless = b_has_bindless_binding;
-			}
+			set_create_info.pNext = &extended_info;
 		}
 
 		vkCreateDescriptorSetLayout(context_state->get_device(), &set_create_info, nullptr, &layout);

@@ -23,7 +23,7 @@ namespace Sunset
 		~VulkanRenderPass() = default;
 
 	public:
-		void initialize_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, const RenderPassConfig& config);
+		void initialize_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RenderPassConfig& config);
 		void destroy(class GraphicsContext* const gfx_context);
 
 		void* get_data()
@@ -41,8 +41,8 @@ namespace Sunset
 			data.output_framebuffers = framebuffers;
 		}
 
-		void begin_pass(class GraphicsContext* const gfx_context, uint32_t framebuffer_index, void* command_buffer);
-		void end_pass(class GraphicsContext* const gfx_context, void* command_buffer);
+		void begin_pass(class GraphicsContext* const gfx_context, uint32_t framebuffer_index, void* command_buffer, const RenderPassConfig& pass_config);
+		void end_pass(class GraphicsContext* const gfx_context, void* command_buffer, const RenderPassConfig& pass_config);
 
 	protected:
 		void create_default_output_framebuffers(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, const RenderPassConfig& config, const std::vector<ImageID>& attachments);

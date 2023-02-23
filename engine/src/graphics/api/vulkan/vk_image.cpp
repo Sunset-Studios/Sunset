@@ -116,10 +116,16 @@ namespace Sunset
 
 		image = existing_image;
 		image_view = existing_image_view;
+		b_external_handling = true;
 	}
 
 	void VulkanImage::destroy(class GraphicsContext* const gfx_context)
 	{
+		if (b_external_handling)
+		{
+			return;
+		}
+
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
 		assert(context_state != nullptr);
 

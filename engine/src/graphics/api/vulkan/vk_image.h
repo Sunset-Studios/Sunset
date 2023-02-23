@@ -38,5 +38,6 @@ namespace Sunset
 		VkImageView image_view;
 		VkSampler sampler;
 		VmaAllocation allocation;
+		bool b_external_handling{ false };
 	};
 }

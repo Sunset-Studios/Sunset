@@ -233,10 +233,7 @@ namespace Sunset
 		render_graph.add_pass(
 			gfx_context,
 			"tools_gui",
-			RenderPassFlags::Main,
-			{
-				.outputs = { main_color_image_desc, main_depth_image_desc }
-			},
+			RenderPassFlags::GraphLocal,
 			[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
 			{
 				global_gui_core.initialize(gfx_context, gfx_context->get_window(), frame_data.current_pass);

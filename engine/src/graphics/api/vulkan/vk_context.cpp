@@ -51,6 +51,7 @@ namespace Sunset
 		indexing_features.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
 		indexing_features.descriptorBindingVariableDescriptorCount = VK_TRUE;
 		indexing_features.descriptorBindingUpdateUnusedWhilePending = VK_TRUE;
+		indexing_features.descriptorBindingUniformBufferUpdateAfterBind = VK_TRUE;
 
 		state.device = device_builder
 			.add_pNext(&shader_draw_parameters_features)
@@ -290,6 +291,8 @@ namespace Sunset
 				pc_data.size = push_constants[0]->size;
 				pc_data.shader_stage = stage.stage_type;
 			}
+
+			spvReflectDestroyShaderModule(&spv_module);
 		}
 
 		std::sort(set_binding_pairs.begin(), set_binding_pairs.end());

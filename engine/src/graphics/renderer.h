@@ -67,6 +67,7 @@ namespace Sunset
 				current_draw_cull_data = draw_cull_data;
 			}
 
+			void begin_frame();
 			void queue_graph_command(Identity name, std::function<void(class RenderGraph&, RGFrameData&, void*)> command_callback);
 
 		private:
@@ -84,6 +85,27 @@ namespace Sunset
 			MeshTaskQueue mesh_task_queue;
 			RenderGraph render_graph;
 			DrawCullData current_draw_cull_data;
+	};
+
+	// Handles renderer lifetime calls (render graph begin/submit, renderer draw, etc.)
+	// as a scoped RAII object
+	template<typename RenderStrategy>
+	class ScopedRender
+	{
+	public:
+		ScopedRender(Renderer* renderer)
+			: renderer(renderer)
+		{
+			renderer->begin_frame();
+		}
+
+		~ScopedRender()
+		{
+			renderer->draw<RenderStrategy>();
+		}
+
+	private:
+		Renderer* renderer{ nullptr };
 	};
 }
 

@@ -102,8 +102,7 @@ namespace Sunset
 				});
 			}
 
-			staging_buffer->destroy(gfx_context);
-			GlobalAssetPools<Buffer>::get()->deallocate(staging_buffer);
+			CACHE_DELETE(Buffer, staging_buffer_id, gfx_context);
 		}
 
 		return image_id;

@@ -40,12 +40,12 @@ namespace Sunset
 
 		void begin_pass(class GraphicsContext* const gfx_context, uint32_t framebuffer_index, void* command_buffer)
 		{
-			render_pass_policy.begin_pass(gfx_context, framebuffer_index, command_buffer);
+			render_pass_policy.begin_pass(gfx_context, framebuffer_index, command_buffer, pass_config);
 		}
 
 		void end_pass(class GraphicsContext* const gfx_context, void* command_buffer)
 		{
-			render_pass_policy.end_pass(gfx_context, command_buffer);
+			render_pass_policy.end_pass(gfx_context, command_buffer, pass_config);
 		}
 
 	private:
@@ -58,7 +58,7 @@ namespace Sunset
 	public:
 		NoopRenderPass() = default;
 
-		void initialize_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, const RenderPassConfig& config)
+		void initialize_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RenderPassConfig& config)
 		{ }
 
 		void destroy(class GraphicsContext* const gfx_context)
@@ -77,10 +77,10 @@ namespace Sunset
 		void set_output_framebuffers(std::vector<class Framebuffer*>&& framebuffers)
 		{ }
 
-		void begin_pass(class GraphicsContext* const gfx_context, uint32_t framebuffer_index, void* command_buffer)
+		void begin_pass(class GraphicsContext* const gfx_context, uint32_t framebuffer_index, void* command_buffer, const RenderPassConfig& pass_config)
 		{ }
 
-		void end_pass(class GraphicsContext* const gfx_context, void* command_buffer)
+		void end_pass(class GraphicsContext* const gfx_context, void* command_buffer, const RenderPassConfig& pass_config)
 		{ }
 	};
 

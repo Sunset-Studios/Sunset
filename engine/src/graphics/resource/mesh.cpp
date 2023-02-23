@@ -48,8 +48,7 @@ namespace Sunset
 				vertex_buffer_obj->copy_buffer(gfx_context, command_buffer, vertex_staging_buffer, vertex_data_size);
 			});
 
-			vertex_staging_buffer->destroy(gfx_context);
-			GlobalAssetPools<Buffer>::get()->deallocate(vertex_staging_buffer);
+			CACHE_DELETE(Buffer, vertex_staging_buffer_id, gfx_context);
 		}
 
 		{
@@ -90,8 +89,7 @@ namespace Sunset
 				index_buffer_obj->copy_buffer(gfx_context, command_buffer, index_staging_buffer, index_data_size);
 			});
 
-			index_staging_buffer->destroy(gfx_context);
-			GlobalAssetPools<Buffer>::get()->deallocate(index_staging_buffer);
+			CACHE_DELETE(Buffer, index_staging_buffer_id, gfx_context);
 		}
 	}
 

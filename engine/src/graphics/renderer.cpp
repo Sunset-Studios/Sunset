@@ -52,6 +52,11 @@ namespace Sunset
 		graphics_context->destroy();
 	}
 
+	void Renderer::begin_frame()
+	{
+		render_graph.begin(graphics_context.get());
+	}
+
 	void Renderer::queue_graph_command(Identity name, std::function<void(class RenderGraph&, RGFrameData&, void*)> command_callback)
 	{
 		render_graph.add_pass(

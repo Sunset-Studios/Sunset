@@ -34,8 +34,7 @@ namespace Sunset
 					gfx_context,
 					{ .name = std::string_view("swapchain_" + i) },
 					swapchain_images[i],
-					swapchain_image_views[i],
-					false
+					swapchain_image_views[i]
 				)
 			);
 		}
@@ -49,7 +48,9 @@ namespace Sunset
 
 		for (int i = 0; i < data.swapchain_images.size(); ++i)
 		{
-			CACHE_FETCH(Image, data.swapchain_images[i])->destroy(gfx_context);
+			Image* const image = CACHE_FETCH(Image, data.swapchain_images[i]);
+			vkDestroyImageView(context_state->get_device(), static_cast<VkImageView>(image->get_image_view()), nullptr);
+			CACHE_DELETE(Image, data.swapchain_images[i], gfx_context);
 		}
 	}
 

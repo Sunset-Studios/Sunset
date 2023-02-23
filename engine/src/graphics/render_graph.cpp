@@ -19,16 +19,12 @@ namespace Sunset
 
 	void RenderGraph::destroy(GraphicsContext* const gfx_context)
 	{
-		for (RGPass* const pass : registry.render_passes)
-		{
-			if (pass != nullptr)
-			{
-				if (RenderPass* const physical_pass = CACHE_FETCH(RenderPass, pass->physical_id))
-				{
-					physical_pass->destroy(gfx_context);
-				}
-			}
-		}
+		reset(gfx_context);
+	}
+
+	void RenderGraph::begin(GraphicsContext* const gfx_context)
+	{
+		reset(gfx_context);
 	}
 
 	Sunset::RGResourceHandle RenderGraph::create_image(class GraphicsContext* const gfx_context, const AttachmentConfig& config)
@@ -60,7 +56,7 @@ namespace Sunset
 		registry.all_resource_handles.push_back(new_image_resource->handle);
 		registry.resource_metadata.insert({ new_image_resource->handle, {} });
 		registry.resource_metadata[new_image_resource->handle].physical_id = image;
-		registry.resource_metadata[new_image_resource->handle].b_is_external = true;
+		registry.resource_metadata[new_image_resource->handle].b_is_persistent = true;
 
 		return new_image_resource->handle;
 	}
@@ -94,7 +90,7 @@ namespace Sunset
 		registry.all_resource_handles.push_back(new_buffer_resource->handle);
 		registry.resource_metadata.insert({ new_buffer_resource->handle, {} });
 		registry.resource_metadata[new_buffer_resource->handle].physical_id = buffer;
-		registry.resource_metadata[new_buffer_resource->handle].b_is_external = true;
+		registry.resource_metadata[new_buffer_resource->handle].b_is_persistent = true;
 
 		return new_buffer_resource->handle;
 	}
@@ -333,8 +329,6 @@ namespace Sunset
 
 	void RenderGraph::submit(GraphicsContext* const gfx_context, class Swapchain* const swapchain)
 	{
-		free_physical_resources(gfx_context);
-
 		compile(gfx_context, swapchain);
 
 		// TODO: switch the queue based on the pass type
@@ -358,8 +352,6 @@ namespace Sunset
 		gfx_context->get_command_queue(DeviceQueueType::Graphics)->end_one_time_buffer_record(gfx_context);
 		// TODO: switch the queue based on the pass type
 		gfx_context->get_command_queue(DeviceQueueType::Graphics)->submit(gfx_context);
-
-		reset(gfx_context);
 	}
 
 	void RenderGraph::inject_global_descriptors(class GraphicsContext* const gfx_context, uint16_t buffered_frame_index, const std::initializer_list<DescriptorBuildData>& descriptor_build_datas)
@@ -378,6 +370,8 @@ namespace Sunset
 
 	void RenderGraph::reset(class GraphicsContext* const gfx_context)
 	{
+		free_physical_resources(gfx_context);
+
 		nonculled_passes.clear();
 
 		registry.all_resource_handles.clear();
@@ -429,35 +423,37 @@ namespace Sunset
 
 		const bool b_is_graphics_pass = (graph_pass->pass_config.flags & RenderPassFlags::Main) != RenderPassFlags::None;
 
-		// Setup resource used by the render pass. If they are output/input attachments we will handle those here as well.
+		// Setup resource used by the render pass. If they are output/input attachments we will handle those here as well but cache those off
+		// as those necessarily need caching along with the render passes.
 		for (RGResourceHandle input_resource : graph_pass->parameters.inputs)
 		{
-			setup_physical_resource(gfx_context, swapchain, input_resource);
-			tie_resource_to_pass_config_attachments(gfx_context, input_resource, graph_pass, true);
+			setup_physical_resource(gfx_context, swapchain, input_resource, b_is_graphics_pass, true);
+			if (b_is_graphics_pass)
+			{
+				tie_resource_to_pass_config_attachments(gfx_context, input_resource, graph_pass, true);
+			}
 		}
 		for (RGResourceHandle output_resource : graph_pass->parameters.outputs)
 		{
-			setup_physical_resource(gfx_context, swapchain, output_resource);
-			tie_resource_to_pass_config_attachments(gfx_context, output_resource, graph_pass, false);
+			setup_physical_resource(gfx_context, swapchain, output_resource, b_is_graphics_pass, false);
+			if (b_is_graphics_pass)
+			{
+				tie_resource_to_pass_config_attachments(gfx_context, output_resource, graph_pass, false);
+			}
 		}
 
 		// Create our physical render pass and cache it if necessary
-		if (!registry.pass_cache.contains(graph_pass->pass_config.name) && b_is_graphics_pass)
-		{
-			graph_pass->physical_id = RenderPassFactory::create_default(gfx_context, swapchain, graph_pass->pass_config);
-			registry.pass_cache.insert(graph_pass->pass_config.name);
-		}
+		graph_pass->physical_id = RenderPassFactory::create_default(gfx_context, swapchain, graph_pass->pass_config, true);
 
 		// Setup render pass pipeline state if render pass-level shader stages were provided. Otherwise, pipeline state should be handled
-		// and bound by render pass callbacks.
+		// and bound by render pass callbacks. Also sparsely bind our descriptors and push constants.
 		setup_pass_pipeline_state_if_necessary(gfx_context, graph_pass, command_buffer);
-		// Sparsely bind our descriptors for the render pass.
 		setup_pass_descriptors(gfx_context, graph_pass, command_buffer);
 		bind_pass_descriptors(gfx_context, graph_pass, command_buffer);
 		push_pass_constants(gfx_context, graph_pass, command_buffer);
 	}
 
-	void RenderGraph::setup_physical_resource(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGResourceHandle resource)
+	void RenderGraph::setup_physical_resource(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGResourceHandle resource, bool b_is_graphics_pass, bool b_is_input_resource)
 	{
 		const ResourceType resource_type = static_cast<ResourceType>(get_graph_resource_type(resource));
 		const RGResourceIndex resource_index = get_graph_resource_index(resource);
@@ -473,10 +469,13 @@ namespace Sunset
 		else if (resource_type == ResourceType::Image)
 		{
 			RGImageResource* const image_resource = registry.image_resources[resource_index];
+			const bool b_is_local_load = (image_resource->config.flags & ImageFlags::LocalLoad) != ImageFlags::None;
+			const bool b_is_persistent = b_is_graphics_pass && (!b_is_input_resource || b_is_local_load);
 			// We check for an empty ID first because registered external resources would have already had this field populated
 			if (registry.resource_metadata[resource].physical_id == 0)
 			{
-				registry.resource_metadata[resource].physical_id = ImageFactory::create(gfx_context, image_resource->config, false);
+				registry.resource_metadata[resource].physical_id = ImageFactory::create(gfx_context, image_resource->config, b_is_persistent);
+				registry.resource_metadata[resource].b_is_persistent = b_is_persistent;
 			}
 		}
 	}
@@ -657,7 +656,7 @@ namespace Sunset
 		for (RGResourceHandle input_resource : pass->parameters.inputs)
 		{
 			RGResourceMetadata& resource_meta = registry.resource_metadata[input_resource];
-			if (resource_meta.physical_id != 0 && resource_meta.last_user == pass->handle && !resource_meta.b_is_external)
+			if (resource_meta.physical_id != 0 && resource_meta.last_user == pass->handle && !resource_meta.b_is_persistent)
 			{
 				// TODO: Aliasing
 			}
@@ -665,7 +664,7 @@ namespace Sunset
 		for (RGResourceHandle output_resource : pass->parameters.outputs)
 		{
 			RGResourceMetadata& resource_meta = registry.resource_metadata[output_resource];
-			if (resource_meta.physical_id != 0 && resource_meta.last_user == pass->handle && !resource_meta.b_is_external)
+			if (resource_meta.physical_id != 0 && resource_meta.last_user == pass->handle && !resource_meta.b_is_persistent)
 			{
 				// TODO: Aliasing
 			}
@@ -678,7 +677,7 @@ namespace Sunset
 		for (RGResourceHandle resource : registry.all_resource_handles)
 		{
 			RGResourceMetadata& resource_meta = registry.resource_metadata[resource];
-			if (resource_meta.physical_id != 0 && !resource_meta.b_is_external)
+			if (resource_meta.physical_id != 0 && !resource_meta.b_is_persistent)
 			{
 				const ResourceType resource_type = static_cast<ResourceType>(get_graph_resource_type(resource));
 				if (resource_type == ResourceType::Image)

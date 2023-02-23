@@ -117,11 +117,11 @@ namespace Sunset
 			{
 				window->poll();
 
+				ScopedRender<ForwardShadingStrategy> scoped_render(Renderer::get());
+
 				InputProvider::get()->update();
 
 				SimulationCore::get()->update();
-
-				Renderer::get()->draw<ForwardShadingStrategy>();
 			}
 		}
 	}
