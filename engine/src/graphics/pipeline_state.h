@@ -31,9 +31,9 @@ namespace Sunset
 			pipeline_state_policy.destroy(gfx_context, &state_data);
 		}
 
-		void build(class GraphicsContext* const gfx_context, void* render_pass_data)
+		void build(class GraphicsContext* const gfx_context, class RenderPass* render_pass)
 		{
-			pipeline_state_policy.build(gfx_context, &state_data, render_pass_data);
+			pipeline_state_policy.build(gfx_context, &state_data, render_pass);
 		}
 
 		void build_compute(class GraphicsContext* const gfx_context, void* render_pass_data)
@@ -141,7 +141,7 @@ namespace Sunset
 		void destroy(class GraphicsContext* const gfx_context, PipelineStateData* state_data)
 		{ }
 
-		void build(class GraphicsContext* const gfx_context, PipelineStateData* state_data, void* render_pass_data)
+		void build(class GraphicsContext* const gfx_context, PipelineStateData* state_data, class RenderPass* render_pass)
 		{ }
 
 		void build_compute(class GraphicsContext* const gfx_context, struct PipelineStateData* state_data, void* render_pass_data)
@@ -184,7 +184,7 @@ namespace Sunset
 			PipelineGraphicsStateBuilder& set_depth_stencil_state(bool b_depth_test_enabled, bool b_depth_write_enabled, CompareOperation compare_op);
 			PipelineGraphicsStateBuilder& set_pass(RenderPassID pass);
 			PipelineGraphicsStateBuilder& set_push_constants(const PushConstantPipelineData& push_constant_data);
-			PipelineGraphicsStateBuilder& derive_shader_layout();
+			PipelineGraphicsStateBuilder& derive_shader_layout(std::vector<DescriptorLayoutID>& out_descriptor_layouts);
 
 			PipelineStateID finish();
 
@@ -216,7 +216,7 @@ namespace Sunset
 		PipelineComputeStateBuilder& set_shader_stage(const char* shader_path);
 		PipelineComputeStateBuilder& set_pass(RenderPassID pass);
 		PipelineComputeStateBuilder& set_push_constants(const PushConstantPipelineData& push_constant_data);
-		PipelineComputeStateBuilder& derive_shader_layout();
+		PipelineComputeStateBuilder& derive_shader_layout(std::vector<DescriptorLayoutID>& out_descriptor_layouts);
 
 		PipelineStateID finish();
 

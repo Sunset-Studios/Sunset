@@ -122,9 +122,9 @@ namespace Sunset
 		return *this;
 	}
 
-	Sunset::PipelineGraphicsStateBuilder& PipelineGraphicsStateBuilder::derive_shader_layout()
+	Sunset::PipelineGraphicsStateBuilder& PipelineGraphicsStateBuilder::derive_shader_layout(std::vector<DescriptorLayoutID>& out_descriptor_layouts)
 	{
-		state_data.layout = context->derive_layout_for_shader_stages(context, state_data.shader_stages);
+		state_data.layout = context->derive_layout_for_shader_stages(context, state_data.shader_stages, out_descriptor_layouts);
 		return *this;
 	}
 
@@ -144,7 +144,7 @@ namespace Sunset
 			new_pipeline_state->initialize(context, state_data);
 
 			RenderPass* const render_pass = CACHE_FETCH(RenderPass, state_data.render_pass);
-			new_pipeline_state->build(context, render_pass->get_data());
+			new_pipeline_state->build(context, render_pass);
 		}
 		return new_pipeline_state_id;
 	}
@@ -205,9 +205,9 @@ namespace Sunset
 		return *this;
 	}
 
-	Sunset::PipelineComputeStateBuilder& PipelineComputeStateBuilder::derive_shader_layout()
+	Sunset::PipelineComputeStateBuilder& PipelineComputeStateBuilder::derive_shader_layout(std::vector<DescriptorLayoutID>& out_descriptor_layouts)
 	{
-		state_data.layout = context->derive_layout_for_shader_stages(context, state_data.shader_stages);
+		state_data.layout = context->derive_layout_for_shader_stages(context, state_data.shader_stages, out_descriptor_layouts);
 		return *this;
 	}
 

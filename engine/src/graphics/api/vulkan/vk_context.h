@@ -122,7 +122,7 @@ namespace Sunset
 			void push_descriptor_writes(const std::vector<DescriptorWrite>& descriptor_writes);
 			size_t get_min_ubo_offset_alignment();
 			void update_indirect_draw_command(void* commands, uint32_t command_index, uint32_t index_count, uint32_t first_index, uint32_t instance_count, uint32_t first_instance, uint64_t object_id, uint32_t batch_id);
-			ShaderLayoutID derive_layout_for_shader_stages(class GraphicsContext* const gfx_context, const std::vector<PipelineShaderStage>& stages);
+			ShaderLayoutID derive_layout_for_shader_stages(class GraphicsContext* const gfx_context, const std::vector<PipelineShaderStage>& stages, std::vector<DescriptorLayoutID>& out_descriptor_layouts);
 
 		public:
 			VulkanContextState state;

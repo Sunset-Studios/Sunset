@@ -35,7 +35,10 @@ namespace Sunset
 				state_builder.set_shader_stage(shader.first, shader.second);
 			}
 
-			state_builder.derive_shader_layout();
+			{
+				std::vector<DescriptorLayoutID> descriptor_layouts;
+				state_builder.derive_shader_layout(descriptor_layouts);
+			}
 
 			state_builder.set_pass(render_pass);
 
@@ -65,6 +68,7 @@ namespace Sunset
 						.image_filter = ImageFilter::Nearest
 					}
 				);
+				material_ptr->b_needs_texture_upload = true;
 			}
 		}
 	}
@@ -73,33 +77,40 @@ namespace Sunset
 	{
 		Material* const material_ptr = CACHE_FETCH(Material, material);
 		assert(material_ptr != nullptr && "Cannot load material textures for a null material!");
-
-		const uint32_t current_buffered_frame = gfx_context->get_buffered_frame_number();
-
-		std::vector<DescriptorBindlessWrite> bindless_writes;
-		for (int i = 0; i < material_ptr->textures.size(); ++i)
+		
+		if (material_ptr->b_needs_texture_upload)
 		{
-			const ImageID texture = material_ptr->textures[i];
-			bindless_writes.push_back(
-				DescriptorBindlessWrite{
-					.slot = 1,
-					.type = DescriptorType::Image,
-					.buffer = CACHE_FETCH(Image, texture),
-					.set = descriptor_set
+			const uint32_t current_buffered_frame = gfx_context->get_buffered_frame_number();
+
+			std::vector<DescriptorBindlessWrite> bindless_writes;
+			for (int i = 0; i < material_ptr->textures.size(); ++i)
+			{
+				if (const ImageID texture = material_ptr->textures[i]; texture != 0)
+				{
+					bindless_writes.push_back(
+						DescriptorBindlessWrite{
+							.slot = 2,
+							.type = DescriptorType::Image,
+							.buffer = CACHE_FETCH(Image, texture),
+							.set = descriptor_set
+						}
+					);
 				}
+			}
+
+			DescriptorHelpers::write_bindless_descriptors(gfx_context, bindless_writes, material_ptr->gpu_data->textures);
+
+			// Update mapped SSBO data
+			Buffer* const material_buffer = CACHE_FETCH(Buffer, MaterialGlobals::get()->material_data.data_buffer[current_buffered_frame]);
+			material_buffer->copy_from(
+				gfx_context,
+				material_ptr->gpu_data,
+				sizeof(MaterialData),
+				sizeof(MaterialData) * material_ptr->gpu_data_buffer_offset
 			);
+
+			material_ptr->b_needs_texture_upload = false;
 		}
-
-		DescriptorHelpers::write_bindless_descriptors(gfx_context, bindless_writes, material_ptr->gpu_data->textures);
-
-		// Update mapped SSBO data
-		Buffer* const material_buffer = CACHE_FETCH(Buffer, MaterialGlobals::get()->material_data.data_buffer[current_buffered_frame]);
-		material_buffer->copy_from(
-			gfx_context,
-			material_ptr->gpu_data,
-			sizeof(MaterialData),
-			sizeof(MaterialData) * material_ptr->gpu_data_buffer_offset
-		);
 	}
 
 	Sunset::PipelineStateID material_get_pipeline(MaterialID material)
@@ -119,7 +130,7 @@ namespace Sunset
 		if (material_ptr->descriptor_data.descriptor_set != nullptr)
 		{
 			const uint16_t material_descriptor_set_index = static_cast<uint16_t>(DescriptorSetType::Material);
-			material_ptr->descriptor_data.descriptor_set->bind(gfx_context, cmd_buffer, pipeline_layout, PipelineStateType::Graphics, material_ptr->descriptor_data.dynamic_buffer_offsets, material_descriptor_set_index);
+			material_ptr->descriptor_data.descriptor_set->bind(gfx_context, cmd_buffer, pipeline_layout, PipelineStateType::Graphics, material_descriptor_set_index);
 		}
 	}
 

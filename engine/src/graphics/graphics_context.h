@@ -132,9 +132,9 @@ namespace Sunset
 				graphics_policy.update_indirect_draw_command(commands, command_index, index_count, first_index, instance_count, first_instance, object_id, batch_id);
 			}
 
-			ShaderLayoutID derive_layout_for_shader_stages(class GraphicsContext* const gfx_context, const std::vector<PipelineShaderStage>& stages)
+			ShaderLayoutID derive_layout_for_shader_stages(class GraphicsContext* const gfx_context, const std::vector<PipelineShaderStage>& stages, std::vector<DescriptorLayoutID>& out_descriptor_layouts)
 			{
-				return graphics_policy.derive_layout_for_shader_stages(gfx_context, stages);
+				return graphics_policy.derive_layout_for_shader_stages(gfx_context, stages, out_descriptor_layouts);
 			}
 
 		private:
@@ -232,7 +232,7 @@ namespace Sunset
 			void update_indirect_draw_command(void* commands, uint32_t command_index, uint32_t index_count, uint32_t first_index, uint32_t instance_count, uint32_t first_instance, uint64_t object_id, uint32_t batch_id)
 			{ }
 
-			ShaderLayoutID derive_layout_for_shader_stages(class GraphicsContext* const gfx_context, const std::vector<PipelineShaderStage>& stages)
+			ShaderLayoutID derive_layout_for_shader_stages(class GraphicsContext* const gfx_context, const std::vector<PipelineShaderStage>& stages, std::vector<DescriptorLayoutID>& out_descriptor_layouts)
 			{ }
 	};
 

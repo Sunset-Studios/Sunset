@@ -43,6 +43,7 @@ namespace Sunset
 
 		void begin_pass(class GraphicsContext* const gfx_context, uint32_t framebuffer_index, void* command_buffer, const RenderPassConfig& pass_config);
 		void end_pass(class GraphicsContext* const gfx_context, void* command_buffer, const RenderPassConfig& pass_config);
+		uint32_t get_num_color_attachments(const RenderPassConfig& config);
 
 	protected:
 		void create_default_output_framebuffers(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, const RenderPassConfig& config, const std::vector<ImageID>& attachments);

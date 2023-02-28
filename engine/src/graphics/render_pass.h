@@ -48,6 +48,11 @@ namespace Sunset
 			render_pass_policy.end_pass(gfx_context, command_buffer, pass_config);
 		}
 
+		uint32_t get_num_color_attachments()
+		{
+			return render_pass_policy.get_num_color_attachments(pass_config);
+		}
+
 	private:
 		Policy render_pass_policy;
 		RenderPassConfig pass_config;
@@ -82,6 +87,11 @@ namespace Sunset
 
 		void end_pass(class GraphicsContext* const gfx_context, void* command_buffer, const RenderPassConfig& pass_config)
 		{ }
+
+		uint32_t get_num_color_attachments(const RenderPassConfig& config)
+		{
+			return 0;
+		}
 	};
 
 #if USE_VULKAN_GRAPHICS

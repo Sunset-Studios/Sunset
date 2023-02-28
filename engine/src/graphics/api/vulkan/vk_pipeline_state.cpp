@@ -18,10 +18,10 @@ namespace Sunset
 		vkDestroyPipeline(context_state->get_device(), pipeline, nullptr);
 	}
 
-	void VulkanPipelineState::build(class GraphicsContext* const gfx_context, PipelineStateData* state_data, void* render_pass_data)
+	void VulkanPipelineState::build(class GraphicsContext* const gfx_context, PipelineStateData* state_data, class RenderPass* render_pass)
 	{
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
-		VulkanRenderPassData* render_pass = static_cast<VulkanRenderPassData*>(render_pass_data);
+		VulkanRenderPassData* render_pass_data = static_cast<VulkanRenderPassData*>(render_pass->get_data());
 		VkPipelineLayout pipeline_layout = static_cast<VkPipelineLayout>(CACHE_FETCH(ShaderPipelineLayout, state_data->layout)->get_data());
 
 		std::vector<VkViewport> viewports(VK_FROM_SUNSET_VIEWPORT_LIST(state_data->viewports));
@@ -49,9 +49,13 @@ namespace Sunset
 
 		VkPipelineMultisampleStateCreateInfo multisample_state = new_multisample_state_create_info(VK_FROM_SUNSET_MULTISAMPLE_COUNT(state_data->multisample_count));
 
-		VkPipelineColorBlendAttachmentState color_blend_attachment_state = new_color_blend_attachment_state();
-
-		VkPipelineColorBlendStateCreateInfo color_blending_state = new_color_blending_state(color_blend_attachment_state);
+		const uint32_t num_attachments = render_pass->get_num_color_attachments();
+		std::vector<VkPipelineColorBlendAttachmentState> color_blend_attachment_states(num_attachments);
+		for (int i = 0; i < num_attachments; ++i)
+		{
+			color_blend_attachment_states[i] = new_color_blend_attachment_state();
+		}
+		VkPipelineColorBlendStateCreateInfo color_blending_state = new_color_blending_state(color_blend_attachment_states);
 
 		VkPipelineDepthStencilStateCreateInfo depth_stencil_state = new_depth_stencil_state(state_data->b_depth_test_enabled, state_data->b_depth_write_enabled, VK_FROM_SUNSET_COMPARE_OP(state_data->compare_op));
 
@@ -68,7 +72,7 @@ namespace Sunset
 		pipeline_create_info.pColorBlendState = &color_blending_state;
 		pipeline_create_info.pDepthStencilState = &depth_stencil_state;
 		pipeline_create_info.layout = pipeline_layout;
-		pipeline_create_info.renderPass = render_pass->render_pass;
+		pipeline_create_info.renderPass = render_pass_data->render_pass;
 		pipeline_create_info.subpass = 0;
 		pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE;
 
@@ -206,15 +210,15 @@ namespace Sunset
 		return color_blend_attachment;
 	}
 
-	VkPipelineColorBlendStateCreateInfo VulkanPipelineState::new_color_blending_state(VkPipelineColorBlendAttachmentState& color_blend_attachment_state)
+	VkPipelineColorBlendStateCreateInfo VulkanPipelineState::new_color_blending_state(std::vector<VkPipelineColorBlendAttachmentState>& color_blend_attachment_states)
 	{
 		VkPipelineColorBlendStateCreateInfo color_blending_state = {};
 		color_blending_state.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
 		color_blending_state.pNext = nullptr;
 		color_blending_state.logicOpEnable = VK_FALSE;
 		color_blending_state.logicOp = VK_LOGIC_OP_COPY;
-		color_blending_state.attachmentCount = 1;
-		color_blending_state.pAttachments = &color_blend_attachment_state;
+		color_blending_state.attachmentCount = color_blend_attachment_states.size();
+		color_blending_state.pAttachments = color_blend_attachment_states.data();
 		return color_blending_state;
 	}
 

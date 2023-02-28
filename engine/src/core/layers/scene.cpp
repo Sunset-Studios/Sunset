@@ -116,27 +116,23 @@ namespace Sunset
 			);
 		}
 
-		for (int i = 0; i < MAX_BUFFERED_FRAMES; ++i)
+		for (uint32_t i = 0; i < MAX_BUFFERED_FRAMES; ++i)
 		{
-			Renderer::get()->get_render_graph().inject_global_descriptors(Renderer::get()->context(), i,
+			const uint32_t cam_data_buffer_offset = static_cast<uint32_t>(scene_data.cam_data_buffer_start + aligned_cam_data_size * i);
+			const uint32_t lighting_data_buffer_offset = static_cast<uint32_t>(scene_data.lighting_data_buffer_start + aligned_lighting_data_size * i);
+			const BufferID buffer = scene_data.buffer;
+
+			Renderer::get()->get_render_graph().queue_global_descriptor_writes(Renderer::get()->context(), i,
 			{
 				{
-					.binding = 0,
-					.buffer = scene_data.buffer,
-					.buffer_offset = static_cast<uint32_t>(scene_data.cam_data_buffer_start + aligned_cam_data_size * i),
+					.buffer = CACHE_FETCH(Buffer, buffer)->get(),
 					.buffer_range = sizeof(CameraMatrices),
-					.count = 1,
-					.type = DescriptorType::DynamicUniformBuffer,
-					.shader_stages = PipelineShaderStageType::All
+					.buffer_offset = cam_data_buffer_offset
 				},
 				{
-					.binding = 1,
-					.buffer = scene_data.buffer,
-					.buffer_offset = static_cast<uint32_t>(scene_data.lighting_data_buffer_start + aligned_lighting_data_size * i),
+					.buffer = CACHE_FETCH(Buffer, buffer)->get(),
 					.buffer_range = sizeof(SceneLightingData),
-					.count = 1,
-					.type = DescriptorType::DynamicUniformBuffer,
-					.shader_stages = PipelineShaderStageType::All
+					.buffer_offset = lighting_data_buffer_offset
 				}
 			});
 		}

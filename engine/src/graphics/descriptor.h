@@ -44,6 +44,11 @@ namespace Sunset
 			bindings = new_bindings;
 		}
 
+		std::vector<DescriptorBinding>& get_bindings()
+		{
+			return bindings;
+		}
+
 		void build(class GraphicsContext* const gfx_context)
 		{
 			descriptor_layout_policy.build(gfx_context, bindings);
@@ -120,7 +125,7 @@ namespace Sunset
 			return descriptor_set_policy.build(gfx_context, descriptor_layout, descriptor_pool);
 		}
 
-		void bind(class GraphicsContext* const gfx_context, void* cmd_buffer, ShaderLayoutID layout, PipelineStateType pipeline_state_type = PipelineStateType::Graphics, const std::vector<uint32_t>& dynamic_buffer_offsets = {}, uint32_t set_index = 0)
+		void bind(class GraphicsContext* const gfx_context, void* cmd_buffer, ShaderLayoutID layout, PipelineStateType pipeline_state_type = PipelineStateType::Graphics, uint32_t set_index = 0)
 		{
 			descriptor_set_policy.bind(gfx_context, cmd_buffer, layout, pipeline_state_type, dynamic_buffer_offsets, set_index);
 		}
@@ -140,9 +145,15 @@ namespace Sunset
 			binding_table.add_binding_slot(slot, count);
 		}
 
+		void set_dynamic_buffer_offsets(const std::vector<uint32_t>& buffer_offsets)
+		{
+			dynamic_buffer_offsets = buffer_offsets;
+		}
+
 	private:
 		Policy descriptor_set_policy;
 		DescriptorBindingTable binding_table;
+		std::vector<uint32_t> dynamic_buffer_offsets;
 	};
 
 	class NoopDescriptorSet
@@ -258,7 +269,7 @@ namespace Sunset
 
 		static DescriptorSetBuilder begin(class GraphicsContext* const context);
 
-		DescriptorSetBuilder& bind_buffer(uint16_t binding, class Buffer* buffer, size_t range_size, uint32_t count, DescriptorType type, PipelineShaderStageType shader_stages, bool b_supports_bindless = false);
+		DescriptorSetBuilder& bind_buffer(uint16_t binding, class Buffer* buffer, size_t range_size, uint32_t count, DescriptorType type, PipelineShaderStageType shader_stages, size_t buffer_offset, bool b_supports_bindless = false);
 		DescriptorSetBuilder& bind_buffer(const DescriptorBuildData& build_data);
 		DescriptorSetBuilder& bind_image(uint16_t binding, class Image* image, size_t range_size, uint32_t count, DescriptorType type, PipelineShaderStageType shader_stages, bool b_supports_bindless = false);
 		DescriptorSetBuilder& bind_image(const DescriptorBuildData& build_data);
@@ -276,8 +287,10 @@ namespace Sunset
 	class DescriptorHelpers
 	{
 	public:
-		static void inject_descriptors(class GraphicsContext* const context, DescriptorData& out_descriptor_data, const std::vector<DescriptorBuildData>& descriptor_build_datas);
-		static void write_bindless_descriptors(class GraphicsContext* const context, const std::vector<DescriptorBindlessWrite>& descriptor_writes, int32_t* out_array_indices);
+		static void inject_descriptors(class GraphicsContext* const gfx_context, DescriptorData& out_descriptor_data, const std::vector<DescriptorBuildData>& descriptor_build_datas);
+		static DescriptorSet* new_descriptor_set_with_layout(class GraphicsContext* const gfx_context, DescriptorLayoutID descriptor_layout);
+		static void write_descriptors(class GraphicsContext* const gfx_context, DescriptorSet* descriptor_set, const std::vector<DescriptorWrite>& descriptor_writes);
+		static void write_bindless_descriptors(class GraphicsContext* const gfx_context, const std::vector<DescriptorBindlessWrite>& descriptor_writes, int32_t* out_array_indices);
 	};
 	// END - Descriptor Helpers
 }

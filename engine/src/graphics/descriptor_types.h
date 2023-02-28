@@ -34,7 +34,13 @@ namespace Sunset
 		class DescriptorSet* descriptor_set;
 		DescriptorLayoutID descriptor_layout;
 		ShaderLayoutID pipeline_layout;
-		std::vector<uint32_t> dynamic_buffer_offsets;
+	};
+
+	struct DescriptorDataList
+	{
+		std::vector<class DescriptorSet*> descriptor_sets;
+		std::vector<DescriptorLayoutID> descriptor_layouts;
+		ShaderLayoutID pipeline_layout;
 	};
 
 	struct DescriptorBuildData
@@ -53,15 +59,21 @@ namespace Sunset
 		bool b_supports_bindless{ false };
 	};
 
+	struct DescriptorBufferDesc
+	{
+		void* buffer{ nullptr };
+		size_t buffer_size{ 0 };
+		size_t buffer_range{ 0 };
+		size_t buffer_offset{ 0 };
+	};
+
 	struct DescriptorWrite
 	{
 		uint16_t slot{ 0 };
 		uint32_t count{ 0 };
 		uint32_t array_index{ 0 };
 		DescriptorType type;
-		void* buffer{ nullptr };
-		size_t buffer_size{ 0 };
-		size_t buffer_range{ 0 };
+		DescriptorBufferDesc buffer_desc;
 		class DescriptorSet* set{ nullptr };
 	};
 

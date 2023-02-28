@@ -44,7 +44,7 @@ namespace Sunset
 		}
 	}
 
-	void MeshTaskQueue::submit_draws(class GraphicsContext* const gfx_context, void* command_buffer, RenderPassID render_pass, bool b_flush /*= true*/)
+	void MeshTaskQueue::submit_draws(class GraphicsContext* const gfx_context, void* command_buffer, RenderPassID render_pass, DescriptorSet* pass_descriptor_set, bool b_flush /*= true*/)
 	{
 		for (const IndirectDrawBatch& draw : indirect_draw_data.indirect_draws)
 		{
@@ -52,8 +52,9 @@ namespace Sunset
 				gfx_context,
 				command_buffer,
 				render_pass,
+				pass_descriptor_set,
 				draw,
-				CACHE_FETCH(Buffer, indirect_draw_data.draw_indirect_buffer),
+				CACHE_FETCH(Buffer, indirect_draw_buffers.draw_indirect_buffer),
 				draw.push_constants
 			);
 		}
@@ -110,7 +111,7 @@ namespace Sunset
 		{
 			// Re-upload cleared draw indirect buffer data to GPU
 			{
-				ScopedGPUBufferMapping scoped_mapping(gfx_context, CACHE_FETCH(Buffer, indirect_draw_data.cleared_draw_indirect_buffer));
+				ScopedGPUBufferMapping scoped_mapping(gfx_context, CACHE_FETCH(Buffer, indirect_draw_buffers.cleared_draw_indirect_buffer));
 				
 				for (int i = 0; i < indirect_draw_data.indirect_draws.size(); ++i)
 				{
@@ -130,9 +131,9 @@ namespace Sunset
 			
 			// Copy cleared draw indirect buffer to GPU bound draw indirect buffer
 			{
-				Buffer* const cleared_draw_indirect_buffer = CACHE_FETCH(Buffer, indirect_draw_data.cleared_draw_indirect_buffer);
-				Buffer* const draw_indirect_buffer = CACHE_FETCH(Buffer, indirect_draw_data.draw_indirect_buffer);
-				CACHE_FETCH(Buffer, indirect_draw_data.draw_indirect_buffer)->copy_buffer(
+				Buffer* const cleared_draw_indirect_buffer = CACHE_FETCH(Buffer, indirect_draw_buffers.cleared_draw_indirect_buffer);
+				Buffer* const draw_indirect_buffer = CACHE_FETCH(Buffer, indirect_draw_buffers.draw_indirect_buffer);
+				CACHE_FETCH(Buffer, indirect_draw_buffers.draw_indirect_buffer)->copy_buffer(
 					gfx_context,
 					command_buffer,
 					cleared_draw_indirect_buffer,
@@ -178,7 +179,7 @@ namespace Sunset
 					}
 				}
 
-				Buffer* const object_instance_buffer = CACHE_FETCH(Buffer, indirect_draw_data.object_instance_buffer);
+				Buffer* const object_instance_buffer = CACHE_FETCH(Buffer, indirect_draw_buffers.object_instance_buffer);
 
 				object_instance_buffer->copy_buffer(gfx_context, command_buffer, CACHE_FETCH(Buffer, staging_buffer), queue.size() * sizeof(GPUObjectInstance));
 				CACHE_DELETE(Buffer, staging_buffer, gfx_context);
@@ -201,6 +202,7 @@ namespace Sunset
 		GraphicsContext* const gfx_context,
 		void* command_buffer,
 		RenderPassID render_pass,
+		DescriptorSet* pass_descriptor_set,
 		MaterialID material,
 		ResourceStateID resource_state,
 		const PushConstantPipelineData& push_constants)
@@ -240,6 +242,7 @@ namespace Sunset
 		class GraphicsContext* const gfx_context,
 		void* command_buffer,
 		RenderPassID render_pass,
+		DescriptorSet* pass_descriptor_set,
 		const IndirectDrawBatch& indirect_draw,
 		class Buffer* indirect_buffer,
 		const PushConstantPipelineData& push_constants)
@@ -249,9 +252,15 @@ namespace Sunset
 		{
 			material_setup_pipeline_state(gfx_context, indirect_draw.material, render_pass);
 			material_bind_pipeline(gfx_context, command_buffer, indirect_draw.material);
+			// Binds per-material descriptors, but with bindless this has no effect
 			material_bind_descriptors(gfx_context, command_buffer, indirect_draw.material);
 			cached_material = indirect_draw.material;
 			b_pipeline_changed = true;
+		}
+
+		if (pass_descriptor_set != nullptr)
+		{
+			material_upload_textures(gfx_context, cached_material, pass_descriptor_set);
 		}
 
 		// TODO: Given that most of our resources will go through descriptors, this resource state will likely get deprecated.

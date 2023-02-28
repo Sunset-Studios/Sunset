@@ -10,6 +10,16 @@ layout (location = 3) flat in int in_instance_index;
 
 layout (location = 0) out vec4 out_frag_color;
 
+// TODO: Put this global data in a shader include
+layout (set = 0, binding = 0) uniform CameraBuffer
+{
+	mat4 view;
+	mat4 proj;
+	mat4 view_proj;
+	mat4 inverse_view_proj;
+} camera_data;
+
+// TODO: Put this global data in a shader include
 layout (set = 0, binding = 1) uniform SceneLightingData
 {
 	vec4 fog_color;
@@ -42,10 +52,15 @@ layout (std140, set = 1, binding = 1) readonly buffer MaterialDataBuffer
 
 layout (set = 1, binding = 2) uniform sampler2D albedo_textures[];
 
+layout (push_constant) uniform constants
+{
+	vec4 user_data;
+} push_constant_uniforms;
+
 void main()
 {
 	EntitySceneData entity = entity_data.entities[in_instance_index];
 	MaterialData material = material_data.materials[entity.material_index];
-	vec3 color = texture(albedo_textures[material.textures[0]], in_tex_coord).xyz;
+	vec3 color = texture(albedo_textures[nonuniformEXT(material.textures[0])], in_tex_coord).xyz;
 	out_frag_color = vec4(color, 1.0f);	
 }

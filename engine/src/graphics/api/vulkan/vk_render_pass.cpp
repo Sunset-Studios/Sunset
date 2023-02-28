@@ -47,6 +47,7 @@ namespace Sunset
 
 				vk_attachments.push_back(swapchain_image_attachment);
 				vk_dependencies.push_back(swapchain_image_dependency);
+				vk_color_attachment_references.push_back(swapchain_image_attachment_ref);
 			}
 
 			uint32_t attachment_index = static_cast<uint32_t>(config.b_is_present_pass);
@@ -200,6 +201,18 @@ namespace Sunset
 	void VulkanRenderPass::end_pass(class GraphicsContext* const gfx_context, void* command_buffer, const RenderPassConfig& pass_config)
 	{
 		vkCmdEndRenderPass(static_cast<VkCommandBuffer>(command_buffer));
+	}
+
+	uint32_t VulkanRenderPass::get_num_color_attachments(const RenderPassConfig& config)
+	{
+		uint32_t total{ config.b_is_present_pass };
+		for (ImageID image_attachment_id : config.attachments)
+		{
+			Image* const image_attachment = CACHE_FETCH(Image, image_attachment_id);
+			AttachmentConfig& image_attachment_config = image_attachment->get_attachment_config();
+			total += static_cast<uint32_t>((image_attachment_config.flags & ImageFlags::Color) != ImageFlags::None);
+		}
+		return total;
 	}
 
 	void VulkanRenderPass::create_default_output_framebuffers(GraphicsContext* const gfx_context, Swapchain* const swapchain, const RenderPassConfig& config, const std::vector<ImageID>& attachments)

@@ -9,6 +9,7 @@ layout (location = 0) out vec3 out_color;
 layout (location = 1) out vec2 out_tex_coord;
 layout (location = 3) out int out_instance_index;
 
+// TODO: Put this global data in a shader include
 layout (set = 0, binding = 0) uniform CameraBuffer
 {
 	mat4 view;
@@ -16,6 +17,16 @@ layout (set = 0, binding = 0) uniform CameraBuffer
 	mat4 view_proj;
 	mat4 inverse_view_proj;
 } camera_data;
+
+// TODO: Put this global data in a shader include
+layout (set = 0, binding = 1) uniform SceneLightingData
+{
+	vec4 fog_color;
+	vec4 fog_distance;
+	vec4 ambient_color;
+	vec4 sunlight_direction;
+	vec4 sunlight_color;
+} scene_lighting_data;
 
 struct EntitySceneData
 {

@@ -13,8 +13,8 @@ namespace Sunset
 		~MeshRenderTaskExecutor() = default;
 
 		void reset();
-		void operator()(class GraphicsContext* const gfx_context, void* command_buffer, RenderPassID render_pass, MaterialID material, ResourceStateID resource_state, const PushConstantPipelineData& push_constants = {});
-		void operator()(class GraphicsContext* const gfx_context, void* command_buffer, RenderPassID render_pass, const IndirectDrawBatch& indirect_draw, class Buffer* indirect_buffer, const PushConstantPipelineData& push_constants = {});
+		void operator()(class GraphicsContext* const gfx_context, void* command_buffer, RenderPassID render_pass, DescriptorSet* pass_descriptor_set, MaterialID material, ResourceStateID resource_state, const PushConstantPipelineData& push_constants = {});
+		void operator()(class GraphicsContext* const gfx_context, void* command_buffer, RenderPassID render_pass, DescriptorSet* pass_descriptor_set, const IndirectDrawBatch& indirect_draw, class Buffer* indirect_buffer, const PushConstantPipelineData& push_constants = {});
 
 	private:
 		MaterialID cached_material{ 0 };
@@ -46,12 +46,22 @@ namespace Sunset
 				queue.emplace_back(task);
 			}
 
-			void set_gpu_draw_indirect_data(const GPUDrawIndirectData& data)
+			void set_gpu_draw_indirect_buffers(const GPUDrawIndirectBuffers& buffers)
+			{
+				indirect_draw_buffers = buffers;
+			}
+
+			void set_gpu_draw_indirect_data(const IndirectDrawData& data)
 			{
 				indirect_draw_data = data;
 			}
 
-			GPUDrawIndirectData& get_gpu_draw_indirect_data()
+			GPUDrawIndirectBuffers& get_gpu_draw_indirect_buffers()
+			{
+				return indirect_draw_buffers;
+			}
+
+			IndirectDrawData& get_indirect_draw_data()
 			{
 				return indirect_draw_data;
 			}
@@ -69,7 +79,7 @@ namespace Sunset
 			void prepare_batches(class GraphicsContext* const gfx_context);
 			void sort_and_batch(class GraphicsContext* const gfx_context);
 			void submit_compute_cull(class GraphicsContext* const gfx_context, void* command_buffer);
-			void submit_draws(class GraphicsContext* const gfx_context, void* command_buffer, RenderPassID render_pass, bool b_flush = true);
+			void submit_draws(class GraphicsContext* const gfx_context, void* command_buffer, RenderPassID render_pass, DescriptorSet* pass_descriptor_set, bool b_flush = true);
 
 		private:
 			std::vector<IndirectDrawBatch> batch_indirect_draws(class GraphicsContext* const gfx_context);
@@ -80,6 +90,7 @@ namespace Sunset
 			std::vector<size_t> previous_queue_hashes;
 			MeshRenderTaskExecutor draw_executor;
 			MeshRenderTaskExecutor compute_cull_executor;
-			GPUDrawIndirectData indirect_draw_data;
+			IndirectDrawData indirect_draw_data;
+			GPUDrawIndirectBuffers indirect_draw_buffers;
 	};
 }

@@ -26,6 +26,7 @@ namespace Sunset
 		MaterialData* gpu_data{ nullptr };
 		uint32_t gpu_data_buffer_offset{ 0 };
 		bool b_dirty{ true };
+		bool b_needs_texture_upload{ false };
 
 		void destroy(class GraphicsContext* const context) { }
 	};

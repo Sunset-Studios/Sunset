@@ -24,8 +24,6 @@ namespace Sunset
 			{
 				static RenderStrategy strategy;
 
-				graphics_context->wait_for_gpu();
-
 				swapchain->request_next_image(graphics_context.get());
 
 				task_allocator.reset();
@@ -67,6 +65,11 @@ namespace Sunset
 				current_draw_cull_data = draw_cull_data;
 			}
 
+			inline void wait_for_gpu()
+			{
+				graphics_context->wait_for_gpu();
+			}
+
 			void begin_frame();
 			void queue_graph_command(Identity name, std::function<void(class RenderGraph&, RGFrameData&, void*)> command_callback);
 
@@ -96,6 +99,7 @@ namespace Sunset
 		ScopedRender(Renderer* renderer)
 			: renderer(renderer)
 		{
+			renderer->wait_for_gpu();
 			renderer->begin_frame();
 		}
 

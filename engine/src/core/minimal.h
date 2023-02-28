@@ -64,7 +64,7 @@ namespace Sunset
 
 	enum class BufferType : int32_t
 	{
-		Generic = 0x00000000,
+		None = 0x00000000,
 		Vertex = 0x00000001,
 		Index = 0x00000002,
 		UniformBuffer = 0x00000004,

@@ -153,7 +153,7 @@ namespace Sunset
 	public:
 		void initialize(class GraphicsContext* const gfx_context, struct PipelineStateData* state_data);
 		void destroy(class GraphicsContext* const gfx_context, struct PipelineStateData* state_data);
-		void build(class GraphicsContext* const gfx_context, struct PipelineStateData* state_data, void* render_pass_data);
+		void build(class GraphicsContext* const gfx_context, struct PipelineStateData* state_data, class RenderPass* render_pass);
 		void build_compute(class GraphicsContext* const gfx_context, struct PipelineStateData* state_data, void* render_pass_data);
 		void bind(class GraphicsContext* const gfx_context, PipelineStateType type, void* buffer);
 
@@ -170,7 +170,7 @@ namespace Sunset
 		VkPipelineRasterizationStateCreateInfo new_rasterization_state_create_info(VkPolygonMode polygon_draw_mode, float polygon_line_width, VkCullModeFlags cull_mode);
 		VkPipelineMultisampleStateCreateInfo new_multisample_state_create_info(VkSampleCountFlagBits sample_count = VK_SAMPLE_COUNT_1_BIT);
 		VkPipelineColorBlendAttachmentState  new_color_blend_attachment_state();
-		VkPipelineColorBlendStateCreateInfo new_color_blending_state(VkPipelineColorBlendAttachmentState& color_blend_attachment_state);
+		VkPipelineColorBlendStateCreateInfo new_color_blending_state(std::vector<VkPipelineColorBlendAttachmentState>& color_blend_attachment_states);
 		VkPipelineDepthStencilStateCreateInfo new_depth_stencil_state(bool b_depth_test = true, bool b_depth_write = true, VkCompareOp compare_op = VK_COMPARE_OP_LESS_OR_EQUAL);
 
 	protected:

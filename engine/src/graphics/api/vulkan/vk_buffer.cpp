@@ -67,7 +67,7 @@ namespace Sunset
 
 		VkBufferCreateInfo buffer_create_info = {};
 		buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		buffer_create_info.size = config.type == BufferType::Indirect ? config.buffer_size * sizeof(VulkanGPUIndirectObject) : config.buffer_size;
+		buffer_create_info.size = (config.type & BufferType::Indirect) != BufferType::None ? config.buffer_size * sizeof(VulkanGPUIndirectObject) : config.buffer_size;
 		buffer_create_info.usage = SUNSET_TO_VULKAN_BUFFER_TYPE(config.type);
 
 		VmaAllocationCreateInfo allocation_create_info = {};
@@ -159,12 +159,12 @@ namespace Sunset
 	{
 		assert(gfx_context->get_buffer_allocator() != nullptr);
 
-		if ((type & BufferType::Vertex) != BufferType::Generic)
+		if ((type & BufferType::Vertex) != BufferType::None)
 		{
 			VkDeviceSize offset{ 0 };
 			vkCmdBindVertexBuffers(static_cast<VkCommandBuffer>(command_buffer), 0, 1, &buffer, &offset);
 		}
-		else if ((type & BufferType::Index) != BufferType::Generic)
+		else if ((type & BufferType::Index) != BufferType::None)
 		{
 			VkDeviceSize offset{ 0 };
 			vkCmdBindIndexBuffer(static_cast<VkCommandBuffer>(command_buffer), buffer, offset, VK_INDEX_TYPE_UINT32);

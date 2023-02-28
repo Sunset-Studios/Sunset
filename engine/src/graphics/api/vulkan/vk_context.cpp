@@ -41,21 +41,19 @@ namespace Sunset
 		VkPhysicalDeviceShaderDrawParametersFeatures shader_draw_parameters_features = {};
 		shader_draw_parameters_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DRAW_PARAMETERS_FEATURES;
 		shader_draw_parameters_features.pNext = nullptr;
-		shader_draw_parameters_features.shaderDrawParameters = VK_TRUE;
 
 		VkPhysicalDeviceDescriptorIndexingFeatures indexing_features = {};
 		indexing_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT;
-		indexing_features.pNext = nullptr;
-		indexing_features.descriptorBindingPartiallyBound = VK_TRUE;
-		indexing_features.descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE;
-		indexing_features.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
-		indexing_features.descriptorBindingVariableDescriptorCount = VK_TRUE;
-		indexing_features.descriptorBindingUpdateUnusedWhilePending = VK_TRUE;
-		indexing_features.descriptorBindingUniformBufferUpdateAfterBind = VK_TRUE;
+		indexing_features.pNext = &shader_draw_parameters_features;
+
+		VkPhysicalDeviceFeatures2 device_features = {};
+		device_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+		device_features.pNext = &indexing_features;
+
+		vkGetPhysicalDeviceFeatures2(state.physical_device.physical_device, &device_features);
 
 		state.device = device_builder
-			.add_pNext(&shader_draw_parameters_features)
-			.add_pNext(&indexing_features)
+			.add_pNext(&device_features)
 			.build()
 			.value();
 
@@ -173,7 +171,7 @@ namespace Sunset
 		{
 			if (write.type == DescriptorType::Image)
 			{
-				Image* const image = static_cast<Image*>(write.buffer);
+				Image* const image = static_cast<Image*>(write.buffer_desc.buffer);
 
 				uint32_t image_infos_write_start = vk_image_infos.size();
 				for (int i = 0; i < write.count; ++i)
@@ -201,9 +199,9 @@ namespace Sunset
 				for (uint32_t i = 0; i < write.count; ++i)
 				{
 					VkDescriptorBufferInfo& buffer_info = vk_buffer_infos.emplace_back();
-					buffer_info.buffer = static_cast<VkBuffer>(write.buffer);
+					buffer_info.buffer = static_cast<VkBuffer>(write.buffer_desc.buffer);
 					buffer_info.offset = 0;
-					buffer_info.range = write.buffer_range;
+					buffer_info.range = write.buffer_desc.buffer_range;
 				}
 				auto data_it = vk_buffer_infos.begin() + buffer_infos_write_start;
 
@@ -238,11 +236,13 @@ namespace Sunset
 		vk_commands[command_index].object_instance.batch_id = batch_id;
 	}
 
-	Sunset::ShaderLayoutID VulkanContext::derive_layout_for_shader_stages(class GraphicsContext* const gfx_context, const std::vector<PipelineShaderStage>& stages)
+	Sunset::ShaderLayoutID VulkanContext::derive_layout_for_shader_stages(class GraphicsContext* const gfx_context, const std::vector<PipelineShaderStage>& stages, std::vector<DescriptorLayoutID>& out_descriptor_layouts)
 	{
 		std::vector<uint64_t> set_binding_pairs;
 		std::vector<DescriptorBinding> all_bindings;
 		std::vector<PushConstantPipelineData> push_constant_data;
+
+		size_t max_total_sets{ 0 };
 
 		for (const PipelineShaderStage& stage : stages)
 		{
@@ -259,6 +259,8 @@ namespace Sunset
 			result = spvReflectEnumerateDescriptorSets(&spv_module, &count, sets.data());
 			assert(result == SPV_REFLECT_RESULT_SUCCESS);
 
+			max_total_sets = std::max(max_total_sets, sets.size());
+
 			for (size_t s = 0; s < sets.size(); ++s)
 			{
 				const SpvReflectDescriptorSet& reflected_set = *(sets[s]);
@@ -269,9 +271,10 @@ namespace Sunset
 
 					DescriptorBinding& binding = all_bindings.emplace_back();
 					binding.slot = reflected_binding.binding;
-					binding.count = reflected_binding.count;
+					binding.count = reflected_binding.count > 0 ? reflected_binding.count : MAX_DESCRIPTOR_BINDINGS - 1;
 					binding.type = SUNSET_FROM_VK_DESCRIPTOR_TYPE(static_cast<VkDescriptorType>(reflected_binding.descriptor_type));
 					binding.pipeline_stages = stage.stage_type;
+					binding.b_supports_bindless = static_cast<bool>(reflected_binding.count ^ 1);
 
 					set_binding_pairs.push_back(((uint64_t)reflected_set.set << 32) | (uint32_t)(all_bindings.size() - 1));
 				}
@@ -297,22 +300,31 @@ namespace Sunset
 
 		std::sort(set_binding_pairs.begin(), set_binding_pairs.end());
 
-		std::vector<DescriptorLayoutID> built_layouts;
 		{
+			out_descriptor_layouts.clear();
+			out_descriptor_layouts.resize(max_total_sets, 0);
+
 			uint32_t previous_set_number{ std::numeric_limits<uint32_t>::max() };
 			std::unordered_map<uint32_t, DescriptorBinding> unique_bindings;
 
-			auto build_unique_bindings_into_layout = [&]()
+			auto build_unique_bindings_into_layout = [&](uint32_t set_number)
 			{
 				std::vector<DescriptorBinding> bindings_to_build;
+
 				for (auto pair : unique_bindings)
 				{
 					bindings_to_build.emplace_back(pair.second);
 				}
-				built_layouts.push_back
-				(
-					DescriptorLayoutFactory::create(gfx_context, bindings_to_build)
+
+				std::sort(bindings_to_build.begin(), bindings_to_build.end(),
+					[](const DescriptorBinding& first, const DescriptorBinding& second)
+					{
+						return first.slot < second.slot;
+					}
 				);
+
+				out_descriptor_layouts[set_number] = DescriptorLayoutFactory::create(gfx_context, bindings_to_build);
+
 				unique_bindings.clear();
 			};
 
@@ -328,7 +340,7 @@ namespace Sunset
 
 				if (set_number != previous_set_number)
 				{
-					build_unique_bindings_into_layout();
+					build_unique_bindings_into_layout(previous_set_number);
 					previous_set_number = set_number;
 				}
 
@@ -343,10 +355,10 @@ namespace Sunset
 				}
 			}
 
-			build_unique_bindings_into_layout();
+			build_unique_bindings_into_layout(previous_set_number);
 		}
 
-		return ShaderPipelineLayoutFactory::create(gfx_context, push_constant_data, built_layouts);
+		return ShaderPipelineLayoutFactory::create(gfx_context, push_constant_data, out_descriptor_layouts);
 	}
 
 	void create_surface(VulkanContext* const vulkan_context, Window* const window)

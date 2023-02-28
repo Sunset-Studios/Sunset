@@ -77,26 +77,11 @@ namespace Sunset
 	{
 		RenderPassID current_pass{ 0 };
 		class GraphicsContext* gfx_context{ nullptr };
-	};
-
-	struct RGShaderDescriptorDeclaration
-	{
-		uint32_t count{ 0 };
-		DescriptorType type;
-		PipelineShaderStageType shader_stages;
-		bool b_supports_bindless{ false };
-	};
-
-	struct RGPipelineShaders
-	{
-		
+		DescriptorSet* pass_descriptor_set{ nullptr };
 	};
 
 	struct RGShaderDataSetup
 	{
-		// For now the description declarations are needed to know how to create the per-pass descriptor layouts and sets. Ideally we won't need
-		// this in the future after we make descriptors entirely dependent on spirv-reflect generated layouts/sets.
-		std::vector<RGShaderDescriptorDeclaration> declarations;
 		// This is auxiliary and only used for passes that only need to bind a single pipeline state to run. Graph passes that don't specify
 		// pipeline shaders will have to handle pipeline state creation and/or binding internally within the pass callback.
 		std::vector<std::pair<PipelineShaderStageType, const char*>> pipeline_shaders;
@@ -143,7 +128,8 @@ namespace Sunset
 		std::vector<RGPass*> render_passes;
 		std::vector<RGResourceHandle> all_resource_handles;
 		std::unordered_map<RGResourceHandle, RGResourceMetadata> resource_metadata;
-		std::unordered_map<Identity, DescriptorData[MAX_BUFFERED_FRAMES]> pass_descriptor_cache;
+		std::unordered_map<Identity, DescriptorDataList> pass_descriptor_cache;
+		std::unordered_map<Identity, PipelineStateID> pass_pipeline_state_cache;
 	};
 
 	class RenderGraph
@@ -188,7 +174,7 @@ namespace Sunset
 
 		void submit(class GraphicsContext* const gfx_context, class Swapchain* const swapchain);
 
-		void inject_global_descriptors(class GraphicsContext* const gfx_context, uint16_t buffered_frame_index, const std::initializer_list<DescriptorBuildData>& descriptor_build_datas);
+		void queue_global_descriptor_writes(class GraphicsContext* const gfx_context, uint32_t buffered_frame, const std::initializer_list<DescriptorBufferDesc>& buffers);
 
 		size_t get_physical_resource(RGResourceHandle resource);
 
@@ -198,7 +184,6 @@ namespace Sunset
 		void update_present_pass_status(RGPass* pass);
 		void cull_graph_passes(class GraphicsContext* const gfx_context);
 		void compute_resource_first_and_last_users(class GraphicsContext* const gfx_context);
-		void create_dummy_pipeline_layout(class GraphicsContext* const gfx_context);
 		void compile(class GraphicsContext* const gfx_context, class Swapchain* const swapchain);
 
 		void execute_pass(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGPass* pass, RGFrameData& frame_data, void* command_buffer);
@@ -206,26 +191,25 @@ namespace Sunset
 		void setup_physical_pass_and_resources(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGPassHandle pass, void* command_buffer);
 		void setup_physical_resource(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGResourceHandle pass, bool b_is_graphics_pass = true, bool b_is_input_resource = false);
 		void tie_resource_to_pass_config_attachments(class GraphicsContext* const gfx_context, RGResourceHandle resource, RGPass* pass, bool b_is_input_resource = false);
-		void setup_pass_pipeline_state_if_necessary(class GraphicsContext* const gfx_context, RGPass* pass, void* command_buffer);
+		void setup_pass_pipeline_state(class GraphicsContext* const gfx_context, RGPass* pass, void* command_buffer);
 		void setup_pass_descriptors(class GraphicsContext* const gfx_context, RGPass* pass, void* command_buffer);
-		void bind_global_descriptors(class GraphicsContext* const gfx_context, void* command_buffer);
 		void bind_pass_descriptors(class GraphicsContext* const gfx_context, RGPass* pass, void* command_buffer);
 		void push_pass_constants(class GraphicsContext* const gfx_context, RGPass* pass, void* command_buffer);
 		void update_transient_resources(class GraphicsContext* const gfx_context, RGPass* pass);
 		void free_physical_resources(class GraphicsContext* const gfx_context);
 
-		void reset(class GraphicsContext* const gfx_context);
+		void reset(class GraphicsContext* const gfx_context, uint32_t current_buffered_frame);
 
 	protected:
 		ImageResourceFrameAllocator image_resource_allocator;
 		BufferResourceFrameAllocator buffer_resource_allocator;
 		RenderPassFrameAllocator render_pass_allocator;
 
-		RenderGraphRegistry registry;
+		RenderGraphRegistry registries[MAX_BUFFERED_FRAMES];
+		RenderGraphRegistry* current_registry;
 
 		std::vector<RGPassHandle> nonculled_passes;
 
-		DescriptorData global_descriptor_datas[MAX_BUFFERED_FRAMES];
-		ShaderLayoutID dummy_pipeline_layout{ 0 };
+		std::vector<DescriptorBufferDesc> queued_buffer_global_writes[MAX_BUFFERED_FRAMES];
 	};
 }

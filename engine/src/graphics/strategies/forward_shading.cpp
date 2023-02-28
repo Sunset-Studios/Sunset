@@ -22,34 +22,6 @@ namespace Sunset
 			// Shader layout setup
 			RGShaderDataSetup shader_setup
 			{
-				.declarations =
-				{
-					RGShaderDescriptorDeclaration{
-						.count = 1,
-						.type = DescriptorType::StorageBuffer,
-						.shader_stages = PipelineShaderStageType::Compute
-					},
-					RGShaderDescriptorDeclaration{
-						.count = 1,
-						.type = DescriptorType::StorageBuffer,
-						.shader_stages = PipelineShaderStageType::Compute
-					},
-					RGShaderDescriptorDeclaration{
-						.count = 1,
-						.type = DescriptorType::StorageBuffer,
-						.shader_stages = PipelineShaderStageType::Compute
-					},
-					RGShaderDescriptorDeclaration{
-						.count = 1,
-						.type = DescriptorType::StorageBuffer,
-						.shader_stages = PipelineShaderStageType::Compute
-					},
-					RGShaderDescriptorDeclaration{
-						.count = 1,
-						.type = DescriptorType::StorageBuffer,
-						.shader_stages = PipelineShaderStageType::Compute
-					},
-				},
 				.pipeline_shaders =
 				{
 					{ PipelineShaderStageType::Compute, "../../shaders/basic.comp.spv" }
@@ -115,7 +87,7 @@ namespace Sunset
 				},
 				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
 				{
-					Renderer::get()->get_mesh_task_queue().set_gpu_draw_indirect_data(
+					Renderer::get()->get_mesh_task_queue().set_gpu_draw_indirect_buffers(
 						{
 							.cleared_draw_indirect_buffer = static_cast<BufferID>(graph.get_physical_resource(cleared_draw_indirect_buffer_desc)),
 							.draw_indirect_buffer = static_cast<BufferID>(graph.get_physical_resource(draw_indirect_buffer_desc)),
@@ -138,25 +110,11 @@ namespace Sunset
 			// Shader layout setup
 			RGShaderDataSetup shader_setup
 			{
-				.declarations =
+				.pipeline_shaders =
 				{
-					RGShaderDescriptorDeclaration{
-						.count = 1,
-						.type = DescriptorType::StorageBuffer,
-						.shader_stages = PipelineShaderStageType::All
-					},
-					RGShaderDescriptorDeclaration{
-						.count = 1,
-						.type = DescriptorType::StorageBuffer,
-						.shader_stages = PipelineShaderStageType::Fragment,
-					},
-					RGShaderDescriptorDeclaration{
-						.count = MAX_DESCRIPTOR_BINDINGS - 1,
-						.type = DescriptorType::Image,
-						.shader_stages = PipelineShaderStageType::Fragment,
-						.b_supports_bindless = true
-					}
-				}
+					{ PipelineShaderStageType::Vertex, "../../shaders/default_mesh.vert.spv" },
+					{ PipelineShaderStageType::Fragment, "../../shaders/default_lit.frag.spv"}
+				},
 			};
 
 			// Input resources
@@ -210,7 +168,7 @@ namespace Sunset
 			render_graph.add_pass(
 				gfx_context,
 				"forward_pass",
-				RenderPassFlags::Main,
+				RenderPassFlags::Present,
 				{
 					.shader_setup = shader_setup,
 					.inputs = { entity_data_buffer_desc, material_data_buffer_desc, default_image_desc },
@@ -221,7 +179,8 @@ namespace Sunset
 					Renderer::get()->get_mesh_task_queue().submit_draws(
 						gfx_context,
 						command_buffer,
-						frame_data.current_pass
+						frame_data.current_pass,
+						frame_data.pass_descriptor_set
 					);
 				}
 			);
@@ -233,7 +192,7 @@ namespace Sunset
 		render_graph.add_pass(
 			gfx_context,
 			"tools_gui",
-			RenderPassFlags::GraphLocal,
+			RenderPassFlags::Graphics,
 			[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
 			{
 				global_gui_core.initialize(gfx_context, gfx_context->get_window(), frame_data.current_pass);

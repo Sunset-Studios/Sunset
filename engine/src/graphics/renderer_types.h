@@ -15,14 +15,18 @@ namespace Sunset
 		uint32_t count;
 	};
 
-	struct GPUDrawIndirectData
+	struct IndirectDrawData
+	{
+		std::vector<IndirectDrawBatch> indirect_draws;
+		bool b_needs_refresh{ false };
+	};
+
+	struct GPUDrawIndirectBuffers
 	{
 		BufferID cleared_draw_indirect_buffer;
 		BufferID draw_indirect_buffer;
 		BufferID object_instance_buffer;
 		BufferID compacted_object_instance_buffer;
-		std::vector<IndirectDrawBatch> indirect_draws;
-		bool b_needs_refresh{ false };
 	};
 
 	struct GPUObjectInstance

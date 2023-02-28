@@ -13,12 +13,13 @@ namespace Sunset
 		return builder;
 	}
 
-	Sunset::DescriptorSetBuilder& DescriptorSetBuilder::bind_buffer(uint16_t binding, Buffer* buffer, size_t range_size, uint32_t count, DescriptorType type, PipelineShaderStageType shader_stages, bool b_supports_bindless)
+	Sunset::DescriptorSetBuilder& DescriptorSetBuilder::bind_buffer(uint16_t binding, Buffer* buffer, size_t range_size, uint32_t count, DescriptorType type, PipelineShaderStageType shader_stages, size_t buffer_offset, bool b_supports_bindless)
 	{
 		bindings.push_back({ .slot = binding, .count = count, .type = type, .pipeline_stages = shader_stages, .b_supports_bindless = b_supports_bindless });
 		if (buffer != nullptr)
 		{
-			descriptor_writes.push_back({ .slot = binding, .count = count, .type = type, .buffer = buffer->get(), .buffer_size = buffer->get_size(), .buffer_range = range_size, .set = nullptr });
+			DescriptorBufferDesc buffer_desc{ .buffer = buffer->get(), .buffer_size = buffer->get_size(), .buffer_range = range_size, .buffer_offset = buffer_offset };
+			descriptor_writes.push_back({ .slot = binding, .count = count, .type = type, .buffer_desc = buffer_desc, .set = nullptr });
 		}
 		return *this;
 	}
@@ -26,7 +27,7 @@ namespace Sunset
 	Sunset::DescriptorSetBuilder& DescriptorSetBuilder::bind_buffer(const DescriptorBuildData& build_data)
 	{
 		Buffer* const buffer = CACHE_FETCH(Buffer, build_data.buffer);
-		return bind_buffer(build_data.binding, buffer, build_data.buffer_range, build_data.count, build_data.type, build_data.shader_stages, build_data.b_supports_bindless);
+		return bind_buffer(build_data.binding, buffer, build_data.buffer_range, build_data.count, build_data.type, build_data.shader_stages, build_data.buffer_offset, build_data.b_supports_bindless);
 	}
 
 	Sunset::DescriptorSetBuilder& DescriptorSetBuilder::bind_image(uint16_t binding, Image* image, size_t range_size, uint32_t count, DescriptorType type, PipelineShaderStageType shader_stages, bool b_supports_bindless)
@@ -34,7 +35,8 @@ namespace Sunset
 		bindings.push_back({ .slot = binding, .count = count, .type = type, .pipeline_stages = shader_stages, .b_supports_bindless = b_supports_bindless });
 		if (image != nullptr)
 		{
-			descriptor_writes.push_back({ .slot = binding, .count = count, .type = type, .buffer = image, .buffer_size = 0, .buffer_range = range_size, .set = nullptr });
+			DescriptorBufferDesc buffer_desc{ .buffer = image, .buffer_size = 0, .buffer_range = range_size, .buffer_offset = 0 };
+			descriptor_writes.push_back({ .slot = binding, .count = count, .type = type, .buffer_desc = buffer_desc, .set = nullptr });
 		}
 		return *this;
 	}
@@ -72,20 +74,14 @@ namespace Sunset
 			write.set = out_descriptor_set;
 		}
 
-		if (!descriptor_writes.empty())
-		{
-			gfx_context->push_descriptor_writes(descriptor_writes);
-		}
+		DescriptorHelpers::write_descriptors(gfx_context, out_descriptor_set, descriptor_writes);
 
 		return true;
 	}
 
-	void DescriptorHelpers::inject_descriptors(GraphicsContext* const context, DescriptorData& out_descriptor_data, const std::vector<DescriptorBuildData>& descriptor_build_datas)
+	void DescriptorHelpers::inject_descriptors(GraphicsContext* const gfx_context, DescriptorData& out_descriptor_data, const std::vector<DescriptorBuildData>& descriptor_build_datas)
 	{
-		out_descriptor_data.dynamic_buffer_offsets.clear();
-		out_descriptor_data.dynamic_buffer_offsets.reserve(descriptor_build_datas.size());
-
-		DescriptorSetBuilder builder = DescriptorSetBuilder::begin(context);
+		DescriptorSetBuilder builder = DescriptorSetBuilder::begin(gfx_context);
 		for (const DescriptorBuildData& descriptor_build_data : descriptor_build_datas)
 		{
 			if (descriptor_build_data.type == DescriptorType::Image)
@@ -96,16 +92,57 @@ namespace Sunset
 			{
 				builder.bind_buffer(descriptor_build_data);
 			}
-
-			if (descriptor_build_data.type == DescriptorType::DynamicUniformBuffer)
-			{
-				out_descriptor_data.dynamic_buffer_offsets.push_back(descriptor_build_data.buffer_offset);
-			}
 		}
 		builder.build(out_descriptor_data.descriptor_set, out_descriptor_data.descriptor_layout);
 	}
 
-	void DescriptorHelpers::write_bindless_descriptors(class GraphicsContext* const context, const std::vector<DescriptorBindlessWrite>& descriptor_writes, int32_t* out_array_indices)
+	DescriptorSet* DescriptorHelpers::new_descriptor_set_with_layout(GraphicsContext* const gfx_context, DescriptorLayoutID descriptor_layout)
+	{
+		assert(descriptor_layout != 0);
+
+		DescriptorLayout* const descriptor_layout_obj = CACHE_FETCH(DescriptorLayout, descriptor_layout);
+		DescriptorSet* descriptor_set = gfx_context->get_descriptor_set_allocator()->allocate(gfx_context, descriptor_layout_obj);
+
+		if (descriptor_set == nullptr)
+		{
+			return nullptr;
+		}
+
+		std::vector<DescriptorBinding> bindings = descriptor_layout_obj->get_bindings();
+		for (const DescriptorBinding& binding : bindings)
+		{
+			if (binding.b_supports_bindless)
+			{
+				descriptor_set->register_bindless_slot(binding.slot, binding.count);
+			}
+		}
+
+		return descriptor_set;
+	}
+
+	void DescriptorHelpers::write_descriptors(GraphicsContext* const gfx_context, DescriptorSet* descriptor_set, const std::vector<DescriptorWrite>& descriptor_writes)
+	{
+		if (!descriptor_writes.empty())
+		{
+			// Set our dynamic uniform/SSBO offsets if we have any
+			{
+				std::vector<uint32_t> dynamic_buffer_offsets;
+				for (const DescriptorWrite& write : descriptor_writes)
+				{
+					if (write.type == DescriptorType::DynamicUniformBuffer)
+					{
+						dynamic_buffer_offsets.push_back(write.buffer_desc.buffer_offset);
+					}
+				}
+				descriptor_set->set_dynamic_buffer_offsets(dynamic_buffer_offsets);
+			}
+
+			// Push our descriptors through the GPI
+			gfx_context->push_descriptor_writes(descriptor_writes);
+		}
+	}
+
+	void DescriptorHelpers::write_bindless_descriptors(class GraphicsContext* const gfx_context, const std::vector<DescriptorBindlessWrite>& descriptor_writes, int32_t* out_array_indices)
 	{
 		std::vector<DescriptorWrite> writes;
 
@@ -120,11 +157,11 @@ namespace Sunset
 			write.count = 1;
 			write.array_index = out_array_indices[i];
 			write.type = bindless_write.type;
-			write.buffer = bindless_write.buffer;
+			write.buffer_desc.buffer = bindless_write.buffer;
 			write.set = bindless_write.set;
 		}
 
-		context->push_descriptor_writes(writes);
+		gfx_context->push_descriptor_writes(writes);
 	}
 
 	bool DescriptorBindingTable::has_binding_slot(uint32_t slot)
