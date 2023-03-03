@@ -110,8 +110,7 @@ void main()
 	if (g_id < draw_cull_constants.draw_count)
 	{
 		const uint object_id = object_instance_buffer.instances[g_id].object_id;
-		//const bool in_frustum = is_in_frustum(object_id);
-		const bool in_frustum = true;
+		const bool in_frustum = is_in_frustum(object_id);
 		const bool occluded = is_occluded(object_id);
 		if (in_frustum && !occluded)
 		{

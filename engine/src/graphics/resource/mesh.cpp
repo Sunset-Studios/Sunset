@@ -173,7 +173,6 @@ namespace Sunset
 			mesh->vertices[2].color = { 0.0f, 1.0f, 0.0f };
 
 			mesh->name = id;
-			mesh->local_bounds = calculate_mesh_bounds(mesh, glm::mat4());
 
 			upload_mesh(gfx_context, mesh);
 		}
@@ -267,7 +266,16 @@ namespace Sunset
 			}
 
 			mesh->name = id;
-			mesh->local_bounds = calculate_mesh_bounds(mesh, glm::mat4());
+
+			{
+				mesh->local_bounds.extents.x = serialized_mesh_info.bounds.extents[0];
+				mesh->local_bounds.extents.y = serialized_mesh_info.bounds.extents[1];
+				mesh->local_bounds.extents.z = serialized_mesh_info.bounds.extents[2];
+				mesh->local_bounds.origin.x = serialized_mesh_info.bounds.origin[0];
+				mesh->local_bounds.origin.y = serialized_mesh_info.bounds.origin[1];
+				mesh->local_bounds.origin.z = serialized_mesh_info.bounds.origin[2];
+				mesh->local_bounds.radius = serialized_mesh_info.bounds.radius;
+			}
 
 			upload_mesh(gfx_context, mesh);
 		}

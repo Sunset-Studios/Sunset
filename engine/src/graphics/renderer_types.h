@@ -37,11 +37,14 @@ namespace Sunset
 	struct DrawCullData
 	{
 		glm::mat4 view;
-		float p00, p11, z_near, z_far;
+		float p00;
+		float p11;
+		float z_near;
+		float z_far;
 		float frustum[4];
 		uint32_t draw_count;
-		uint8_t culling_enabled;
-		uint8_t occlusion_enabled;
-		uint8_t distance_check;
+		uint32_t culling_enabled;
+		uint32_t occlusion_enabled;
+		uint32_t distance_check;
 	};
 }

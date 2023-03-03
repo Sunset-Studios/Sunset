@@ -169,20 +169,20 @@ namespace Sunset
 		}
 #ifndef NDEBUG
 		// IMGui pass
-		render_graph.add_pass(
-			gfx_context,
-			"tools_gui",
-			RenderPassFlags::Graphics,
-			[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
-			{
-				global_gui_core.initialize(gfx_context, gfx_context->get_window(), frame_data.current_pass);
-				global_gui_core.new_frame(Renderer::get()->context()->get_window());
-				global_gui_core.begin_draw();
+		//render_graph.add_pass(
+		//	gfx_context,
+		//	"tools_gui",
+		//	RenderPassFlags::Graphics,
+		//	[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
+		//	{
+		//		global_gui_core.initialize(gfx_context, gfx_context->get_window(), frame_data.current_pass);
+		//		global_gui_core.new_frame(Renderer::get()->context()->get_window());
+		//		global_gui_core.begin_draw();
 
-				global_gui_core.end_draw(command_buffer);
-			}
-		);
-#endif
+		//		global_gui_core.end_draw(command_buffer);
+		//	}
+		//);
+#endif 
 		render_graph.submit(gfx_context, swapchain);
 	}
 }
