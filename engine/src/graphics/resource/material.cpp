@@ -10,44 +10,6 @@
 
 namespace Sunset
 {
-	void material_bind_pipeline(class GraphicsContext* const gfx_context, void* cmd_buffer, MaterialID material)
-	{
-		Material* const material_ptr = CACHE_FETCH(Material, material);
-		assert(material_ptr != nullptr && "Cannot bind pipeline for null material!");
-		CACHE_FETCH(PipelineState, material_ptr->pipeline_state)->bind(gfx_context, cmd_buffer);
-	}
-
-	void material_setup_pipeline_state(class GraphicsContext* const gfx_context, MaterialID material, RenderPassID render_pass)
-	{
-		Material* const material_ptr = CACHE_FETCH(Material, material);
-		assert(material_ptr != nullptr && "Cannot setup pipeline for null material!");
-
-		if (material_ptr->b_dirty)
-		{
-			const uint32_t current_buffered_frame = gfx_context->get_buffered_frame_number();
-
-			RenderPass* const pass = CACHE_FETCH(RenderPass, render_pass);
-
-			PipelineGraphicsStateBuilder state_builder = PipelineGraphicsStateBuilder::create_default(gfx_context->get_window()).clear_shader_stages().value();
-
-			for (const std::pair<PipelineShaderStageType, const char*>& shader : material_ptr->description.shaders)
-			{
-				state_builder.set_shader_stage(shader.first, shader.second);
-			}
-
-			{
-				std::vector<DescriptorLayoutID> descriptor_layouts;
-				state_builder.derive_shader_layout(descriptor_layouts);
-			}
-
-			state_builder.set_pass(render_pass);
-
-			material_ptr->pipeline_state = state_builder.finish();
-
-			material_ptr->b_dirty = false;
-		}
-	}
-
 	void material_load_textures(class GraphicsContext* const gfx_context, MaterialID material)
 	{
 		Material* const material_ptr = CACHE_FETCH(Material, material);
@@ -110,27 +72,6 @@ namespace Sunset
 			);
 
 			material_ptr->b_needs_texture_upload = false;
-		}
-	}
-
-	Sunset::PipelineStateID material_get_pipeline(MaterialID material)
-	{
-		Material* const material_ptr = CACHE_FETCH(Material, material);
-		assert(material_ptr != nullptr && "Cannot get pipeline for null material!");
-		return material_ptr->pipeline_state;
-	}
-
-	void material_bind_descriptors(class GraphicsContext* const gfx_context, void* cmd_buffer, MaterialID material)
-	{
-		Material* const material_ptr = CACHE_FETCH(Material, material);
-		assert(material_ptr != nullptr && "Cannot bind descriptors for null material!");
-
-		const ShaderLayoutID pipeline_layout = CACHE_FETCH(PipelineState, material_ptr->pipeline_state)->get_state_data().layout;
-
-		if (material_ptr->descriptor_data.descriptor_set != nullptr)
-		{
-			const uint16_t material_descriptor_set_index = static_cast<uint16_t>(DescriptorSetType::Material);
-			material_ptr->descriptor_data.descriptor_set->bind(gfx_context, cmd_buffer, pipeline_layout, PipelineStateType::Graphics, material_descriptor_set_index);
 		}
 	}
 

@@ -6,7 +6,7 @@
 
 layout (location = 0) in vec3 in_color;
 layout (location = 1) in vec2 in_tex_coord;
-layout (location = 3) flat in int in_instance_index;
+layout (location = 2) flat in int in_instance_index;
 
 layout (location = 0) out vec4 out_frag_color;
 
@@ -32,6 +32,8 @@ layout (set = 0, binding = 1) uniform SceneLightingData
 struct EntitySceneData
 {
 	mat4 transform;
+	vec4 bounds_pos_radius;
+	vec4 bounds_extent;
 	uint material_index;
 };
 

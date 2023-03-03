@@ -7,7 +7,7 @@ layout (location = 3) in vec2 in_tex_coord;
 
 layout (location = 0) out vec3 out_color;
 layout (location = 1) out vec2 out_tex_coord;
-layout (location = 3) out int out_instance_index;
+layout (location = 2) out int out_instance_index;
 
 // TODO: Put this global data in a shader include
 layout (set = 0, binding = 0) uniform CameraBuffer
@@ -31,6 +31,8 @@ layout (set = 0, binding = 1) uniform SceneLightingData
 struct EntitySceneData
 {
 	mat4 transform;
+	vec4 bounds_pos_radius;
+	vec4 bounds_extent;
 	uint material_index;
 };
 

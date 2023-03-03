@@ -75,7 +75,7 @@ namespace Sunset
 
 		VK_CHECK(vmaCreateBuffer(allocator, &buffer_create_info, &allocation_create_info, &buffer, &allocation, nullptr));
 
-		size = config.buffer_size;
+		size = buffer_create_info.size;
 	}
 
 	void VulkanBuffer::reallocate(class GraphicsContext* const gfx_context, const BufferConfig& config)
@@ -125,10 +125,12 @@ namespace Sunset
 		VkBuffer other_buffer = static_cast<VkBuffer>(other->get());
 		VkCommandBuffer cmd = static_cast<VkCommandBuffer>(command_buffer);
 
+		BufferConfig& other_config = other->get_buffer_config();
+
 		VkBufferCopy copy;
 		copy.dstOffset = 0;
 		copy.srcOffset = 0;
-		copy.size = buffer_size;
+		copy.size = (other_config.type & BufferType::Indirect) != BufferType::None ? buffer_size * sizeof(VulkanGPUIndirectObject) : buffer_size;
 
 		vkCmdCopyBuffer(cmd, other_buffer, buffer, 1, &copy);
 	}

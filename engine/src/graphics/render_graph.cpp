@@ -377,11 +377,13 @@ namespace Sunset
 			setup_physical_pass_and_resources(gfx_context, swapchain, pass->handle, command_buffer);
 
 			{
-				DescriptorDataList& descriptor_data_list = current_registry->pass_descriptor_cache[pass->pass_config.name];
+				DescriptorDataList& descriptor_data_list = pass_cache.descriptors[pass->pass_config.name];
 				frame_data.pass_descriptor_set = descriptor_data_list.descriptor_sets.empty()
 					? nullptr
 					: descriptor_data_list.descriptor_sets[static_cast<uint32_t>(DescriptorSetType::Pass)];
 			}
+
+			frame_data.pass_pipeline_state = pass->pipeline_state_id;
 
 			if ((pass->pass_config.flags & RenderPassFlags::Compute) != RenderPassFlags::None)
 			{
@@ -486,16 +488,16 @@ namespace Sunset
 	{
 		// We don't "need" the additional pipeline state caching here since internally pipeline states are already cached
 		// based on the builder config, but this'll keep us from doing unnecessary per-frame calculations on pipeline state setup
-		if (current_registry->pass_pipeline_state_cache.find(pass->pass_config.name) != current_registry->pass_pipeline_state_cache.end())
+		if (pass_cache.pipeline_states.find(pass->pass_config.name) != pass_cache.pipeline_states.end())
 		{
-			pass->pipeline_state_id = current_registry->pass_pipeline_state_cache[pass->pass_config.name];
+			pass->pipeline_state_id = pass_cache.pipeline_states[pass->pass_config.name];
 			CACHE_FETCH(PipelineState, pass->pipeline_state_id)->bind(gfx_context, command_buffer);
 			return;
 		}
 
-		if (current_registry->pass_descriptor_cache.find(pass->pass_config.name) == current_registry->pass_descriptor_cache.end())
+		if (pass_cache.descriptors.find(pass->pass_config.name) == pass_cache.descriptors.end())
 		{
-			current_registry->pass_descriptor_cache[pass->pass_config.name] = DescriptorDataList();
+			pass_cache.descriptors[pass->pass_config.name] = DescriptorDataList();
 		}
 
 		std::vector<DescriptorLayoutID> descriptor_layouts;
@@ -552,13 +554,13 @@ namespace Sunset
 			CACHE_FETCH(PipelineState, pass->pipeline_state_id)->bind(gfx_context, command_buffer);
 		}
 
-		current_registry->pass_descriptor_cache[pass->pass_config.name].descriptor_layouts = descriptor_layouts;
-		current_registry->pass_descriptor_cache[pass->pass_config.name].descriptor_sets.resize(descriptor_layouts.size(), nullptr);
+		pass_cache.descriptors[pass->pass_config.name].descriptor_layouts = descriptor_layouts;
+		pass_cache.descriptors[pass->pass_config.name].descriptor_sets.resize(descriptor_layouts.size(), nullptr);
 	}
 
 	void RenderGraph::setup_pass_descriptors(class GraphicsContext* const gfx_context, RGPass* pass, void* command_buffer)
 	{
-		DescriptorDataList& pass_descriptor_data = current_registry->pass_descriptor_cache[pass->pass_config.name];
+		DescriptorDataList& pass_descriptor_data = pass_cache.descriptors[pass->pass_config.name];
 
 		if (!pass_descriptor_data.descriptor_layouts.empty())
 		{
@@ -572,9 +574,7 @@ namespace Sunset
 				if (global_descriptor_set == nullptr)
 				{
 					global_descriptor_set = DescriptorHelpers::new_descriptor_set_with_layout(gfx_context, global_descriptor_layout);
-				}
 
-				{
 					const uint32_t current_buffered_frame = gfx_context->get_buffered_frame_number();
 
 					DescriptorLayout* const layout = CACHE_FETCH(DescriptorLayout, global_descriptor_layout);
@@ -591,6 +591,7 @@ namespace Sunset
 						new_write.set = global_descriptor_set;
 						new_write.buffer_desc = queued_buffer_global_writes[current_buffered_frame][j];
 					}
+
 					DescriptorHelpers::write_descriptors(gfx_context, global_descriptor_set, descriptor_writes);
 				}
 			}
@@ -602,38 +603,49 @@ namespace Sunset
 				DescriptorSet*& pass_descriptor_set = pass_descriptor_data.descriptor_sets[pass_type_index];
 				DescriptorLayoutID pass_descriptor_layout = pass_descriptor_data.descriptor_layouts[pass_type_index];
 
-				if (pass_descriptor_set == nullptr)
-				{
-					pass_descriptor_set = DescriptorHelpers::new_descriptor_set_with_layout(gfx_context, pass_descriptor_layout);
-				}
+				DescriptorLayout* const layout = CACHE_FETCH(DescriptorLayout, pass_descriptor_layout);
+				std::vector<DescriptorBinding>& descriptor_bindings = layout->get_bindings();
 
+				const auto write_descriptors = [&](bool b_persistent_resources)
 				{
-					DescriptorLayout* const layout = CACHE_FETCH(DescriptorLayout, pass_descriptor_layout);
-					std::vector<DescriptorBinding>& descriptor_bindings = layout->get_bindings();
-
 					std::vector<DescriptorWrite> descriptor_writes;
 					for (uint32_t j = 0; j < descriptor_bindings.size(); ++j)
 					{
-						DescriptorWrite& new_write = descriptor_writes.emplace_back();
-						new_write.slot = descriptor_bindings[j].slot;
-						new_write.type = descriptor_bindings[j].type;
-						new_write.count = descriptor_bindings[j].count;
-						new_write.set = pass_descriptor_set;
+						if (current_registry->resource_metadata[pass->parameters.inputs[j]].b_is_persistent == b_persistent_resources)
+						{
+							DescriptorWrite& new_write = descriptor_writes.emplace_back();
+							new_write.slot = descriptor_bindings[j].slot;
+							new_write.type = descriptor_bindings[j].type;
+							new_write.count = descriptor_bindings[j].count;
+							new_write.set = pass_descriptor_set;
 
-						if (new_write.type == DescriptorType::Image)
-						{
-							Image* const image = CACHE_FETCH(Image, current_registry->resource_metadata[pass->parameters.inputs[j]].physical_id);
-							new_write.buffer_desc.buffer = image;
-						}
-						else
-						{
-							Buffer* const buffer = CACHE_FETCH(Buffer, current_registry->resource_metadata[pass->parameters.inputs[j]].physical_id);
-							new_write.buffer_desc.buffer = buffer->get();
-							new_write.buffer_desc.buffer_range = buffer->get_size();
-							new_write.buffer_desc.buffer_size = buffer->get_size();
+							if (new_write.type == DescriptorType::Image)
+							{
+								Image* const image = CACHE_FETCH(Image, current_registry->resource_metadata[pass->parameters.inputs[j]].physical_id);
+								new_write.buffer_desc.buffer = image;
+							}
+							else
+							{
+								Buffer* const buffer = CACHE_FETCH(Buffer, current_registry->resource_metadata[pass->parameters.inputs[j]].physical_id);
+								new_write.buffer_desc.buffer = buffer->get();
+								new_write.buffer_desc.buffer_range = buffer->get_size();
+								new_write.buffer_desc.buffer_size = buffer->get_size();
+							}
 						}
 					}
 					DescriptorHelpers::write_descriptors(gfx_context, pass_descriptor_set, descriptor_writes);
+				};
+
+				if (pass_descriptor_set == nullptr)
+				{
+					pass_descriptor_set = DescriptorHelpers::new_descriptor_set_with_layout(gfx_context, pass_descriptor_layout);
+					const bool b_write_only_persistent_resources = true;
+					write_descriptors(b_write_only_persistent_resources);
+				}
+
+				{
+					const bool b_write_only_persistent_resources = false;
+					write_descriptors(b_write_only_persistent_resources);
 				}
 			}
 		}
@@ -648,7 +660,7 @@ namespace Sunset
 	{
 		const bool b_is_compute_pass = (pass->pass_config.flags & RenderPassFlags::Compute) != RenderPassFlags::None;
 
-		DescriptorDataList& pass_descriptor_data = current_registry->pass_descriptor_cache[pass->pass_config.name];
+		DescriptorDataList& pass_descriptor_data = pass_cache.descriptors[pass->pass_config.name];
 
 		if (!pass_descriptor_data.descriptor_sets.empty())
 		{

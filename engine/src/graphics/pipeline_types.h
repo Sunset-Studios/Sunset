@@ -50,6 +50,7 @@ namespace Sunset
 
 	enum class PipelineStageType : uint32_t
 	{
+		None = 0x00000000,
 		TopOfPipe = 0x00000001,
 		DrawIndirect = 0x00000002,
 		VertexInput = 0x00000004,
@@ -63,7 +64,10 @@ namespace Sunset
 		ColorAttachmentOutput = 0x00000400,
 		ComputeShader = 0x00000800,
 		Transfer = 0x00001000,
-		BottomOfPipe = 0x00002000
+		BottomOfPipe = 0x00002000,
+		Host = 0x00004000,
+		AllGraphics = 0x00008000,
+		AllCommands = 0x00010000
 	};
 
 	inline PipelineStageType operator|(PipelineStageType lhs, PipelineStageType rhs)

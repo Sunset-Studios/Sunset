@@ -113,8 +113,8 @@ namespace Sunset
 
 	void VulkanContext::draw_indexed_indirect(void* buffer, class Buffer* indirect_buffer, uint32_t draw_count, uint32_t draw_first /*= 0*/)
 	{
-		VkDeviceSize indirect_offset = draw_first * sizeof(VulkanGPUIndirectObject);
-		uint32_t stride = sizeof(VulkanGPUIndirectObject);
+		const uint32_t stride = sizeof(VulkanGPUIndirectObject);
+		const VkDeviceSize indirect_offset = draw_first * stride;
 		vkCmdDrawIndexedIndirect(static_cast<VkCommandBuffer>(buffer), static_cast<VkBuffer>(indirect_buffer->get()), indirect_offset, draw_count, stride);
 	}
 

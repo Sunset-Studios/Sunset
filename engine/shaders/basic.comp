@@ -61,12 +61,7 @@ struct DrawCommand
 	uint batch_id;
 };
 
-layout (set = 1, binding = 3) readonly buffer ClearedDrawIndirectBuffer
-{
-	DrawCommand commands[];
-} cleared_draw_indirect_buffer;
-
-layout (set = 1, binding = 4) buffer DrawIndirectBuffer
+layout (set = 1, binding = 3) buffer DrawIndirectBuffer
 {
 	DrawCommand commands[];
 } draw_indirect_buffer;
@@ -115,7 +110,8 @@ void main()
 	if (g_id < draw_cull_constants.draw_count)
 	{
 		const uint object_id = object_instance_buffer.instances[g_id].object_id;
-		const bool in_frustum = is_in_frustum(object_id);
+		//const bool in_frustum = is_in_frustum(object_id);
+		const bool in_frustum = true;
 		const bool occluded = is_occluded(object_id);
 		if (in_frustum && !occluded)
 		{

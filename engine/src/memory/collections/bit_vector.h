@@ -23,7 +23,7 @@ namespace Sunset
 		{
 			const size_t bit_index = bit % sizeof(size_t);
 			const size_t word_index = bit / sizeof(size_t) + (bit_index != 0);
-			bits[word_index] &= (size_t(1) << bit_index);
+			bits[word_index] |= (size_t(1) << bit_index);
 		}
 
 		void unset(size_t bit)

@@ -13,8 +13,8 @@ namespace Sunset
 		~MeshRenderTaskExecutor() = default;
 
 		void reset();
-		void operator()(class GraphicsContext* const gfx_context, void* command_buffer, RenderPassID render_pass, DescriptorSet* pass_descriptor_set, MaterialID material, ResourceStateID resource_state, const PushConstantPipelineData& push_constants = {});
-		void operator()(class GraphicsContext* const gfx_context, void* command_buffer, RenderPassID render_pass, DescriptorSet* pass_descriptor_set, const IndirectDrawBatch& indirect_draw, class Buffer* indirect_buffer, const PushConstantPipelineData& push_constants = {});
+		void operator()(class GraphicsContext* const gfx_context, void* command_buffer, RenderPassID render_pass, DescriptorSet* pass_descriptor_set, MaterialID material, ResourceStateID resource_state, PipelineStateID pipeline_state, const PushConstantPipelineData& push_constants = {});
+		void operator()(class GraphicsContext* const gfx_context, void* command_buffer, RenderPassID render_pass, DescriptorSet* pass_descriptor_set, const IndirectDrawBatch& indirect_draw, class Buffer* indirect_buffer, PipelineStateID pipeline_state, const PushConstantPipelineData& push_constants = {});
 
 	private:
 		MaterialID cached_material{ 0 };
@@ -76,10 +76,9 @@ namespace Sunset
 				return indirect_draw_data.indirect_draws.size();
 			}
 
-			void prepare_batches(class GraphicsContext* const gfx_context);
 			void sort_and_batch(class GraphicsContext* const gfx_context);
 			void submit_compute_cull(class GraphicsContext* const gfx_context, void* command_buffer);
-			void submit_draws(class GraphicsContext* const gfx_context, void* command_buffer, RenderPassID render_pass, DescriptorSet* pass_descriptor_set, bool b_flush = true);
+			void submit_draws(class GraphicsContext* const gfx_context, void* command_buffer, RenderPassID render_pass, DescriptorSet* pass_descriptor_set, PipelineStateID pipeline_state, bool b_flush = true);
 
 		private:
 			std::vector<IndirectDrawBatch> batch_indirect_draws(class GraphicsContext* const gfx_context);

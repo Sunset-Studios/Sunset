@@ -23,7 +23,6 @@ namespace Sunset
 
 	struct GPUDrawIndirectBuffers
 	{
-		BufferID cleared_draw_indirect_buffer;
 		BufferID draw_indirect_buffer;
 		BufferID object_instance_buffer;
 		BufferID compacted_object_instance_buffer;

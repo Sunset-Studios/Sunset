@@ -316,6 +316,10 @@ inline VkPipelineStageFlagBits VK_FROM_SUNSET_PIPELINE_STAGE_TYPE(Sunset::Pipeli
 	{
 		vk_pipeline_stages |= VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
 	}
+	if (sunset_pipeline_stages & static_cast<uint32_t>(Sunset::PipelineStageType::Host))
+	{
+		vk_pipeline_stages |= VK_PIPELINE_STAGE_HOST_BIT;
+	}
 	if (sunset_pipeline_stages & static_cast<uint32_t>(Sunset::PipelineStageType::DrawIndirect))
 	{
 		vk_pipeline_stages |= VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT;
@@ -363,6 +367,14 @@ inline VkPipelineStageFlagBits VK_FROM_SUNSET_PIPELINE_STAGE_TYPE(Sunset::Pipeli
 	if (sunset_pipeline_stages & static_cast<uint32_t>(Sunset::PipelineStageType::Transfer))
 	{
 		vk_pipeline_stages |= VK_PIPELINE_STAGE_TRANSFER_BIT;
+	}
+	if (sunset_pipeline_stages & static_cast<uint32_t>(Sunset::PipelineStageType::AllGraphics))
+	{
+		vk_pipeline_stages |= VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
+	}
+	if (sunset_pipeline_stages & static_cast<uint32_t>(Sunset::PipelineStageType::AllCommands))
+	{
+		vk_pipeline_stages |= VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
 	}
 	return static_cast<VkPipelineStageFlagBits>(vk_pipeline_stages);
 }
