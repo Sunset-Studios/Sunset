@@ -1,5 +1,10 @@
 find_package(Vulkan REQUIRED)
 
+option( TRACY_ENABLE "" ON)
+option( TRACY_ON_DEMAND "" ON)
+option( TRACY_ONLY_LOCALHOST "" ON)
+add_subdirectory(tracy)
+
 add_library(vkbootstrap STATIC)
 add_library(glm INTERFACE)
 add_library(vma INTERFACE)

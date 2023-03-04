@@ -14,6 +14,8 @@
 #include <SDL.h>
 #include <SDL_vulkan.h>
 
+#include <Tracy.hpp>
+
 namespace Sunset
 {
 	void Application::init()
@@ -84,11 +86,15 @@ namespace Sunset
 			{
 				window->poll();
 
-				ScopedRender<ForwardShadingStrategy> scoped_render(Renderer::get());
+				{
+					ScopedRender<ForwardShadingStrategy> scoped_render(Renderer::get());
 
-				InputProvider::get()->update();
+					InputProvider::get()->update();
 
-				SimulationCore::get()->update();
+					SimulationCore::get()->update();
+				}
+
+				FrameMark;
 			}
 		}
 	}

@@ -24,7 +24,7 @@ set_property(TARGET Sunset PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE
 target_include_directories(Sunset PUBLIC ${INCLUDE_DIRS})
 
 target_link_libraries(Sunset vkbootstrap vma glm imgui lz4 json spirv_reflect)
-target_link_libraries(Sunset Vulkan::Vulkan sdl2 AssetSerializer)
+target_link_libraries(Sunset Vulkan::Vulkan sdl2 AssetSerializer Tracy::TracyClient)
 
 ## find all the shader files under the shaders folder
 file(GLOB_RECURSE GLSL_SOURCE_FILES
