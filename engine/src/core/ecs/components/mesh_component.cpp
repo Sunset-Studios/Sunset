@@ -13,16 +13,16 @@ namespace Sunset
 		mesh_comp->mesh = mesh;
 	}
 
-	void set_material(MeshComponent* mesh_comp, const Material& material)
+	void set_material(MeshComponent* mesh_comp, MaterialID material)
 	{
 		assert(mesh_comp != nullptr && "Cannot set material on null mesh component");
-		mesh_comp->material = MaterialCache::get()->fetch_or_add(material, Renderer::get()->context());
+		mesh_comp->material = material;
 	}
 
 	size_t mesh_vertex_count(MeshComponent* mesh_comp)
 	{
 		assert(mesh_comp != nullptr && "Cannot get vertex count via null mesh component");
-		Mesh* const mesh = MeshCache::get()->fetch(mesh_comp->mesh);
+		Mesh* const mesh = CACHE_FETCH(Mesh, mesh_comp->mesh);
 		if (mesh != nullptr)
 		{
 			return mesh->vertices.size();
@@ -33,7 +33,7 @@ namespace Sunset
 	size_t mesh_index_count(MeshComponent* mesh_comp)
 	{
 		assert(mesh_comp != nullptr && "Cannot get index count via null mesh component");
-		Mesh* const mesh = MeshCache::get()->fetch(mesh_comp->mesh);
+		Mesh* const mesh = CACHE_FETCH(Mesh, mesh_comp->mesh);
 		if (mesh != nullptr)
 		{
 			return mesh->indices.size();
@@ -41,25 +41,47 @@ namespace Sunset
 		return 0;
 	}
 
-	class Buffer* mesh_vertex_buffer(MeshComponent* mesh_comp)
+	BufferID mesh_vertex_buffer(MeshComponent* mesh_comp)
 	{
 		assert(mesh_comp != nullptr && "Cannot get vertex buffer via null mesh component");
-		Mesh* const mesh = MeshCache::get()->fetch(mesh_comp->mesh);
+		Mesh* const mesh = CACHE_FETCH(Mesh, mesh_comp->mesh);
 		if (mesh != nullptr)
 		{
 			return mesh->vertex_buffer;
 		}
-		return nullptr;
+		return 0;
 	}
 
-	class Buffer* mesh_index_buffer(MeshComponent* mesh_comp)
+	BufferID mesh_index_buffer(MeshComponent* mesh_comp)
 	{
 		assert(mesh_comp != nullptr && "Cannot get index buffer via null mesh component");
-		Mesh* const mesh = MeshCache::get()->fetch(mesh_comp->mesh);
+		Mesh* const mesh = CACHE_FETCH(Mesh, mesh_comp->mesh);
 		if (mesh != nullptr)
 		{
 			return mesh->index_buffer;
 		}
-		return nullptr;
+		return 0;
+	}
+
+	Sunset::Bounds mesh_local_bounds(MeshComponent* mesh_comp)
+	{
+		assert(mesh_comp != nullptr && "Cannot get mesh bounds via null mesh component");
+		Mesh* const mesh = CACHE_FETCH(Mesh, mesh_comp->mesh);
+		if (mesh != nullptr)
+		{
+			return mesh->local_bounds;
+		}
+		return Bounds();
+	}
+
+	Sunset::Bounds transform_mesh_bounds(MeshComponent* mesh_comp, glm::mat4 transform)
+	{
+		assert(mesh_comp != nullptr && "Cannot calculate mesh bounds via null mesh component");
+		Mesh* const mesh = CACHE_FETCH(Mesh, mesh_comp->mesh);
+		if (mesh != nullptr)
+		{
+			return calculate_mesh_bounds(mesh, transform);
+		}
+		return Bounds();
 	}
 }

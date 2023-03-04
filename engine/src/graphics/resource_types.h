@@ -11,8 +11,8 @@ namespace Sunset
 	struct ResourceStateData
 	{
 	public:
-		class Buffer* vertex_buffer{ nullptr };
-		class Buffer* index_buffer{ nullptr };
+		BufferID vertex_buffer{ 0 };
+		BufferID index_buffer{ 0 };
 		uint32_t instance_index{ 0 };
 		uint32_t vertex_count{ 0 };
 		uint32_t index_count{ 0 };
@@ -35,8 +35,8 @@ struct std::hash<Sunset::ResourceStateData>
 {
 	std::size_t operator()(const Sunset::ResourceStateData& psd) const
 	{
-		std::size_t seed = reinterpret_cast<uintptr_t>(psd.vertex_buffer);
-		seed = Sunset::Maths::cantor_pair_hash(static_cast<int32_t>(seed), reinterpret_cast<uintptr_t>(psd.index_buffer));
+		std::size_t seed = static_cast<int32_t>(psd.vertex_buffer);
+		seed = Sunset::Maths::cantor_pair_hash(static_cast<int32_t>(seed), static_cast<int32_t>(psd.index_buffer));
 		seed = Sunset::Maths::cantor_pair_hash(static_cast<int32_t>(seed), psd.instance_index);
 		return seed;
 	}

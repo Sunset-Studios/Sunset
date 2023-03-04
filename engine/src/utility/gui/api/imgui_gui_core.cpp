@@ -1,5 +1,6 @@
 #include <utility/gui/api/imgui_gui_core.h>
 #include <graphics/graphics_context.h>
+#include <graphics/command_queue.h>
 #include <graphics/renderer.h>
 #include <graphics/render_pass.h>
 #include <window/window.h>
@@ -17,7 +18,7 @@
 
 namespace Sunset
 {
-	void ImGUICore::initialize(class GraphicsContext* gfx_context, class Window* const window)
+	void ImGUICore::initialize(class GraphicsContext* gfx_context, class Window* const window, RenderPassID render_pass)
 	{
 		if (!b_initialized)
 		{
@@ -68,11 +69,11 @@ namespace Sunset
 				init_info.ImageCount = 3;
 				init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 
-				VulkanRenderPassData* render_pass_data = static_cast<VulkanRenderPassData*>(Renderer::get()->master_pass()->get_data());
+				VulkanRenderPassData* render_pass_data = static_cast<VulkanRenderPassData*>(CACHE_FETCH(RenderPass, render_pass)->get_data());
 				ImGui_ImplVulkan_Init(&init_info, render_pass_data->render_pass);
 			}
 
-			Renderer::get()->graphics_command_queue()->submit_immediate(gfx_context, [](void* command_buffer)
+			gfx_context->get_command_queue(DeviceQueueType::Graphics)->submit_immediate(gfx_context, [](void* command_buffer)
 			{
 				ImGui_ImplVulkan_CreateFontsTexture(static_cast<VkCommandBuffer>(command_buffer));
 			});
@@ -89,23 +90,35 @@ namespace Sunset
 
 	void ImGUICore::new_frame(class Window* const window)
 	{
-		ImGui_ImplVulkan_NewFrame();
-		ImGui_ImplSDL2_NewFrame(static_cast<SDL_Window*>(window->get_window_handle()));
-		ImGui::NewFrame();
+		if (b_initialized)
+		{
+			ImGui_ImplVulkan_NewFrame();
+			ImGui_ImplSDL2_NewFrame(static_cast<SDL_Window*>(window->get_window_handle()));
+			ImGui::NewFrame();
+		}
 	}
 
 	void ImGUICore::poll_events()
 	{
-		ImGui_ImplSDL2_ProcessEvent(&sdl_event);
+		if (b_initialized)
+		{
+			ImGui_ImplSDL2_ProcessEvent(&sdl_event);
+		}
 	}
 
 	void ImGUICore::begin_draw()
 	{
-		ImGui::Render();
+		if (b_initialized)
+		{
+			ImGui::Render();
+		}
 	}
 
 	void ImGUICore::end_draw(void* command_buffer)
 	{
-		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), static_cast<VkCommandBuffer>(command_buffer));
+		if (b_initialized)
+		{
+			ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), static_cast<VkCommandBuffer>(command_buffer));
+		}
 	}
 }

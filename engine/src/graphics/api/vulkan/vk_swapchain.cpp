@@ -1,6 +1,7 @@
 #include <graphics/api/vulkan/vk_swapchain.h>
 #include <graphics/graphics_context.h>
 #include <graphics/command_queue.h>
+#include <graphics/resource/image.h>
 #include <window/window.h>
 
 #include <VkBootstrap.h>
@@ -22,9 +23,21 @@ namespace Sunset
 			.value();
 
 		data.swapchain = vkb_swapchain.swapchain;
-		data.swapchain_images = vkb_swapchain.get_images().value();
-		data.swapchain_image_views = vkb_swapchain.get_image_views().value();
 		data.swapchain_image_format = vkb_swapchain.image_format;
+
+		std::vector<VkImage> swapchain_images = vkb_swapchain.get_images().value();
+		std::vector<VkImageView> swapchain_image_views = vkb_swapchain.get_image_views().value();
+		for (int i = 0; i < swapchain_images.size(); ++i)
+		{
+			data.swapchain_images.push_back(
+				ImageFactory::create(
+					gfx_context,
+					{ .name = std::string_view("swapchain_" + i) },
+					swapchain_images[i],
+					swapchain_image_views[i]
+				)
+			);
+		}
 	}
 
 	void VulkanSwapchain::destroy(GraphicsContext* const gfx_context)
@@ -33,9 +46,11 @@ namespace Sunset
 
 		vkDestroySwapchainKHR(context_state->get_device(), data.swapchain, nullptr);
 
-		for (int i = 0; i < data.swapchain_image_views.size(); ++i)
+		for (int i = 0; i < data.swapchain_images.size(); ++i)
 		{
-			vkDestroyImageView(context_state->get_device(), data.swapchain_image_views[i], nullptr);
+			Image* const image = CACHE_FETCH(Image, data.swapchain_images[i]);
+			vkDestroyImageView(context_state->get_device(), static_cast<VkImageView>(image->get_image_view()), nullptr);
+			CACHE_DELETE(Image, data.swapchain_images[i], gfx_context);
 		}
 	}
 
@@ -49,10 +64,10 @@ namespace Sunset
 	}
 
 
-	void VulkanSwapchain::present(GraphicsContext* const gfx_context, GraphicsCommandQueue* const command_queue)
+	void VulkanSwapchain::present(GraphicsContext* const gfx_context, DeviceQueueType queue_type)
 	{
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
-		VulkanCommandQueueData* command_queue_data = static_cast<VulkanCommandQueueData*>(command_queue->get_data());
+		VulkanCommandQueueData* command_queue_data = static_cast<VulkanCommandQueueData*>(gfx_context->get_command_queue(queue_type)->get_data());
 
 		const int16_t current_buffered_frame = gfx_context->get_buffered_frame_number();
 

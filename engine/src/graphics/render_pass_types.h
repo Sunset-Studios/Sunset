@@ -2,26 +2,44 @@
 
 #include <minimal.h>
 #include <functional>
+#include <utility/strings.h>
 
 namespace Sunset
 {
 	enum class RenderPassFlags : int32_t
 	{
-		None = 0,
-		Depth = 1,
-		Shadow = 1 << 1,
-		Main = 1 << 2,
-		Post = 1 << 3,
-		UI = 1 << 4,
-		All = 1 << 31
+		None = 0x00000000,
+		Compute = 0x00000001,
+		Graphics = 0x00000002,
+		Present = 0x00000004,
+		GraphLocal = 0x00000008 // For graph passes that should run locally, without creating and executing an actual GPU pass
 	};
 
-	inline void render_pass_type_visitor(const std::function<void(RenderPassFlags)>& visitor)
+	inline RenderPassFlags operator|(RenderPassFlags lhs, RenderPassFlags rhs)
 	{
-		visitor(RenderPassFlags::Depth);
-		visitor(RenderPassFlags::Shadow);
-		visitor(RenderPassFlags::Main);
-		visitor(RenderPassFlags::Post);
-		visitor(RenderPassFlags::UI);
+		return static_cast<RenderPassFlags>(static_cast<int32_t>(lhs) | static_cast<int32_t>(rhs));
 	}
+
+	inline RenderPassFlags operator&(RenderPassFlags lhs, RenderPassFlags rhs)
+	{
+		return static_cast<RenderPassFlags>(static_cast<int32_t>(lhs) & static_cast<int32_t>(rhs));
+	}
+
+	inline RenderPassFlags& operator|=(RenderPassFlags& lhs, RenderPassFlags rhs)
+	{
+		return lhs = lhs | rhs;
+	}
+
+	inline RenderPassFlags& operator&=(RenderPassFlags& lhs, RenderPassFlags rhs)
+	{
+		return lhs = lhs & rhs;
+	}
+
+	struct RenderPassConfig
+	{
+		Identity name;
+		RenderPassFlags flags;
+		std::vector<ImageID> attachments;
+		bool b_is_present_pass = false;
+	};
 }

@@ -9,7 +9,6 @@ namespace Sunset
 {
 	void VulkanPipelineState::initialize(class GraphicsContext* const gfx_context, PipelineStateData* state_data)
 	{
-
 	}
 
 	void VulkanPipelineState::destroy(class GraphicsContext* const gfx_context, PipelineStateData* state_data)
@@ -19,11 +18,11 @@ namespace Sunset
 		vkDestroyPipeline(context_state->get_device(), pipeline, nullptr);
 	}
 
-	void VulkanPipelineState::build(class GraphicsContext* const gfx_context, PipelineStateData* state_data, void* render_pass_data)
+	void VulkanPipelineState::build(class GraphicsContext* const gfx_context, PipelineStateData* state_data, class RenderPass* render_pass)
 	{
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
-		VulkanRenderPassData* render_pass = static_cast<VulkanRenderPassData*>(render_pass_data);
-		VkPipelineLayout pipeline_layout = static_cast<VkPipelineLayout>(state_data->layout->get_data());
+		VulkanRenderPassData* render_pass_data = static_cast<VulkanRenderPassData*>(render_pass->get_data());
+		VkPipelineLayout pipeline_layout = static_cast<VkPipelineLayout>(CACHE_FETCH(ShaderPipelineLayout, state_data->layout)->get_data());
 
 		std::vector<VkViewport> viewports(VK_FROM_SUNSET_VIEWPORT_LIST(state_data->viewports));
 		std::vector<VkRect2D> scissors(VK_FROM_SUNSET_SCISSORS_LIST(state_data->scissors));
@@ -33,7 +32,7 @@ namespace Sunset
 		std::vector<VkPipelineShaderStageCreateInfo> shader_stages;
 		for (PipelineShaderStage& shader_stage : state_data->shader_stages)
 		{
-			VulkanShaderData* shader_data = static_cast<VulkanShaderData*>(shader_stage.shader_module->get_data());
+			VulkanShaderData* shader_data = static_cast<VulkanShaderData*>(CACHE_FETCH(Shader, shader_stage.shader_module)->get_data());
 			shader_stages.push_back(new_shader_stage_create_info(VK_FROM_SUNSET_SHADER_STAGE_TYPE(shader_stage.stage_type), shader_data->shader_module));
 		}
 
@@ -50,9 +49,13 @@ namespace Sunset
 
 		VkPipelineMultisampleStateCreateInfo multisample_state = new_multisample_state_create_info(VK_FROM_SUNSET_MULTISAMPLE_COUNT(state_data->multisample_count));
 
-		VkPipelineColorBlendAttachmentState color_blend_attachment_state = new_color_blend_attachment_state();
-
-		VkPipelineColorBlendStateCreateInfo color_blending_state = new_color_blending_state(color_blend_attachment_state);
+		const uint32_t num_attachments = render_pass->get_num_color_attachments();
+		std::vector<VkPipelineColorBlendAttachmentState> color_blend_attachment_states(num_attachments);
+		for (int i = 0; i < num_attachments; ++i)
+		{
+			color_blend_attachment_states[i] = new_color_blend_attachment_state();
+		}
+		VkPipelineColorBlendStateCreateInfo color_blending_state = new_color_blending_state(color_blend_attachment_states);
 
 		VkPipelineDepthStencilStateCreateInfo depth_stencil_state = new_depth_stencil_state(state_data->b_depth_test_enabled, state_data->b_depth_write_enabled, VK_FROM_SUNSET_COMPARE_OP(state_data->compare_op));
 
@@ -69,7 +72,7 @@ namespace Sunset
 		pipeline_create_info.pColorBlendState = &color_blending_state;
 		pipeline_create_info.pDepthStencilState = &depth_stencil_state;
 		pipeline_create_info.layout = pipeline_layout;
-		pipeline_create_info.renderPass = render_pass->render_pass;
+		pipeline_create_info.renderPass = render_pass_data->render_pass;
 		pipeline_create_info.subpass = 0;
 		pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE;
 
@@ -83,9 +86,42 @@ namespace Sunset
 		pipeline = new_pipeline;
 	}
 
-	void VulkanPipelineState::bind(class GraphicsContext* const gfx_context, void* buffer)
+	void VulkanPipelineState::build_compute(class GraphicsContext* const gfx_context, PipelineStateData* state_data, void* render_pass_data)
 	{
-		vkCmdBindPipeline(static_cast<VkCommandBuffer>(buffer), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+		if (state_data->shader_stages.empty())
+		{
+			std::cout << "Vulkan pipeline error: Cannot create compute pipeline without shader stages" << std::endl;
+			return;
+		}
+
+		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
+		VkPipelineLayout pipeline_layout = static_cast<VkPipelineLayout>(CACHE_FETCH(ShaderPipelineLayout, state_data->layout)->get_data());
+
+		PipelineShaderStage& stage = state_data->shader_stages.back();
+		VulkanShaderData* shader_data = static_cast<VulkanShaderData*>(CACHE_FETCH(Shader, stage.shader_module)->get_data());
+		VkPipelineShaderStageCreateInfo shader_stage = new_shader_stage_create_info(VK_FROM_SUNSET_SHADER_STAGE_TYPE(stage.stage_type), shader_data->shader_module);
+
+		VkComputePipelineCreateInfo pipeline_create_info = {};
+		pipeline_create_info.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+		pipeline_create_info.pNext = nullptr;
+		pipeline_create_info.stage = shader_stage;
+		pipeline_create_info.layout = pipeline_layout;
+		
+		pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE;
+
+		VkPipeline new_pipeline;
+		if (vkCreateComputePipelines(context_state->get_device(), VK_NULL_HANDLE, 1, &pipeline_create_info, nullptr, &new_pipeline) != VK_SUCCESS)
+		{
+			std::cout << "Vulkan pipeline error: Failed to create compute pipeline" << std::endl;
+			return;
+		}
+
+		pipeline = new_pipeline;
+	}
+
+	void VulkanPipelineState::bind(class GraphicsContext* const gfx_context, PipelineStateType type, void* buffer)
+	{
+		vkCmdBindPipeline(static_cast<VkCommandBuffer>(buffer), VK_FROM_SUNSET_PIPELINE_STATE_BIND_TYPE(type), pipeline);
 	}
 
 	VkPipelineViewportStateCreateInfo VulkanPipelineState::new_viewport_state_create_info(const std::vector<VkViewport>& viewports, const std::vector<VkRect2D>& scissors)
@@ -174,15 +210,15 @@ namespace Sunset
 		return color_blend_attachment;
 	}
 
-	VkPipelineColorBlendStateCreateInfo VulkanPipelineState::new_color_blending_state(VkPipelineColorBlendAttachmentState& color_blend_attachment_state)
+	VkPipelineColorBlendStateCreateInfo VulkanPipelineState::new_color_blending_state(std::vector<VkPipelineColorBlendAttachmentState>& color_blend_attachment_states)
 	{
 		VkPipelineColorBlendStateCreateInfo color_blending_state = {};
 		color_blending_state.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
 		color_blending_state.pNext = nullptr;
 		color_blending_state.logicOpEnable = VK_FALSE;
 		color_blending_state.logicOp = VK_LOGIC_OP_COPY;
-		color_blending_state.attachmentCount = 1;
-		color_blending_state.pAttachments = &color_blend_attachment_state;
+		color_blending_state.attachmentCount = color_blend_attachment_states.size();
+		color_blending_state.pAttachments = color_blend_attachment_states.data();
 		return color_blending_state;
 	}
 

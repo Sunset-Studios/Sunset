@@ -5,6 +5,8 @@
 #include <vk_types.h>
 #include <vk_initializers.h>
 
+#include <graphics/command_queue_types.h>
+
 namespace Sunset
 {
 	struct VulkanSwapchainData
@@ -12,8 +14,7 @@ namespace Sunset
 		public:
 			VkSwapchainKHR swapchain;
 			VkFormat swapchain_image_format;
-			std::vector<VkImage> swapchain_images;
-			std::vector<VkImageView> swapchain_image_views;
+			std::vector<ImageID> swapchain_images;
 			uint32_t current_image_index;
 	};
 
@@ -32,8 +33,18 @@ namespace Sunset
 				return &data;
 			}
 
+			Format get_format()
+			{
+				return SUNSET_FROM_VK_FORMAT(data.swapchain_image_format);
+			}
+
+			uint32_t get_current_image_index()
+			{
+				return data.current_image_index;
+			}
+
 			void request_next_image(class GraphicsContext* const gfx_context);
-			void present(class GraphicsContext* const gfx_context, class GraphicsCommandQueue* const command_queue);
+			void present(class GraphicsContext* const gfx_context, DeviceQueueType queue_type);
 
 		protected:
 			VulkanSwapchainData data;

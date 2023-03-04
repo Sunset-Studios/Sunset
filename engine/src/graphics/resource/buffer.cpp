@@ -4,19 +4,16 @@
 
 namespace Sunset
 {
-	Sunset::Buffer* BufferFactory::create(class GraphicsContext* const gfx_context, size_t buffer_size, BufferType type, MemoryUsageType memory_usage, bool auto_delete)
+	Sunset::BufferID BufferFactory::create(class GraphicsContext* const gfx_context, const BufferConfig& config, bool auto_delete)
 	{
-		Buffer* buffer = GlobalAssetPools<Buffer>::get()->allocate();
-		buffer->initialize(gfx_context, buffer_size, type, memory_usage);
-		if (auto_delete)
+		bool b_added{ false };
+		BufferID buffer_id = BufferCache::get()->fetch_or_add(config.name, gfx_context, b_added, auto_delete);
+		if (b_added)
 		{
-			gfx_context->add_resource_deletion_execution([buffer, gfx_context]()
-			{
-				buffer->destroy(gfx_context);
-				GlobalAssetPools<Buffer>::get()->deallocate(buffer);
-			});
+			Buffer* buffer = CACHE_FETCH(Buffer, buffer_id);
+			buffer->initialize(gfx_context, config);
 		}
-		return buffer;
+		return buffer_id;
 	}
 
 	size_t BufferHelpers::pad_ubo_size(size_t ubo_size, size_t min_ubo_alignment)

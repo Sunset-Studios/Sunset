@@ -1,8 +1,8 @@
 #pragma once
 
 #include <common.h>
-#include <singleton.h>
 #include <graphics/resource/shader_types.h>
+#include <graphics/resource/resource_cache.h>
 
 namespace Sunset
 {
@@ -27,6 +27,21 @@ namespace Sunset
 			return shader_policy.get_data();
 		}
 
+		bool is_compiled() const
+		{
+			return shader_policy.is_compiled();
+		}
+
+		size_t get_code_size()
+		{
+			return shader_policy.get_code_size();
+		}
+
+		uint32_t* get_code()
+		{
+			return shader_policy.get_code();
+		}
+
 	private:
 		Policy shader_policy;
 	};
@@ -42,7 +57,30 @@ namespace Sunset
 		void destroy(class GraphicsContext* const gfx_context)
 		{ }
 
+		void reflect_shader_layout(class GraphicsContext* const gfx_context)
+		{ }
+
 		void* get_data()
+		{
+			return nullptr;
+		}
+
+		ShaderLayoutID get_shader_layout()
+		{
+			return 0;
+		}
+
+		bool is_compiled() const
+		{
+			return false;
+		}
+
+		size_t get_code_size()
+		{
+			return 0;
+		}
+
+		uint32_t* get_code()
 		{
 			return nullptr;
 		}
@@ -56,28 +94,11 @@ namespace Sunset
 	{ };
 #endif
 
-	class ShaderCache : public Singleton<ShaderCache>
+	class ShaderFactory
 	{
-		friend class Singleton;
-
 	public:
-		void initialize();
-		void update();
-
-		ShaderID fetch_or_add(const char* file_path, class GraphicsContext* const gfx_context = nullptr);
-		Shader* fetch(ShaderID id);
-		void remove(ShaderID id);
-		void destroy(class GraphicsContext* const gfx_context);
-
-		size_t size() const
-		{
-			return cache.size();
-		}
-
-	protected:
-		std::unordered_map<ShaderID, Shader*> cache;
-
-	private:
-		ShaderCache() = default;
+		static ShaderID create(class GraphicsContext* gfx_context, const char* shader_path);
 	};
+
+	DEFINE_RESOURCE_CACHE(ShaderCache, ShaderID, Shader);
 }

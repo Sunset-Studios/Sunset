@@ -1,11 +1,32 @@
 #pragma once
 
 #include <common.h>
-#include <utility/pattern/singleton.h>
 #include <graphics/descriptor_types.h>
+#include <graphics/resource/resource_cache.h>
 
 namespace Sunset
 {
+	constexpr uint32_t MAX_DESCRIPTOR_BINDINGS = 16536;
+
+	// Binding table is mostly used for bindless descriptor sets, so that we have a simple interface
+	// for pooling array descriptors.
+	struct DescriptorBindingTable
+	{
+		struct BindingTableEntry
+		{
+			uint32_t total_bindings_count;
+			std::vector<int32_t> free_indices;
+			std::vector<int32_t> bound_indices;
+		};
+		std::unordered_map<uint32_t, BindingTableEntry> binding_table;
+
+		inline bool has_binding_slot(uint32_t slot);
+		void add_binding_slot(uint32_t slot, uint32_t count);
+		int32_t get_new(uint32_t slot);
+		void free(uint32_t slot, int32_t index);
+		void reset(uint32_t slot);
+	};
+
 	// BEGIN - Descriptor Set Layout
 	template<class Policy>
 	class GenericDescriptorLayout
@@ -23,14 +44,29 @@ namespace Sunset
 			bindings = new_bindings;
 		}
 
+		std::vector<DescriptorBinding>& get_bindings()
+		{
+			return bindings;
+		}
+
 		void build(class GraphicsContext* const gfx_context)
 		{
 			descriptor_layout_policy.build(gfx_context, bindings);
 		}
 
+		void destroy(class GraphicsContext* const gfx_context)
+		{
+			descriptor_layout_policy.destroy(gfx_context);
+		}
+
 		void* get() const
 		{
 			return descriptor_layout_policy.get();
+		}
+
+		bool supports_bindless() const
+		{
+			return descriptor_layout_policy.supports_bindless();
 		}
 
 	private:
@@ -46,9 +82,17 @@ namespace Sunset
 		void build(class GraphicsContext* const gfx_context, const std::vector<DescriptorBinding>& bindings)
 		{ }
 
+		void destroy(class GraphicsContext* const gfx_context)
+		{ }
+
 		void* get() const
 		{
 			return nullptr;
+		}
+
+		bool supports_bindless() const
+		{
+			return false;
 		}
 	};
 
@@ -60,22 +104,13 @@ namespace Sunset
 	{ };
 #endif
 
-	class DescriptorLayoutCache : public Singleton<DescriptorLayoutCache>
+	class DescriptorLayoutFactory
 	{
-		friend class Singleton;
-
 	public:
-		void initialize() { }
-
-		DescriptorLayoutID fetch_or_add(const std::vector<DescriptorBinding>& bindings, class GraphicsContext* const gfx_context);
-		DescriptorLayout* fetch(DescriptorLayoutID layout_id);
-
-	private:
-		DescriptorLayoutCache() = default;
-
-	private:
-		std::unordered_map<DescriptorLayoutID, DescriptorLayout*> descriptor_layouts;
+		static DescriptorLayoutID create(class GraphicsContext* const gfx_context, const std::vector<DescriptorBinding>& bindings);
 	};
+
+	DEFINE_RESOURCE_CACHE(DescriptorLayoutCache, DescriptorLayoutID, DescriptorLayout);
 	// END - Descriptor Set Layout
 
 	// BEGIN - Descriptor Set
@@ -90,9 +125,9 @@ namespace Sunset
 			return descriptor_set_policy.build(gfx_context, descriptor_layout, descriptor_pool);
 		}
 
-		void bind(class GraphicsContext* const gfx_context, void* cmd_buffer, PipelineStateID pipeline_state, const std::vector<uint32_t>& dynamic_buffer_offsets = {}, uint32_t set_index = 0)
+		void bind(class GraphicsContext* const gfx_context, void* cmd_buffer, ShaderLayoutID layout, PipelineStateType pipeline_state_type = PipelineStateType::Graphics, uint32_t set_index = 0)
 		{
-			descriptor_set_policy.bind(gfx_context, cmd_buffer, pipeline_state, dynamic_buffer_offsets, set_index);
+			descriptor_set_policy.bind(gfx_context, cmd_buffer, layout, pipeline_state_type, dynamic_buffer_offsets, set_index);
 		}
 
 		void* get() const
@@ -100,8 +135,25 @@ namespace Sunset
 			return descriptor_set_policy.get();
 		}
 
+		int32_t get_free_bindless_index(uint32_t slot)
+		{
+			return binding_table.get_new(slot);
+		}
+
+		void register_bindless_slot(uint32_t slot, uint32_t count)
+		{
+			binding_table.add_binding_slot(slot, count);
+		}
+
+		void set_dynamic_buffer_offsets(const std::vector<uint32_t>& buffer_offsets)
+		{
+			dynamic_buffer_offsets = buffer_offsets;
+		}
+
 	private:
 		Policy descriptor_set_policy;
+		DescriptorBindingTable binding_table;
+		std::vector<uint32_t> dynamic_buffer_offsets;
 	};
 
 	class NoopDescriptorSet
@@ -112,7 +164,10 @@ namespace Sunset
 		bool build(class GraphicsContext* const gfx_context, class DescriptorLayout* descriptor_layout, void* descriptor_pool)
 		{ }
 
-		void bind(class GraphicsContext* const gfx_context, void* cmd_buffer, PipelineStateID pipeline_state, const std::vector<uint32_t>& dynamic_buffer_offsets = {}, uint32_t set_index = 0)
+		void bind(class GraphicsContext* const gfx_context, void* cmd_buffer, ShaderLayoutID layout, const std::vector<uint32_t>& dynamic_buffer_offsets = {}, uint32_t set_index = 0)
+		{ }
+
+		void bind(class GraphicsContext* const gfx_context, void* cmd_buffer, ShaderLayoutID layout, PipelineStateType pipeline_state_type = PipelineStateType::Graphics, const std::vector<uint32_t>& dynamic_buffer_offsets = {}, uint32_t set_index = 0)
 		{ }
 
 		void* get() const
@@ -214,12 +269,12 @@ namespace Sunset
 
 		static DescriptorSetBuilder begin(class GraphicsContext* const context);
 
-		DescriptorSetBuilder& bind_buffer(uint16_t binding, class Buffer* buffer, size_t range_size, DescriptorType type, PipelineShaderStageType shader_stages);
+		DescriptorSetBuilder& bind_buffer(uint16_t binding, class Buffer* buffer, size_t range_size, uint32_t count, DescriptorType type, PipelineShaderStageType shader_stages, size_t buffer_offset, bool b_supports_bindless = false);
 		DescriptorSetBuilder& bind_buffer(const DescriptorBuildData& build_data);
-		DescriptorSetBuilder& bind_image(uint16_t binding, class Image* image, size_t range_size, DescriptorType type, PipelineShaderStageType shader_stages);
+		DescriptorSetBuilder& bind_image(uint16_t binding, class Image* image, size_t range_size, uint32_t count, DescriptorType type, PipelineShaderStageType shader_stages, bool b_supports_bindless = false);
 		DescriptorSetBuilder& bind_image(const DescriptorBuildData& build_data);
 
-		bool build(DescriptorSet*& out_descriptor_set, DescriptorLayout*& out_descriptor_layout);
+		bool build(DescriptorSet*& out_descriptor_set, DescriptorLayoutID& out_descriptor_layout);
 
 	private:
 		class GraphicsContext* gfx_context{ nullptr };
@@ -232,7 +287,10 @@ namespace Sunset
 	class DescriptorHelpers
 	{
 	public:
-		static void inject_descriptors(class GraphicsContext* const context, DescriptorData& out_descriptor_data, const std::vector<DescriptorBuildData>& descriptor_build_datas);
+		static void inject_descriptors(class GraphicsContext* const gfx_context, DescriptorData& out_descriptor_data, const std::vector<DescriptorBuildData>& descriptor_build_datas);
+		static DescriptorSet* new_descriptor_set_with_layout(class GraphicsContext* const gfx_context, DescriptorLayoutID descriptor_layout);
+		static void write_descriptors(class GraphicsContext* const gfx_context, DescriptorSet* descriptor_set, const std::vector<DescriptorWrite>& descriptor_writes);
+		static void write_bindless_descriptors(class GraphicsContext* const gfx_context, const std::vector<DescriptorBindlessWrite>& descriptor_writes, int32_t* out_array_indices);
 	};
 	// END - Descriptor Helpers
 }

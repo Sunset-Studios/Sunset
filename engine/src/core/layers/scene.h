@@ -24,7 +24,7 @@ namespace Sunset
 		SceneLightingData lighting;
 		uint32_t cam_data_buffer_start{ 0 };
 		uint32_t lighting_data_buffer_start{ 0 };
-		class Buffer* buffer{ nullptr };
+		BufferID buffer{ 0 };
 	};
 
 	class Scene : public SimulationLayer

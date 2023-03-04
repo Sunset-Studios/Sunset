@@ -6,13 +6,14 @@
 #include <vk_initializers.h>
 
 #include <graphics/pipeline_types.h>
+#include <graphics/render_pass_types.h>
 
 namespace Sunset
 {
 	struct VulkanRenderPassData
 	{
 		VkRenderPass render_pass{ nullptr };
-		std::vector<class Framebuffer*> output_framebuffers;
+		std::vector<FramebufferID> output_framebuffers;
 	};
 
 	class VulkanRenderPass
@@ -22,35 +23,32 @@ namespace Sunset
 		~VulkanRenderPass() = default;
 
 	public:
-		void initialize(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, const std::initializer_list<class Image*>& attachments);
-		void initialize_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, const std::initializer_list<class Image*>& attachments);
+		void initialize_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RenderPassConfig& config);
 		void destroy(class GraphicsContext* const gfx_context);
-		void draw(class GraphicsContext* const gfx_context, void* command_buffer);
 
 		void* get_data()
 		{
 			return &data;
 		}
 
-		std::vector<class Framebuffer*> get_output_framebuffers()
+		std::vector<FramebufferID> get_output_framebuffers()
 		{
 			return data.output_framebuffers;
 		}
 
-		void set_output_framebuffers(std::vector<class Framebuffer*>&& framebuffers)
+		void set_output_framebuffers(std::vector<FramebufferID>&& framebuffers)
 		{
 			data.output_framebuffers = framebuffers;
 		}
 
-		void begin_pass(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, void* command_buffer);
-		void end_pass(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, void* command_buffer);
+		void begin_pass(class GraphicsContext* const gfx_context, uint32_t framebuffer_index, void* command_buffer, const RenderPassConfig& pass_config);
+		void end_pass(class GraphicsContext* const gfx_context, void* command_buffer, const RenderPassConfig& pass_config);
+		uint32_t get_num_color_attachments(const RenderPassConfig& config);
 
 	protected:
-		void create_default_output_framebuffers(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, const std::initializer_list<class Image*>& attachments);
+		void create_default_output_framebuffers(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, const RenderPassConfig& config, const std::vector<ImageID>& attachments);
 
 	protected:
 		VulkanRenderPassData data;
-		std::vector<PipelineStateID> pass_pipelines_states;
-		size_t current_pso_index{ 0 };
 	};
 }

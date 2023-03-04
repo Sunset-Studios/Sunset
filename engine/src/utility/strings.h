@@ -4,6 +4,10 @@
 
 namespace Sunset
 {
+#ifndef NDEBUG
+	extern std::unordered_map<uint32_t, std::string> g_string_table;
+#endif
+
 	constexpr uint32_t fnvla_32(char const* s, std::size_t count)
 	{
 		return ((count > 0 ? fnvla_32(s, count - 1) : 2166136261u) ^ s[count]) * 16777619u;
@@ -19,37 +23,75 @@ namespace Sunset
 		return size;
 	}
 
-	struct StringHash
+	struct Identity
 	{
 		uint32_t computed_hash;
 
-		constexpr StringHash(uint32_t hash) noexcept
+		constexpr Identity(uint32_t hash = 0) noexcept
 			: computed_hash(hash)
 		{ }
 
-		constexpr StringHash(const char* s) noexcept
+		constexpr Identity(const char* s) noexcept
 			: computed_hash(0)
 		{
 			computed_hash = fnvla_32(s, const_strlen(s));
+#ifndef NDEBUG
+			g_string_table[computed_hash] = s;
+#endif
 		}
 
-		constexpr StringHash(const char* s, std::size_t count) noexcept
+		constexpr Identity(const char* s, std::size_t count) noexcept
 			: computed_hash(0)
 		{
 			computed_hash = fnvla_32(s, count);
+#ifndef NDEBUG
+			g_string_table[computed_hash] = s;
+#endif
 		}
 
-		constexpr StringHash(std::string_view s) noexcept
+		constexpr Identity(std::string_view s) noexcept
 			: computed_hash(0)
 		{
 			computed_hash = fnvla_32(s.data(), s.size());
+#ifndef NDEBUG
+			g_string_table[computed_hash] = s;
+#endif
 		}
 
-		StringHash(const StringHash& other) = default;
+		Identity(const Identity& other) = default;
 
 		constexpr operator uint32_t() noexcept
 		{
 			return computed_hash;
 		}
+
+		constexpr operator std::string() noexcept
+		{
+#ifndef NDEBUG
+			return g_string_table.find(computed_hash) != g_string_table.end() ? g_string_table[computed_hash] : "";
+#else
+			return "";
+#endif
+		}
+
+		constexpr bool operator==(const Identity& other) const noexcept
+		{
+			return computed_hash == other.computed_hash;
+		}
 	};
 }
+
+#pragma warning( push )
+#pragma warning( disable : 4244)
+#pragma warning( disable : 4267)
+
+template<>
+struct std::hash<Sunset::Identity>
+{
+	std::size_t operator()(const Sunset::Identity& id) const
+	{
+		return id.computed_hash;
+	}
+};
+
+#pragma warning( pop ) 

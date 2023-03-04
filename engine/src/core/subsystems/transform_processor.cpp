@@ -11,9 +11,16 @@ namespace Sunset
 	{
 		for (int i = 0; i < MAX_BUFFERED_FRAMES; ++i)
 		{
-			if (EntityGlobals::get()->transforms.transform_buffer[i] == nullptr)
+			if (EntityGlobals::get()->entity_data.data_buffer[i] == 0)
 			{
-				EntityGlobals::get()->transforms.transform_buffer[i] = BufferFactory::create(Renderer::get()->context(), sizeof(glm::mat4) * MIN_ENTITIES, BufferType::StorageBuffer);
+				EntityGlobals::get()->entity_data.data_buffer[i] = BufferFactory::create(
+					Renderer::get()->context(),
+					{
+						.name = "entity_datas",
+						.buffer_size = sizeof(EntitySceneData) * MIN_ENTITIES,
+						.type = BufferType::StorageBuffer
+					}
+				);
 			}
 		}
 	}
@@ -31,6 +38,8 @@ namespace Sunset
 				glm::mat4 scale = glm::scale(glm::mat4(1.0f), transform_comp->transform.scale);
 				transform_comp->transform.local_matrix = translation * rotation * scale;
 				transform_comp->transform.b_dirty = false;
+
+				EntityGlobals::get()->entity_transform_dirty_states.set(get_entity_index(entity));
 			}
 		}
 	}

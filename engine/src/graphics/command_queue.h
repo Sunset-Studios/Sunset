@@ -1,6 +1,7 @@
 #pragma once
 
 #include <common.h>
+#include <command_queue_types.h>
 
 namespace Sunset
 {
@@ -10,14 +11,14 @@ namespace Sunset
 	public:
 		GenericCommandQueue() = default;
 
-		void initialize(class GraphicsContext* const gfx_context)
+		void initialize(void* gfx_context_state, DeviceQueueType queue_type)
 		{
-			queue_policy.initialize(gfx_context);
+			queue_policy.initialize(gfx_context_state, queue_type);
 		}
 
-		void destroy(class GraphicsContext* const gfx_context)
+		void destroy(void* gfx_context_state)
 		{
-			queue_policy.destroy(gfx_context);
+			queue_policy.destroy(gfx_context_state);
 		}
 
 		void* get_data()
@@ -25,14 +26,14 @@ namespace Sunset
 			return queue_policy.get_data();
 		}
 
-		void new_command_pool(class GraphicsContext* const gfx_context, void* command_pool_ptr)
+		void new_command_pool(void* gfx_context_state, void* command_pool_ptr)
 		{
-			queue_policy.new_command_pool(gfx_context, command_pool_ptr);
+			queue_policy.new_command_pool(gfx_context_state, command_pool_ptr);
 		}
 
-		void new_command_buffers(class GraphicsContext* const gfx_context, void* command_buffer_ptr, void* command_pool_ptr, uint16_t count = 1)
+		void new_command_buffers(void* gfx_context_state, void* command_buffer_ptr, void* command_pool_ptr, uint16_t count = 1)
 		{
-			queue_policy.new_command_buffers(gfx_context, command_buffer_ptr, command_pool_ptr, count);
+			queue_policy.new_command_buffers(gfx_context_state, command_buffer_ptr, command_pool_ptr, count);
 		}
 
 		void* begin_one_time_buffer_record(class GraphicsContext* const gfx_context)
@@ -64,10 +65,10 @@ namespace Sunset
 	public:
 		NoopCommandQueue() = default;
 
-		void initialize(class GraphicsContext* const gfx_context)
+		void initialize(void* gfx_context_state, DeviceQueueType queue_type)
 		{ }
 
-		void destroy(class GraphicsContext* const gfx_context)
+		void destroy(void* gfx_context_state)
 		{ }
 
 		void* get_data()
@@ -75,12 +76,12 @@ namespace Sunset
 			return nullptr;
 		}
 
-		void new_command_pool(class GraphicsContext* const gfx_context, void* command_pool_ptr)
+		void new_command_pool(void* gfx_context_state, void* command_pool_ptr)
 		{
 			command_pool_ptr = nullptr;
 		}
 
-		void new_command_buffers(class GraphicsContext* const gfx_context, void* command_buffer_ptr, void* command_pool_ptr, uint16_t count = 1)
+		void new_command_buffers(void* gfx_context_state, void* command_buffer_ptr, void* command_pool_ptr, uint16_t count = 1)
 		{
 			command_buffer_ptr = nullptr;
 		}
@@ -101,22 +102,21 @@ namespace Sunset
 	};
 
 #if USE_VULKAN_GRAPHICS
-	class GraphicsCommandQueue : public GenericCommandQueue<VulkanCommandQueue>
+	class CommandQueue : public GenericCommandQueue<VulkanCommandQueue>
 	{ };
 #else
-	class GraphicsCommandQueue : public GenericCommandQueue<NoopCommandQueue>
+	class CommandQueue : public GenericCommandQueue<NoopCommandQueue>
 	{ };
 #endif
 
 	class GraphicsCommandQueueFactory
 	{
 	public:
-		template<typename ...Args>
-		static std::unique_ptr<GraphicsCommandQueue> create(Args&&... args)
+		static CommandQueue* create(void* gfx_context_state, DeviceQueueType queue_type)
 		{
-			GraphicsCommandQueue* gfx = new GraphicsCommandQueue;
-			gfx->initialize(std::forward<Args>(args)...);
-			return std::unique_ptr<GraphicsCommandQueue>(gfx);
+			CommandQueue* queue = new CommandQueue;
+			queue->initialize(gfx_context_state, queue_type);
+			return queue;
 		}
 	};
 }

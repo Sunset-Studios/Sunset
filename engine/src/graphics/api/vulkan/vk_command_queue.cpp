@@ -5,22 +5,38 @@
 
 namespace Sunset
 {
-	void VulkanCommandQueue::initialize(GraphicsContext* const gfx_context)
+	void VulkanCommandQueue::initialize(void* gfx_context_state, DeviceQueueType queue_type)
 	{
-		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
+		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context_state);
 
-		// TODO: May want a way to specify what kind of queue we need (i.e. transfer queues, present queues, compute queues, etc.)
-		data.graphics_queue = context_state->device.get_queue(vkb::QueueType::graphics).value();
-		data.graphics_queue_family = context_state->device.get_queue_index(vkb::QueueType::graphics).value();
+		switch (queue_type)
+		{
+		case Sunset::DeviceQueueType::Graphics:
+			data.graphics_queue = context_state->device.get_queue(vkb::QueueType::graphics).value();
+			data.graphics_queue_family = context_state->device.get_queue_index(vkb::QueueType::graphics).value();
+			break;
+		case Sunset::DeviceQueueType::Compute:
+			data.graphics_queue = context_state->device.get_queue(vkb::QueueType::compute).value();
+			data.graphics_queue_family = context_state->device.get_queue_index(vkb::QueueType::compute).value();
+			break;
+		case Sunset::DeviceQueueType::Transfer:
+			data.graphics_queue = context_state->device.get_queue(vkb::QueueType::transfer).value();
+			data.graphics_queue_family = context_state->device.get_queue_index(vkb::QueueType::transfer).value();
+			break;
+		default:
+			data.graphics_queue = context_state->device.get_queue(vkb::QueueType::graphics).value();
+			data.graphics_queue_family = context_state->device.get_queue_index(vkb::QueueType::graphics).value();
+			break;
+		}
 
 		for (int16_t frame_number = 0; frame_number < MAX_BUFFERED_FRAMES; ++frame_number)
 		{
-			new_command_pool(gfx_context, &data.frame_command_pool_data[frame_number].command_pool, frame_number);
-			new_command_buffers(gfx_context, &data.frame_command_pool_data[frame_number].command_buffer, data.frame_command_pool_data[frame_number].command_pool, 1, frame_number);
+			new_command_pool(gfx_context_state, &data.frame_command_pool_data[frame_number].command_pool, frame_number);
+			new_command_buffers(gfx_context_state, &data.frame_command_pool_data[frame_number].command_buffer, data.frame_command_pool_data[frame_number].command_pool, 1, frame_number);
 		}
 
-		new_command_pool(gfx_context, &data.immediate_command_data.command_pool);
-		new_command_buffers(gfx_context, &data.immediate_command_data.command_buffer, data.immediate_command_data.command_pool);
+		new_command_pool(gfx_context_state, &data.immediate_command_data.command_pool);
+		new_command_buffers(gfx_context_state, &data.immediate_command_data.command_buffer, data.immediate_command_data.command_pool);
 
 		data.immediate_command_data.fence = context_state->sync_pool.new_fence(context_state);
 
@@ -28,9 +44,9 @@ namespace Sunset
 		vkResetFences(context_state->get_device(), 1, &render_fence);
 	}
 
-	void VulkanCommandQueue::destroy(GraphicsContext* const gfx_context)
+	void VulkanCommandQueue::destroy(void* gfx_context_state)
 	{
-		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
+		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context_state);
 
 		vkDestroyCommandPool(context_state->get_device(), data.immediate_command_data.command_pool, nullptr);
 
@@ -43,9 +59,9 @@ namespace Sunset
 		}
 	}
 
-	void VulkanCommandQueue::new_command_pool(GraphicsContext* const gfx_context, void* command_pool_ptr, uint16_t buffered_frame_number)
+	void VulkanCommandQueue::new_command_pool(void* gfx_context_state, void* command_pool_ptr, uint16_t buffered_frame_number)
 	{
-		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
+		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context_state);
 
 		VkCommandPoolCreateInfo command_pool_info = {};
 		command_pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -57,9 +73,9 @@ namespace Sunset
 		VK_CHECK(vkCreateCommandPool(context_state->get_device(), &command_pool_info, nullptr, static_cast<VkCommandPool*>(command_pool_ptr)));
 	}
 
-	void VulkanCommandQueue::new_command_buffers(class GraphicsContext* const gfx_context, void* command_buffer_ptr, void* command_pool_ptr, uint16_t count, uint16_t buffered_frame_number)
+	void VulkanCommandQueue::new_command_buffers(void* gfx_context_state, void* command_buffer_ptr, void* command_pool_ptr, uint16_t count, uint16_t buffered_frame_number)
 	{
-		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
+		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context_state);
 		VkCommandPool command_pool = static_cast<VkCommandPool>(command_pool_ptr);
 
 		VkCommandBufferAllocateInfo cmd_allocate_info = {};

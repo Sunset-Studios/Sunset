@@ -6,33 +6,6 @@
 
 namespace Sunset
 {
-	Sunset::DescriptorLayoutID DescriptorLayoutCache::fetch_or_add(const std::vector<DescriptorBinding>& bindings, class GraphicsContext* const gfx_context)
-	{
-		DescriptorLayoutID id{ 0 };
-		for (const DescriptorBinding& binding : bindings)
-		{
-			id = Maths::cantor_pair_hash(static_cast<int32_t>(id), static_cast<int32_t>(std::hash<DescriptorBinding>{}(binding)));
-		}
-		if (descriptor_layouts.find(id) == descriptor_layouts.end())
-		{
-			DescriptorLayout* const new_descriptor_layout = GlobalAssetPools<DescriptorLayout>::get()->allocate();
-			new_descriptor_layout->set_bindings(bindings);
-			new_descriptor_layout->build(gfx_context);
-			gfx_context->add_resource_deletion_execution([new_descriptor_layout, gfx_context]()
-			{
-				GlobalAssetPools<DescriptorLayout>::get()->deallocate(new_descriptor_layout);
-			});
-			descriptor_layouts.insert({ id, new_descriptor_layout });
-		}
-		return id;
-	}
-
-	Sunset::DescriptorLayout* DescriptorLayoutCache::fetch(DescriptorLayoutID layout_id)
-	{
-		assert(descriptor_layouts.find(layout_id) != descriptor_layouts.end());
-		return descriptor_layouts[layout_id];
-	}
-
 	Sunset::DescriptorSetBuilder DescriptorSetBuilder::begin(class GraphicsContext* const context)
 	{
 		DescriptorSetBuilder builder;
@@ -40,39 +13,60 @@ namespace Sunset
 		return builder;
 	}
 
-	Sunset::DescriptorSetBuilder& DescriptorSetBuilder::bind_buffer(uint16_t binding, Buffer* buffer, size_t range_size, DescriptorType type, PipelineShaderStageType shader_stages)
+	Sunset::DescriptorSetBuilder& DescriptorSetBuilder::bind_buffer(uint16_t binding, Buffer* buffer, size_t range_size, uint32_t count, DescriptorType type, PipelineShaderStageType shader_stages, size_t buffer_offset, bool b_supports_bindless)
 	{
-		bindings.push_back({ .slot = binding, .count = 1, .type = type, .pipeline_stages = shader_stages });
-		descriptor_writes.push_back({ .slot = binding, .count = 1, .type = type, .buffer = buffer->get(), .buffer_size = buffer->get_size(), .buffer_range = range_size, .set = nullptr });
+		bindings.push_back({ .slot = binding, .count = count, .type = type, .pipeline_stages = shader_stages, .b_supports_bindless = b_supports_bindless });
+		if (buffer != nullptr)
+		{
+			DescriptorBufferDesc buffer_desc{ .buffer = buffer->get(), .buffer_size = buffer->get_size(), .buffer_range = range_size, .buffer_offset = buffer_offset };
+			descriptor_writes.push_back({ .slot = binding, .count = count, .type = type, .buffer_desc = buffer_desc, .set = nullptr });
+		}
 		return *this;
 	}
 
 	Sunset::DescriptorSetBuilder& DescriptorSetBuilder::bind_buffer(const DescriptorBuildData& build_data)
 	{
-		return bind_buffer(build_data.binding, build_data.buffer, build_data.buffer_range, build_data.type, build_data.shader_stages);
+		Buffer* const buffer = CACHE_FETCH(Buffer, build_data.buffer);
+		return bind_buffer(build_data.binding, buffer, build_data.buffer_range, build_data.count, build_data.type, build_data.shader_stages, build_data.buffer_offset, build_data.b_supports_bindless);
 	}
 
-	Sunset::DescriptorSetBuilder& DescriptorSetBuilder::bind_image(uint16_t binding, Image* image, size_t range_size, DescriptorType type, PipelineShaderStageType shader_stages)
+	Sunset::DescriptorSetBuilder& DescriptorSetBuilder::bind_image(uint16_t binding, Image* image, size_t range_size, uint32_t count, DescriptorType type, PipelineShaderStageType shader_stages, bool b_supports_bindless)
 	{
-		bindings.push_back({ .slot = binding, .count = 1, .type = type, .pipeline_stages = shader_stages });
-		descriptor_writes.push_back({ .slot = binding, .count = 1, .type = type, .buffer = image, .buffer_size = 0, .buffer_range = range_size, .set = nullptr });
+		bindings.push_back({ .slot = binding, .count = count, .type = type, .pipeline_stages = shader_stages, .b_supports_bindless = b_supports_bindless });
+		if (image != nullptr)
+		{
+			DescriptorBufferDesc buffer_desc{ .buffer = image, .buffer_size = 0, .buffer_range = range_size, .buffer_offset = 0 };
+			descriptor_writes.push_back({ .slot = binding, .count = count, .type = type, .buffer_desc = buffer_desc, .set = nullptr });
+		}
 		return *this;
 	}
 
 	Sunset::DescriptorSetBuilder& DescriptorSetBuilder::bind_image(const DescriptorBuildData& build_data)
 	{
-		return bind_image(build_data.binding, build_data.image, build_data.buffer_range, build_data.type, build_data.shader_stages);
+		Image* const image = CACHE_FETCH(Image, build_data.image);
+		return bind_image(build_data.binding, image, build_data.buffer_range, build_data.count, build_data.type, build_data.shader_stages, build_data.b_supports_bindless);
 	}
 
-	bool DescriptorSetBuilder::build(DescriptorSet*& out_descriptor_set, DescriptorLayout*& out_descriptor_layout)
+	bool DescriptorSetBuilder::build(DescriptorSet*& out_descriptor_set, DescriptorLayoutID& out_descriptor_layout)
 	{
-		DescriptorLayoutID layout_id = DescriptorLayoutCache::get()->fetch_or_add(bindings, gfx_context);
-		out_descriptor_layout = DescriptorLayoutCache::get()->fetch(layout_id);
-		
-		out_descriptor_set = gfx_context->get_descriptor_set_allocator()->allocate(gfx_context, out_descriptor_layout);
+		if (out_descriptor_layout == 0)
+		{
+			out_descriptor_layout = DescriptorLayoutFactory::create(gfx_context, bindings);
+		}
 		if (out_descriptor_set == nullptr)
 		{
-			return false;
+			out_descriptor_set = gfx_context->get_descriptor_set_allocator()->allocate(gfx_context, CACHE_FETCH(DescriptorLayout, out_descriptor_layout));
+			if (out_descriptor_set == nullptr)
+			{
+				return false;
+			}
+			for (const DescriptorBinding& binding : bindings)
+			{
+				if (binding.b_supports_bindless)
+				{
+					out_descriptor_set->register_bindless_slot(binding.slot, binding.count);
+				}
+			}
 		}
 
 		for (DescriptorWrite& write : descriptor_writes)
@@ -80,34 +74,166 @@ namespace Sunset
 			write.set = out_descriptor_set;
 		}
 
-		gfx_context->push_descriptor_writes(descriptor_writes);
+		DescriptorHelpers::write_descriptors(gfx_context, out_descriptor_set, descriptor_writes);
 
 		return true;
 	}
 
-	void DescriptorHelpers::inject_descriptors(GraphicsContext* const context, DescriptorData& out_descriptor_data, const std::vector<DescriptorBuildData>& descriptor_build_datas)
+	void DescriptorHelpers::inject_descriptors(GraphicsContext* const gfx_context, DescriptorData& out_descriptor_data, const std::vector<DescriptorBuildData>& descriptor_build_datas)
 	{
-		if (out_descriptor_data.descriptor_set == nullptr)
+		DescriptorSetBuilder builder = DescriptorSetBuilder::begin(gfx_context);
+		for (const DescriptorBuildData& descriptor_build_data : descriptor_build_datas)
 		{
-			DescriptorSetBuilder builder = DescriptorSetBuilder::begin(context);
-			for (const DescriptorBuildData& descriptor_build_data : descriptor_build_datas)
+			if (descriptor_build_data.type == DescriptorType::Image)
 			{
-				// TODO: Switch on descriptor type to determine whether to bind buffer or image
-				if (descriptor_build_data.type == DescriptorType::Image)
-				{
-					builder.bind_image(descriptor_build_data);
-				}
-				else
-				{
-					builder.bind_buffer(descriptor_build_data);
-				}
-
-				if (descriptor_build_data.type == DescriptorType::DynamicUniformBuffer)
-				{
-					out_descriptor_data.dynamic_buffer_offsets.push_back(descriptor_build_data.buffer_offset);
-				}
+				builder.bind_image(descriptor_build_data);
 			}
-			builder.build(out_descriptor_data.descriptor_set, out_descriptor_data.descriptor_layout);
+			else
+			{
+				builder.bind_buffer(descriptor_build_data);
+			}
 		}
+		builder.build(out_descriptor_data.descriptor_set, out_descriptor_data.descriptor_layout);
+	}
+
+	DescriptorSet* DescriptorHelpers::new_descriptor_set_with_layout(GraphicsContext* const gfx_context, DescriptorLayoutID descriptor_layout)
+	{
+		assert(descriptor_layout != 0);
+
+		DescriptorLayout* const descriptor_layout_obj = CACHE_FETCH(DescriptorLayout, descriptor_layout);
+		DescriptorSet* descriptor_set = gfx_context->get_descriptor_set_allocator()->allocate(gfx_context, descriptor_layout_obj);
+
+		if (descriptor_set == nullptr)
+		{
+			return nullptr;
+		}
+
+		std::vector<DescriptorBinding> bindings = descriptor_layout_obj->get_bindings();
+		for (const DescriptorBinding& binding : bindings)
+		{
+			if (binding.b_supports_bindless)
+			{
+				descriptor_set->register_bindless_slot(binding.slot, binding.count);
+			}
+		}
+
+		return descriptor_set;
+	}
+
+	void DescriptorHelpers::write_descriptors(GraphicsContext* const gfx_context, DescriptorSet* descriptor_set, const std::vector<DescriptorWrite>& descriptor_writes)
+	{
+		if (!descriptor_writes.empty())
+		{
+			// Set our dynamic uniform/SSBO offsets if we have any
+			{
+				std::vector<uint32_t> dynamic_buffer_offsets;
+				for (const DescriptorWrite& write : descriptor_writes)
+				{
+					if (write.type == DescriptorType::DynamicUniformBuffer)
+					{
+						dynamic_buffer_offsets.push_back(write.buffer_desc.buffer_offset);
+					}
+				}
+				descriptor_set->set_dynamic_buffer_offsets(dynamic_buffer_offsets);
+			}
+
+			// Push our descriptors through the GPI
+			gfx_context->push_descriptor_writes(descriptor_writes);
+		}
+	}
+
+	void DescriptorHelpers::write_bindless_descriptors(class GraphicsContext* const gfx_context, const std::vector<DescriptorBindlessWrite>& descriptor_writes, int32_t* out_array_indices)
+	{
+		std::vector<DescriptorWrite> writes;
+
+		for (int i = 0; i < descriptor_writes.size(); ++i)
+		{
+			const DescriptorBindlessWrite& bindless_write = descriptor_writes[i];
+
+			out_array_indices[i] = bindless_write.set->get_free_bindless_index(bindless_write.slot);
+
+			DescriptorWrite& write = writes.emplace_back();
+			write.slot = bindless_write.slot;
+			write.count = 1;
+			write.array_index = out_array_indices[i];
+			write.type = bindless_write.type;
+			write.buffer_desc.buffer = bindless_write.buffer;
+			write.set = bindless_write.set;
+		}
+
+		gfx_context->push_descriptor_writes(writes);
+	}
+
+	bool DescriptorBindingTable::has_binding_slot(uint32_t slot)
+	{
+		return binding_table.contains(slot);
+	}
+
+	void DescriptorBindingTable::add_binding_slot(uint32_t slot, uint32_t count)
+	{
+		binding_table.insert({ slot, {} });
+		binding_table[slot].total_bindings_count = count;
+		reset(slot);
+	}
+
+	int32_t DescriptorBindingTable::get_new(uint32_t slot)
+	{
+		assert(binding_table.contains(slot));
+
+		if (binding_table[slot].free_indices.empty())
+		{
+			return -1;
+		}
+
+		int32_t new_index = binding_table[slot].free_indices.back();
+		binding_table[slot].free_indices.pop_back();
+		binding_table[slot].bound_indices.push_back(new_index);
+
+		return new_index;
+	}
+
+	void DescriptorBindingTable::free(uint32_t slot, int32_t index)
+	{
+		assert(binding_table.contains(slot));
+
+		binding_table[slot].free_indices.push_back(index);
+		binding_table[slot].bound_indices.erase(
+			std::remove(binding_table[slot].bound_indices.begin(), binding_table[slot].bound_indices.end(), index),
+			binding_table[slot].bound_indices.end()
+		);
+	}
+
+	void DescriptorBindingTable::reset(uint32_t slot)
+	{
+		assert(binding_table.contains(slot));
+
+		binding_table[slot].free_indices.clear();
+		binding_table[slot].bound_indices.clear();
+
+		binding_table[slot].free_indices.reserve(binding_table[slot].total_bindings_count);
+		for (int32_t i = binding_table[slot].total_bindings_count - 1; i >= 0; --i)
+		{
+			binding_table[slot].free_indices.push_back(i);
+		}
+	}
+
+	Sunset::DescriptorLayoutID DescriptorLayoutFactory::create(class GraphicsContext* const gfx_context, const std::vector<DescriptorBinding>& bindings)
+	{
+		Identity cache_id;
+		for (const DescriptorBinding& binding : bindings)
+		{
+			cache_id = Maths::cantor_pair_hash(static_cast<int32_t>(cache_id), static_cast<int32_t>(std::hash<DescriptorBinding>{}(binding)));
+		}
+
+		bool b_added{ false };
+		DescriptorLayoutID layout_id = DescriptorLayoutCache::get()->fetch_or_add(cache_id, gfx_context, b_added);
+		if (b_added)
+		{
+			DescriptorLayout* const descriptor_layout = CACHE_FETCH(DescriptorLayout, layout_id);
+			descriptor_layout->set_bindings(bindings);
+			descriptor_layout->build(gfx_context);
+		}
+
+		return layout_id;
 	}
 }

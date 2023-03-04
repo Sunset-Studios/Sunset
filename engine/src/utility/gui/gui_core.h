@@ -10,9 +10,9 @@ namespace Sunset
 	public:
 		GenericGUICore() = default;
 
-		void initialize(class GraphicsContext* gfx_context, class Window* const window)
+		void initialize(class GraphicsContext* gfx_context, class Window* const window, RenderPassID render_pass)
 		{
-			gui_policy.initialize(gfx_context, window);
+			gui_policy.initialize(gfx_context, window, render_pass);
 		}
 
 		void new_frame(class Window* const window)
@@ -44,7 +44,7 @@ namespace Sunset
 	public:
 		NoopGUICore() = default;
 
-		void initialize(class GraphicsContext* gfx_context, class Window* const window)
+		void initialize(class GraphicsContext* gfx_context, class Window* const window, RenderPassID render_pass)
 		{ }
 
 		void new_frame(class Window* const window)

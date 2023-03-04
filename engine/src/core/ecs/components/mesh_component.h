@@ -21,10 +21,12 @@ namespace Sunset
 	};
 
 	void set_mesh(MeshComponent* mesh_comp, MeshID mesh);
-	void set_material(MeshComponent* mesh_comp, const Material& material);
+	void set_material(MeshComponent* mesh_comp, MaterialID material);
 
 	size_t mesh_vertex_count(MeshComponent* mesh_comp);
 	size_t mesh_index_count(MeshComponent* mesh_comp);
-	class Buffer* mesh_vertex_buffer(MeshComponent* mesh_comp);
-	class Buffer* mesh_index_buffer(MeshComponent* mesh_comp);
+	BufferID mesh_vertex_buffer(MeshComponent* mesh_comp);
+	BufferID mesh_index_buffer(MeshComponent* mesh_comp);
+	Bounds mesh_local_bounds(MeshComponent* mesh_comp);
+	Bounds transform_mesh_bounds(MeshComponent* mesh_comp, glm::mat4 transform);
 }

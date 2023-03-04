@@ -2,10 +2,11 @@
 
 #include <common.h>
 #include <singleton.h>
-#include <graphics/command_queue.h>
 #include <graphics/graphics_context.h>
-#include <graphics/render_task.h>
-#include <window/window.h>
+#include <graphics/render_graph.h>
+#include <graphics/mesh_task_queue.h>
+#include <graphics/mesh_render_task.h>
+#include <graphics/resource/swapchain.h>
 
 namespace Sunset
 {
@@ -16,68 +17,61 @@ namespace Sunset
 		public:
 			void initialize() { }
 			void setup(class Window* const window);
-			void draw();
 			void destroy();
+
+			template<typename RenderStrategy>
+			void draw()
+			{
+				static RenderStrategy strategy;
+
+				swapchain->request_next_image(graphics_context.get());
+
+				task_allocator.reset();
+
+				strategy.render(graphics_context.get(), render_graph, swapchain);
+
+				swapchain->present(graphics_context.get(), DeviceQueueType::Graphics);
+
+				graphics_context->advance_frame();
+			}
 
 			GraphicsContext* context() const
 			{
 				return graphics_context.get();
 			}
 
-			Window* window() const
+			inline RenderGraph& get_render_graph()
 			{
-				return graphics_window;
+				return render_graph;
 			}
 
-			class RenderPass* master_pass() const
+			inline MeshTaskQueue& get_mesh_task_queue()
 			{
-				return graphics_master_pass;
+				return mesh_task_queue;
 			}
 
-			GraphicsCommandQueue* graphics_command_queue() const
+			inline MeshRenderTask* fresh_rendertask()
 			{
-				return command_queue.get();
+				return task_allocator.get_new();
 			}
 
-			DescriptorData get_global_descriptor_data(uint16_t buffered_frame) const
+			inline DrawCullData& get_draw_cull_data()
 			{
-				return global_descriptor_data[buffered_frame];
+				return current_draw_cull_data;
 			}
 
-			DescriptorData get_object_descriptor_data(uint16_t buffered_frame) const
+			inline void set_draw_cull_data(DrawCullData draw_cull_data)
 			{
-				return object_descriptor_data[buffered_frame];
+				current_draw_cull_data = draw_cull_data;
 			}
 
-			class DescriptorSet* global_descriptor_set(uint16_t buffered_frame) const
+			inline void wait_for_gpu()
 			{
-				return global_descriptor_data[buffered_frame].descriptor_set;
+				graphics_context->wait_for_gpu();
 			}
 
-			class DescriptorSet* object_descriptor_set(uint16_t buffered_frame) const
-			{
-				return object_descriptor_data[buffered_frame].descriptor_set;
-			}
-
-			class DescriptorLayout* global_descriptor_layout(uint16_t buffered_frame) const
-			{
-				return global_descriptor_data[buffered_frame].descriptor_layout;
-			}
-
-			class DescriptorLayout* object_descriptor_layout(uint16_t buffered_frame) const
-			{
-				return object_descriptor_data[buffered_frame].descriptor_layout;
-			}
-
-			class Buffer* indirect_draw_buffer(uint16_t buffered_frame) const
-			{
-				return indirect_draw_buffers[buffered_frame];
-			}
-
-			RenderTask* fresh_rendertask();
-
-			void inject_global_descriptor(uint16_t buffered_frame, const std::initializer_list<DescriptorBuildData>& descriptor_build_datas);
-			void inject_object_descriptor(uint16_t buffered_frame, const std::initializer_list<DescriptorBuildData>& descriptor_build_datas);
+			void begin_frame();
+			void queue_graph_command(Identity name, std::function<void(class RenderGraph&, RGFrameData&, void*)> command_callback);
 
 		private:
 			Renderer() = default;
@@ -87,15 +81,36 @@ namespace Sunset
 			~Renderer() = default;
 
 		protected:
-			RenderTaskFrameAllocator rendertask_allocator;
 			std::unique_ptr<GraphicsContext> graphics_context;
 			class Swapchain* swapchain;
-			std::unique_ptr<GraphicsCommandQueue> command_queue;
-			class RenderPass* graphics_master_pass;
-			Window* graphics_window;
 
-			class Buffer* indirect_draw_buffers[MAX_BUFFERED_FRAMES];
-			DescriptorData global_descriptor_data[MAX_BUFFERED_FRAMES];
-			DescriptorData object_descriptor_data[MAX_BUFFERED_FRAMES];
+			MeshRenderTaskFrameAllocator task_allocator;
+			MeshTaskQueue mesh_task_queue;
+			RenderGraph render_graph;
+			DrawCullData current_draw_cull_data;
+	};
+
+	// Handles renderer lifetime calls (render graph begin/submit, renderer draw, etc.)
+	// as a scoped RAII object
+	template<typename RenderStrategy>
+	class ScopedRender
+	{
+	public:
+		ScopedRender(Renderer* renderer)
+			: renderer(renderer)
+		{
+			renderer->wait_for_gpu();
+			renderer->begin_frame();
+		}
+
+		~ScopedRender()
+		{
+			renderer->draw<RenderStrategy>();
+		}
+
+	private:
+		Renderer* renderer{ nullptr };
 	};
 }
+
+#define QUEUE_RENDERGRAPH_COMMAND(CommandName, Lambda) Renderer::get()->queue_graph_command(#CommandName, Lambda)

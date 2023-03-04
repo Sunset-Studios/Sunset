@@ -18,11 +18,12 @@ namespace Sunset
 		StorageBuffer
 	};
 
-	enum class DescriptorSetType : int16_t
+	enum class DescriptorSetType : uint16_t
 	{
 		Global = 0,
-		Object,
+		Pass,
 		Material,
+		Object,
 		MaxSets
 	};
 
@@ -31,8 +32,15 @@ namespace Sunset
 	struct DescriptorData
 	{
 		class DescriptorSet* descriptor_set;
-		class DescriptorLayout* descriptor_layout;
-		std::vector<uint32_t> dynamic_buffer_offsets;
+		DescriptorLayoutID descriptor_layout;
+		ShaderLayoutID pipeline_layout;
+	};
+
+	struct DescriptorDataList
+	{
+		std::vector<class DescriptorSet*> descriptor_sets;
+		std::vector<DescriptorLayoutID> descriptor_layouts;
+		ShaderLayoutID pipeline_layout;
 	};
 
 	struct DescriptorBuildData
@@ -40,23 +48,40 @@ namespace Sunset
 		uint16_t binding{ 0 };
 		union
 		{
-			class Buffer* buffer{ nullptr };
-			class Image* image;
+			BufferID buffer{ 0 };
+			ImageID image;
 		};
 		uint32_t buffer_offset{ 0 };
 		size_t buffer_range{ 0 };
+		uint32_t count{ 0 };
 		DescriptorType type;
 		PipelineShaderStageType shader_stages;
+		bool b_supports_bindless{ false };
+	};
+
+	struct DescriptorBufferDesc
+	{
+		void* buffer{ nullptr };
+		size_t buffer_size{ 0 };
+		size_t buffer_range{ 0 };
+		size_t buffer_offset{ 0 };
 	};
 
 	struct DescriptorWrite
 	{
 		uint16_t slot{ 0 };
 		uint32_t count{ 0 };
+		uint32_t array_index{ 0 };
+		DescriptorType type;
+		DescriptorBufferDesc buffer_desc;
+		class DescriptorSet* set{ nullptr };
+	};
+
+	struct DescriptorBindlessWrite
+	{
+		uint16_t slot{ 0 };
 		DescriptorType type;
 		void* buffer{ nullptr };
-		size_t buffer_size{ 0 };
-		size_t buffer_range{ 0 };
 		class DescriptorSet* set{ nullptr };
 	};
 
@@ -66,6 +91,7 @@ namespace Sunset
 		uint32_t count{ 0 };
 		DescriptorType type;
 		PipelineShaderStageType pipeline_stages;
+		bool b_supports_bindless{ false };
 
 		bool operator==(const DescriptorBinding& other) const
 		{

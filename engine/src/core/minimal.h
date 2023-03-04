@@ -64,14 +64,15 @@ namespace Sunset
 
 	enum class BufferType : int32_t
 	{
-		Generic = 0x00000000,
+		None = 0x00000000,
 		Vertex = 0x00000001,
 		Index = 0x00000002,
 		UniformBuffer = 0x00000004,
 		StorageBuffer = 0x00000008,
 		TransferSource = 0x00000010,
 		TransferDestination = 0x00000020,
-		Indirect = 0x00000040
+		Indirect = 0x00000040,
+		Transient = 0x00000080
 	};
 
 	inline BufferType operator|(BufferType lhs, BufferType rhs)
@@ -100,11 +101,15 @@ namespace Sunset
 		Color = 0x00000001,
 		Depth = 0x00000002,
 		Stencil = 0x00000004,
-		TransferSrc = 0x00000008,
-		TransferDst = 0x00000010,
-		Image2D = 0x00000020,
-		Image3D = 0x00000040,
-		Sampled = 0x00000080
+		DepthStencil = 0x00000008,
+		TransferSrc = 0x00000010,
+		TransferDst = 0x00000020,
+		Image2D = 0x00000040,
+		Image3D = 0x00000080,
+		Sampled = 0x00000100,
+		Present = 0x00000200,
+		Transient = 0x00000400,
+		LocalLoad = 0x00000800
 	};
 
 	inline ImageFlags operator|(ImageFlags lhs, ImageFlags rhs)
@@ -127,7 +132,49 @@ namespace Sunset
 		return lhs = lhs & rhs;
 	}
 
-	enum class CompareOperation : int16_t
+	enum class AccessFlags : int32_t
+	{
+		None = 0,
+		IndirectCommandRead = 0x00000001,
+		IndexRead = 0x00000002,
+		VertexAttributeRead = 0x00000004,
+		UniformRead = 0x00000008,
+		InputAttachmentRead = 0x00000010,
+		ShaderRead = 0x00000020,
+		ShaderWrite = 0x00000040,
+		ColorAttachmentRead = 0x00000080,
+		ColorAttachmentWrite = 0x00000100,
+		DepthStencilAttachmentRead = 0x00000200,
+		DepthStencilAttachmentWrite = 0x00000400,
+		TransferRead = 0x00000800,
+		TransferWrite = 0x00001000,
+		HostRead = 0x00002000,
+		HostWrite = 0x00004000,
+		MemoryRead = 0x00008000,
+		MemoryWrite = 0x00010000
+	};
+
+	inline AccessFlags operator|(AccessFlags lhs, AccessFlags rhs)
+	{
+		return static_cast<AccessFlags>(static_cast<int32_t>(lhs) | static_cast<int32_t>(rhs));
+	}
+
+	inline AccessFlags operator&(AccessFlags lhs, AccessFlags rhs)
+	{
+		return static_cast<AccessFlags>(static_cast<int32_t>(lhs) & static_cast<int32_t>(rhs));
+	}
+
+	inline AccessFlags& operator|=(AccessFlags& lhs, AccessFlags rhs)
+	{
+		return lhs = lhs | rhs;
+	}
+
+	inline AccessFlags& operator&=(AccessFlags& lhs, AccessFlags rhs)
+	{
+		return lhs = lhs & rhs;
+	}
+
+	enum class CompareOperation : uint16_t
 	{
 		Always,
 		Equal,
@@ -138,14 +185,35 @@ namespace Sunset
 		GreaterOrEqual
 	};
 
+	enum class ResourceType : uint16_t
+	{
+		Undefined = 0,
+		Image,
+		Buffer
+	};
+
 	using ObjectID = uint32_t;
 	using ImageID = size_t;
 	using MeshID = size_t;
 	using MaterialID = size_t;
+	using BufferID = size_t;
+	using RenderPassID = size_t;
+	using FramebufferID = size_t;
+	using ShaderLayoutID = size_t;
+	using ShaderID = size_t;
 
 	#define SECONDS_TIME std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count() * 0.001
 	#define WORLD_UP glm::vec3(0.0f, 1.0f, 0.0f)
 	#define WORLD_FORWARD glm::vec3(0.0f, 0.0f, -1.0f)
 
-	#define MAX_BUFFERED_FRAMES 2
+	constexpr uint16_t MAX_BUFFERED_FRAMES = 2;
+	constexpr uint16_t MAX_MATERIALS = 16536;
+	constexpr uint16_t MAX_MATERIAL_TEXTURES = 16;
+
+	struct Bounds
+	{
+		glm::vec3 extents;
+		glm::vec3 origin;
+		float radius;
+	};
 }

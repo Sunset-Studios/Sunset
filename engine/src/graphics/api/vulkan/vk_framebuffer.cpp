@@ -6,15 +6,14 @@
 
 namespace Sunset
 {
-	void VulkanFramebuffer::initialize(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, void* render_pass_handle, void* attachments_handle, const std::initializer_list<Image*>& additional_attachments)
+	void VulkanFramebuffer::initialize(class GraphicsContext* const gfx_context, void* render_pass_handle, const std::vector<ImageID>& attachments)
 	{
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
-		VulkanSwapchainData* swapchain_data = static_cast<VulkanSwapchainData*>(swapchain->get_data());
 
 		VkFramebufferCreateInfo fb_create_info = {};
 		fb_create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 		fb_create_info.pNext = nullptr;
-		fb_create_info.attachmentCount = 1 + static_cast<int32_t>(additional_attachments.size());
+		fb_create_info.attachmentCount = static_cast<int32_t>(attachments.size());
 		fb_create_info.width = context_state->window->get_extent().x;
 		fb_create_info.height = context_state->window->get_extent().y;
 		fb_create_info.layers = 1;
@@ -27,14 +26,11 @@ namespace Sunset
 		std::vector<VkImageView> fb_attachments;
 		fb_attachments.reserve(fb_create_info.attachmentCount);
 
-		if (VkImageView* image_view = static_cast<VkImageView*>(attachments_handle))
+		for (ImageID image_attachment_id : attachments)
 		{
-			fb_attachments.push_back(*image_view);
-			for (Image* const additional_image_attachment : additional_attachments)
-			{
-				VkImageView attachment_image_view = static_cast<VkImageView>(additional_image_attachment->get_image_view());
-				fb_attachments.push_back(attachment_image_view);
-			}
+			Image* const image_attachment = CACHE_FETCH(Image, image_attachment_id);
+			VkImageView attachment_image_view = static_cast<VkImageView>(image_attachment->get_image_view());
+			fb_attachments.push_back(attachment_image_view);
 		}
 
 		fb_create_info.pAttachments = fb_attachments.data();

@@ -15,7 +15,7 @@ namespace Sunset
 		{
 			usage_flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 		}
-		if (static_cast<int32_t>(flags & (ImageFlags::Depth | ImageFlags::Stencil)) > 0)
+		if (static_cast<int32_t>(flags & (ImageFlags::DepthStencil)) > 0)
 		{
 			usage_flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 		}
@@ -41,11 +41,11 @@ namespace Sunset
 		{
 			aspect_flags |= VK_IMAGE_ASPECT_COLOR_BIT;
 		}
-		else if (static_cast<int32_t>(flags & ImageFlags::Depth) > 0)
+		else if (static_cast<int32_t>(flags & (ImageFlags::Depth | ImageFlags::DepthStencil)) > 0)
 		{
 			aspect_flags |= VK_IMAGE_ASPECT_DEPTH_BIT;
 		}
-		else if (static_cast<int32_t>(flags & ImageFlags::Stencil) > 0)
+		else if (static_cast<int32_t>(flags & (ImageFlags::Depth | ImageFlags::DepthStencil)) > 0)
 		{
 			aspect_flags |= VK_IMAGE_ASPECT_STENCIL_BIT;
 		}
@@ -108,8 +108,24 @@ namespace Sunset
 		}
 	}
 
+	void VulkanImage::initialize(class GraphicsContext* const gfx_context, const AttachmentConfig& config, void* image_handle, void* image_view_handle)
+	{
+		VkImage existing_image = static_cast<VkImage>(image_handle);
+		VkImageView existing_image_view = static_cast<VkImageView>(image_view_handle);
+		assert(existing_image != nullptr && existing_image_view != nullptr);
+
+		image = existing_image;
+		image_view = existing_image_view;
+		b_external_handling = true;
+	}
+
 	void VulkanImage::destroy(class GraphicsContext* const gfx_context)
 	{
+		if (b_external_handling)
+		{
+			return;
+		}
+
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
 		assert(context_state != nullptr);
 

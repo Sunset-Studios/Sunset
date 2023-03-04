@@ -42,9 +42,19 @@ namespace Sunset
 				graphics_policy.draw_indexed_indirect(buffer, indirect_buffer, draw_count, draw_first);
 			}
 
+			void dispatch_compute(void* buffer, uint32_t count_x, uint32_t count_y, uint32_t count_z)
+			{
+				graphics_policy.dispatch_compute(buffer, count_x, count_y, count_z);
+			}
+
 			void* get_state()
 			{
 				return graphics_policy.get_state();
+			}
+
+			class Window* get_window()
+			{
+				return graphics_policy.get_window();
 			}
 
 			uint32_t get_frame_number() const
@@ -77,6 +87,21 @@ namespace Sunset
 				return graphics_policy.get_descriptor_set_allocator();
 			}
 
+			void register_command_queue(DeviceQueueType queue_type)
+			{
+				graphics_policy.register_command_queue(queue_type);
+			}
+
+			void destroy_command_queue(DeviceQueueType queue_type)
+			{
+				graphics_policy.destroy_command_queue(queue_type);
+			}
+
+			class CommandQueue* get_command_queue(DeviceQueueType queue_type)
+			{
+				return graphics_policy.get_command_queue(queue_type);
+			}
+
 			void advance_frame()
 			{
 				graphics_policy.advance_frame();
@@ -102,9 +127,14 @@ namespace Sunset
 				return graphics_policy.get_min_ubo_offset_alignment();
 			}
 
-			void update_indirect_draw_command(void* commands, uint32_t command_index, uint32_t index_count, uint32_t first_index, uint32_t instance_count, uint32_t first_instance)
+			void update_indirect_draw_command(void* commands, uint32_t command_index, uint32_t index_count, uint32_t first_index, uint32_t instance_count, uint32_t first_instance, uint64_t object_id, uint32_t batch_id)
 			{
-				graphics_policy.update_indirect_draw_command(commands, command_index, index_count, first_index, instance_count, first_instance);
+				graphics_policy.update_indirect_draw_command(commands, command_index, index_count, first_index, instance_count, first_instance, object_id, batch_id);
+			}
+
+			ShaderLayoutID derive_layout_for_shader_stages(class GraphicsContext* const gfx_context, const std::vector<PipelineShaderStage>& stages, std::vector<DescriptorLayoutID>& out_descriptor_layouts)
+			{
+				return graphics_policy.derive_layout_for_shader_stages(gfx_context, stages, out_descriptor_layouts);
 			}
 
 		private:
@@ -135,6 +165,14 @@ namespace Sunset
 			void draw_indexed_indirect(void* buffer, class Buffer* indirect_buffer, uint32_t draw_count, uint32_t draw_first = 0)
 			{ }
 
+			void dispatch_compute(void* buffer, uint32_t count_x, uint32_t count_y, uint32_t count_z)
+			{ }
+
+			class Window* get_window()
+			{
+				return nullptr;
+			}
+
 			void* get_state()
 			{
 				return nullptr;
@@ -152,6 +190,17 @@ namespace Sunset
 			}
 
 			class DescriptorSetAllocator* get_descriptor_set_allocator()
+			{
+				return nullptr;
+			}
+
+			void register_command_queue(DeviceQueueType queue_type)
+			{ }
+
+			void destroy_command_queue(DeviceQueueType queue_type)
+			{ }
+
+			class CommandQueue* get_command_queue(DeviceQueueType queue_type)
 			{
 				return nullptr;
 			}
@@ -180,7 +229,10 @@ namespace Sunset
 				return 0;
 			}
 
-			void update_indirect_draw_command(void* commands, uint32_t command_index, uint32_t index_count, uint32_t first_index, uint32_t instance_count, uint32_t first_instance)
+			void update_indirect_draw_command(void* commands, uint32_t command_index, uint32_t index_count, uint32_t first_index, uint32_t instance_count, uint32_t first_instance, uint64_t object_id, uint32_t batch_id)
+			{ }
+
+			ShaderLayoutID derive_layout_for_shader_stages(class GraphicsContext* const gfx_context, const std::vector<PipelineShaderStage>& stages, std::vector<DescriptorLayoutID>& out_descriptor_layouts)
 			{ }
 	};
 

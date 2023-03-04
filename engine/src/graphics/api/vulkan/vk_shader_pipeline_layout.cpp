@@ -5,7 +5,7 @@
 
 namespace Sunset
 {
-	void VulkanShaderPipelineLayout::initialize(class GraphicsContext* const gfx_context, const PushConstantPipelineData& push_constant_data, const std::vector<DescriptorLayout*> descriptor_layouts)
+	void VulkanShaderPipelineLayout::initialize(class GraphicsContext* const gfx_context, const std::vector<PushConstantPipelineData>& push_constant_data, const std::vector<DescriptorLayoutID> descriptor_layouts)
 	{
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
 
@@ -18,23 +18,30 @@ namespace Sunset
 		create_info.pushConstantRangeCount = 0;
 		create_info.pPushConstantRanges = nullptr;
 
-		VkPushConstantRange push_constant;
-		if (push_constant_data.size > 0)
+		std::vector<VkPushConstantRange> pc_ranges;
 		{
-			push_constant.offset = push_constant_data.offset;
-			push_constant.size = static_cast<uint32_t>(push_constant_data.size);
-			push_constant.stageFlags = VK_FROM_SUNSET_SHADER_STAGE_TYPE(push_constant_data.shader_stage);
-
-			create_info.pushConstantRangeCount = 1;
-			create_info.pPushConstantRanges = &push_constant;
+			pc_ranges.reserve(push_constant_data.size());
+			for (const PushConstantPipelineData& pc_data : push_constant_data)
+			{
+				if (pc_data.size > 0)
+				{
+					VkPushConstantRange& push_constant = pc_ranges.emplace_back();
+					push_constant.offset = pc_data.offset;
+					push_constant.size = static_cast<uint32_t>(pc_data.size);
+					push_constant.stageFlags = VK_FROM_SUNSET_SHADER_STAGE_TYPE(pc_data.shader_stage);
+				}
+			}
+			create_info.pushConstantRangeCount = pc_ranges.size();
+			create_info.pPushConstantRanges = pc_ranges.data();
 		}
 
 		std::vector<VkDescriptorSetLayout> set_layouts;
 		if (descriptor_layouts.size() > 0)
 		{
-			for (DescriptorLayout* const layout : descriptor_layouts)
+			for (DescriptorLayoutID layout : descriptor_layouts)
 			{
-				set_layouts.push_back(static_cast<VkDescriptorSetLayout>(layout->get()));
+				DescriptorLayout* const layout_obj = CACHE_FETCH(DescriptorLayout, layout);
+				set_layouts.push_back(static_cast<VkDescriptorSetLayout>(layout_obj->get()));
 			}
 
 			create_info.setLayoutCount = static_cast<uint32_t>(set_layouts.size());

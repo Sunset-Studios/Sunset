@@ -14,14 +14,21 @@ namespace Sunset
 		VulkanDescriptorLayout() = default;
 
 		void build(class GraphicsContext* const gfx_context, const std::vector<DescriptorBinding>& bindings);
+		void destroy(class GraphicsContext* const gfx_context);
 
 		void* get() const
 		{
 			return layout;
 		}
 
+		bool supports_bindless() const
+		{
+			return b_supports_bindless;
+		}
+
 	protected:
 		VkDescriptorSetLayout layout;
+		bool b_supports_bindless{ false };
 	};
 
 	class VulkanDescriptorSet
@@ -30,8 +37,7 @@ namespace Sunset
 		VulkanDescriptorSet() = default;
 
 		bool build(class GraphicsContext* const gfx_context, class DescriptorLayout* descriptor_layout, void* descriptor_pool);
-		void bind(class GraphicsContext* const gfx_context, void* cmd_buffer, PipelineStateID pipeline_state, const std::vector<uint32_t>& dynamic_buffer_offsets = {}, uint32_t set_index = 0);
-
+		void bind(class GraphicsContext* const gfx_context, void* cmd_buffer, ShaderLayoutID layout, PipelineStateType pipeline_state_type = PipelineStateType::Graphics, const std::vector<uint32_t>& dynamic_buffer_offsets = {}, uint32_t set_index = 0);
 		void* get() const
 		{
 			return descriptor_set;

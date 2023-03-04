@@ -2,7 +2,7 @@
 
 #include <vk_types.h>
 #include <vk_initializers.h>
-#include <push_constants.h>
+#include <pipeline_types.h>
 
 namespace Sunset
 {
@@ -14,7 +14,7 @@ namespace Sunset
 	class VulkanShaderPipelineLayout
 	{
 		public:
-			void initialize(class GraphicsContext* const gfx_context, const PushConstantPipelineData& push_constant_data = {}, const std::vector<DescriptorLayout*> descriptor_layouts = {});
+			void initialize(class GraphicsContext* const gfx_context, const std::vector<PushConstantPipelineData>& push_constant_data = {}, const std::vector<DescriptorLayoutID> descriptor_layouts = {});
 			void destroy(class GraphicsContext* const gfx_context);
 
 			void* get_data()

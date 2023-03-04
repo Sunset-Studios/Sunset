@@ -9,7 +9,7 @@ namespace Sunset
 			return nullptr;
 		}
 
-		uint32_t name_hash = StringHash{ name };
+		uint32_t name_hash = Identity{ name };
 		saved_cvar_params[name_hash] = CVarParam{};
 
 		CVarParam& new_param = saved_cvar_params[name_hash];
@@ -19,7 +19,7 @@ namespace Sunset
 		return &new_param;
 	}
 
-	Sunset::CVarParam* CVarSystem::get_cvar(StringHash hash)
+	Sunset::CVarParam* CVarSystem::get_cvar(Identity hash)
 	{
 		if (auto it = saved_cvar_params.find(hash); it != saved_cvar_params.end())
 		{
@@ -88,42 +88,42 @@ namespace Sunset
 		return param;
 	}
 
-	int32_t* CVarSystem::get_int_cvar(StringHash hash)
+	int32_t* CVarSystem::get_int_cvar(Identity hash)
 	{
 		return get_cvar_current_value<int32_t>(hash);
 	}
 
-	double* CVarSystem::get_float_cvar(StringHash hash)
+	double* CVarSystem::get_float_cvar(Identity hash)
 	{
 		return get_cvar_current_value<double>(hash);
 	}
 
-	std::string* CVarSystem::get_string_cvar(StringHash hash)
+	std::string* CVarSystem::get_string_cvar(Identity hash)
 	{
 		return get_cvar_current_value<std::string>(hash);
 	}
 
-	bool* CVarSystem::get_bool_cvar(StringHash hash)
+	bool* CVarSystem::get_bool_cvar(Identity hash)
 	{
 		return get_cvar_current_value<bool>(hash);
 	}
 
-	void CVarSystem::set_int_cvar(StringHash hash, int32_t value)
+	void CVarSystem::set_int_cvar(Identity hash, int32_t value)
 	{
 		set_cvar_current_value<int32_t>(hash, value);
 	}
 
-	void CVarSystem::set_float_cvar(StringHash hash, double value)
+	void CVarSystem::set_float_cvar(Identity hash, double value)
 	{
 		set_cvar_current_value<double>(hash, value);
 	}
 
-	void CVarSystem::set_string_cvar(StringHash hash, const std::string& value)
+	void CVarSystem::set_string_cvar(Identity hash, const std::string& value)
 	{
 		set_cvar_current_value<std::string>(hash, value);
 	}
 
-	void CVarSystem::set_bool_cvar(StringHash hash, bool value)
+	void CVarSystem::set_bool_cvar(Identity hash, bool value)
 	{
 		set_cvar_current_value<bool>(hash, value);
 	}

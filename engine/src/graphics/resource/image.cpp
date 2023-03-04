@@ -2,6 +2,7 @@
 #include <graphics/asset_pool.h>
 #include <graphics/graphics_context.h>
 #include <graphics/renderer.h>
+#include <graphics/command_queue.h>
 #include <image_serializer.h>
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -11,32 +12,60 @@
 
 namespace Sunset
 {
-	Sunset::Image* ImageFactory::create(class GraphicsContext* const gfx_context, const AttachmentConfig& config, bool auto_delete)
+	Sunset::ImageID ImageFactory::create(class GraphicsContext* const gfx_context, const AttachmentConfig& config, bool auto_delete)
 	{
-		Image* image = GlobalAssetPools<Image>::get()->allocate();
-		image->initialize(gfx_context, config);
-		if (auto_delete)
+		bool b_added{ false };
+		ImageID image_id = ImageCache::get()->fetch_or_add(config.name, gfx_context, b_added, auto_delete);
+		if (b_added)
 		{
-			gfx_context->add_resource_deletion_execution([image, gfx_context]()
-			{
-				image->destroy(gfx_context);
-				GlobalAssetPools<Image>::get()->deallocate(image);
-			});
+			Image* image = CACHE_FETCH(Image, image_id);
+			image->initialize(gfx_context, config);
+		}
+		return image_id;
+	}
+
+	Sunset::ImageID ImageFactory::create(class GraphicsContext* const gfx_context, const AttachmentConfig& config, void* image_handle, void* image_view_handle, bool auto_delete /*= true*/)
+	{
+		bool b_added{ false };
+		ImageID image_id = ImageCache::get()->fetch_or_add(config.name, gfx_context, b_added, auto_delete);
+		if (b_added)
+		{
+			Image* image = CACHE_FETCH(Image, image_id);
+			image->initialize(gfx_context, config, image_handle, image_view_handle);
+		}
+		return image_id;
+	}
+
+	Sunset::ImageID ImageFactory::create_default(class GraphicsContext* const gfx_context)
+	{
+		static ImageID image;
+		if (image == 0)
+		{
+			AttachmentConfig config;
+			config.name = "default";
+			config.format = Format::Float4x16;
+			config.extent = glm::vec3(1.0f, 1.0f, 1.0f);
+			config.flags = ImageFlags::Color | ImageFlags::Sampled;
+			config.usage_type = MemoryUsageType::OnlyGPU;
+			config.sampler_address_mode = SamplerAddressMode::Repeat;
+			config.image_filter = ImageFilter::Linear;
+			image = create(gfx_context, config);
 		}
 		return image;
 	}
 
-	Sunset::Image* ImageFactory::load(class GraphicsContext* const gfx_context, const char* path)
+	Sunset::ImageID ImageFactory::load(class GraphicsContext* const gfx_context, const AttachmentConfig& config)
 	{
-		ImageID image_id = ImageCache::get()->fetch_or_add(path, gfx_context);
-		Image* image = ImageCache::get()->fetch(image_id);
+		bool b_added{ false };
+		ImageID image_id = ImageCache::get()->fetch_or_add(config.name, gfx_context, b_added);
+		Image* image = CACHE_FETCH(Image, image_id);
 
-		if (image->get_image() == nullptr)
+		if (b_added)
 		{
 			SerializedAsset asset;
-			if (!deserialize_asset(path, asset))
+			if (!deserialize_asset(config.path, asset))
 			{
-				return nullptr;
+				return ImageID();
 			}
 
 			SerializedImageInfo image_info = get_serialized_image_info(&asset);
@@ -44,7 +73,17 @@ namespace Sunset
 			const size_t image_size = image_info.size;
 			const Format image_format = image_info.format;
 
-			Buffer* const staging_buffer = BufferFactory::create(gfx_context, image_size, BufferType::TransferSource, MemoryUsageType::OnlyCPU, false);
+			const BufferID staging_buffer_id = BufferFactory::create(
+				gfx_context, 
+				{
+					.name = config.path,
+					.buffer_size = image_size,
+					.type = BufferType::TransferSource,
+					.memory_usage = MemoryUsageType::OnlyCPU
+				},
+				false
+			);
+			Buffer* const staging_buffer = CACHE_FETCH(Buffer, staging_buffer_id);
 
 			staging_buffer->copy_from(gfx_context, asset.binary.data(), asset.binary.size(), 0, [&image_info, &asset](void* memory)
 			{
@@ -52,68 +91,20 @@ namespace Sunset
 			});
 
 			{
-				AttachmentConfig config;
-				config.format = image_format;
-				config.extent = glm::vec3(image_info.extent[0], image_info.extent[1], image_info.extent[2]);
-				config.flags = (ImageFlags::Sampled | ImageFlags::TransferDst);
-				config.usage_type = MemoryUsageType::OnlyGPU;
-				config.image_filter = ImageFilter::Nearest;
-				image->initialize(gfx_context, config);
+				AttachmentConfig image_config = config;
+				image_config.format = image_format;
+				image_config.extent = glm::vec3(image_info.extent[0], image_info.extent[1], image_info.extent[2]);
+				image->initialize(gfx_context, image_config);
 
-				Renderer::get()->graphics_command_queue()->submit_immediate(gfx_context, [image, staging_buffer, gfx_context](void* command_buffer)
+				gfx_context->get_command_queue(DeviceQueueType::Graphics)->submit_immediate(gfx_context, [image, staging_buffer, gfx_context](void* command_buffer)
 				{
 					image->copy_buffer(gfx_context, command_buffer, staging_buffer);
 				});
 			}
 
-			staging_buffer->destroy(gfx_context);
-			GlobalAssetPools<Buffer>::get()->deallocate(staging_buffer);
+			CACHE_DELETE(Buffer, staging_buffer_id, gfx_context);
 		}
 
-		return image;
-	}
-
-	void ImageCache::initialize()
-	{
-	}
-
-	void ImageCache::update()
-	{
-	}
-
-	Sunset::ImageID ImageCache::fetch_or_add(const char* file_path, class GraphicsContext* const gfx_context /*= nullptr*/)
-	{
-		ImageID id = std::hash<std::string>{}(file_path);
-		if (cache.find(id) == cache.end())
-		{
-			Image* const new_image = GlobalAssetPools<Image>::get()->allocate();
-			gfx_context->add_resource_deletion_execution([new_image, gfx_context]()
-			{ 
-				new_image->destroy(gfx_context);
-				GlobalAssetPools<Image>::get()->deallocate(new_image);
-			});
-			cache.insert({ id, new_image });
-		}
-		return id;
-	}
-
-	void ImageCache::remove(ImageID id)
-	{
-		cache.erase(id);
-	}
-
-	Sunset::Image* ImageCache::fetch(ImageID id)
-	{
-		assert(cache.find(id) != cache.end());
-		return cache[id];
-	}
-
-	void ImageCache::destroy(class GraphicsContext* const gfx_context)
-	{
-		for (const std::pair<size_t, Image*>& pair : cache)
-		{
-			pair.second->destroy(gfx_context);
-		}
-		cache.clear();
+		return image_id;
 	}
 }

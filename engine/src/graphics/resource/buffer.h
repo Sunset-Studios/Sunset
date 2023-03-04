@@ -1,6 +1,8 @@
 #pragma once
 
 #include <common.h>
+#include <buffer_types.h>
+#include <graphics/resource/resource_cache.h>
 
 namespace Sunset
 {
@@ -35,10 +37,16 @@ namespace Sunset
 	public:
 		GenericBuffer() = default;
 
-		void initialize(class GraphicsContext* const gfx_context, size_t buffer_size, BufferType type, MemoryUsageType memory_usage)
+		void initialize(class GraphicsContext* const gfx_context, const BufferConfig& config)
 		{
-			buffer_policy.initialize(gfx_context, buffer_size, type, memory_usage);
-			buffer_type = type;
+			buffer_config = config;
+			buffer_policy.initialize(gfx_context, buffer_config);
+		}
+
+		void reallocate(class GraphicsContext* const gfx_context, size_t new_buffer_size)
+		{
+			buffer_config.buffer_size = new_buffer_size;
+			buffer_policy.reallocate(gfx_context, buffer_config);
 		}
 
 		void copy_from(class GraphicsContext* const gfx_context, void* data, size_t buffer_size, size_t buffer_offset = 0, std::function<void(void*)> memcpy_op = {})
@@ -63,12 +71,17 @@ namespace Sunset
 
 		void bind(class GraphicsContext* const gfx_context, void* command_buffer)
 		{
-			buffer_policy.bind(gfx_context, buffer_type, command_buffer);
+			buffer_policy.bind(gfx_context, buffer_config.type, command_buffer);
 		}
 
 		void destroy(class GraphicsContext* const gfx_context)
 		{
 			buffer_policy.destroy(gfx_context);
+		}
+
+		void barrier(class GraphicsContext* const gfx_context, void* command_buffer, AccessFlags src_access, AccessFlags dst_access, PipelineStageType src_pipeline_stage, PipelineStageType dst_pipeline_stage)
+		{
+			buffer_policy.barrier(gfx_context, command_buffer, src_access, dst_access, src_pipeline_stage, dst_pipeline_stage);
 		}
 
 		void* get()
@@ -81,9 +94,14 @@ namespace Sunset
 			return buffer_policy.get_size();
 		}
 
+		BufferConfig& get_buffer_config()
+		{
+			return buffer_config;
+		}
+
 	private:
 		Policy buffer_policy;
-		BufferType buffer_type;
+		BufferConfig buffer_config;
 	};
 
 	class NoopBufferAllocator
@@ -108,7 +126,10 @@ namespace Sunset
 	public:
 		NoopBuffer() = default;
 
-		void initialize(class GraphicsContext* const gfx_context, size_t buffer_size, BufferType type, MemoryUsageType memory_usage)
+		void initialize(class GraphicsContext* const gfx_context, const BufferConfig& config)
+		{ }
+
+		void reallocate(class GraphicsContext* const gfx_context, const BufferConfig& config)
 		{ }
 
 		void destroy(class GraphicsContext* const gfx_context)
@@ -128,7 +149,10 @@ namespace Sunset
 		void unmap_gpu(class GraphicsContext* const gfx_context)
 		{ }
 
-		void bind(class GraphicsContext* const gfx_context, BufferType type, void* command_buffer)
+		void bind(class GraphicsContext* const gfx_context, BufferType type, void* command_buffer, AccessFlags src_access, AccessFlags dst_access, PipelineStageType src_pipeline_stage, PipelineStageType dst_pipeline_stage)
+		{ }
+
+		void barrier(class GraphicsContext* const gfx_context, void* command_buffer)
 		{ }
 
 		void* get()
@@ -168,8 +192,10 @@ namespace Sunset
 	class BufferFactory
 	{
 	public:
-		static Buffer* create(class GraphicsContext* const gfx_context, size_t buffer_size, BufferType type, MemoryUsageType memory_usage = MemoryUsageType::CPUToGPU, bool auto_delete = true);
+		static BufferID create(class GraphicsContext* const gfx_context, const BufferConfig& config, bool auto_delete = true);
 	};
+
+	DEFINE_RESOURCE_CACHE(BufferCache, BufferID, Buffer);
 
 	class BufferHelpers
 	{

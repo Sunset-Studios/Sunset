@@ -1,7 +1,7 @@
 #pragma once
 
-#include <singleton.h>
 #include <resource_types.h>
+#include <resource_cache.h>
 
 namespace Sunset
 {
@@ -16,6 +16,9 @@ namespace Sunset
 				state_data = data;
 			}
 
+			void destroy(class GraphicsContext* const gfx_context)
+			{ }
+
 			void bind(class GraphicsContext* const gfx_context, void* buffer);
 
 		public:
@@ -28,8 +31,8 @@ namespace Sunset
 		static ResourceStateBuilder create();
 		static ResourceStateBuilder create(const ResourceStateData& data);
 
-		ResourceStateBuilder& set_vertex_buffer(class Buffer* buffer);
-		ResourceStateBuilder& set_index_buffer(class Buffer* buffer);
+		ResourceStateBuilder& set_vertex_buffer(BufferID buffer);
+		ResourceStateBuilder& set_index_buffer(BufferID buffer);
 		ResourceStateBuilder& set_instance_index(uint32_t index);
 		ResourceStateBuilder& set_vertex_count(uint32_t count);
 		ResourceStateBuilder& set_index_count(uint32_t count);
@@ -52,28 +55,5 @@ namespace Sunset
 		class GraphicsContext* context{ nullptr };
 	};
 
-	class ResourceStateCache : public Singleton<ResourceStateCache>
-	{
-		friend class Singleton;
-
-	public:
-		void initialize();
-		void update();
-
-		ResourceStateID fetch_or_add(const ResourceStateData& data, class GraphicsContext* const gfx_context = nullptr);
-		void remove(ResourceStateID id);
-		ResourceState* fetch(ResourceStateID id);
-		void destroy(class GraphicsContext* const gfx_context);
-
-		size_t size() const
-		{
-			return cache.size();
-		}
-
-	protected:
-		std::unordered_map<ResourceStateID, ResourceState*> cache;
-
-	private:
-		ResourceStateCache() = default;
-	};
+	DEFINE_RESOURCE_CACHE(ResourceStateCache, ResourceStateID, ResourceState);
 }

@@ -19,14 +19,40 @@ namespace Sunset
 		set_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 		set_create_info.pNext = nullptr;
 		set_create_info.bindingCount = static_cast<uint32_t>(bindings.size());
-		set_create_info.flags = 0;
+		set_create_info.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT_EXT;
 		set_create_info.pBindings = vk_bindings.data();
-		vkCreateDescriptorSetLayout(context_state->get_device(), &set_create_info, nullptr, &layout);
 
-		gfx_context->add_resource_deletion_execution([this, device = context_state->get_device()]()
+		std::vector<VkDescriptorBindingFlags> bindless_flags(bindings.size(), VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT);
 		{
-			vkDestroyDescriptorSetLayout(device, layout, nullptr);
-		});
+			for (uint32_t i = 0; i < bindings.size(); ++i)
+			{
+				if (bindings[i].b_supports_bindless)
+				{
+					bindless_flags[i] |= VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT_EXT;
+					b_supports_bindless = true;
+				}
+				if (bindings[i].type != DescriptorType::DynamicUniformBuffer)
+				{
+					bindless_flags[i] |= VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT_EXT;
+				}
+			}
+
+			VkDescriptorSetLayoutBindingFlagsCreateInfoEXT extended_info{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO_EXT, nullptr };
+			extended_info.bindingCount = static_cast<uint32_t>(bindless_flags.size());
+			extended_info.pBindingFlags = bindless_flags.data();
+
+			set_create_info.pNext = &extended_info;
+		}
+
+		vkCreateDescriptorSetLayout(context_state->get_device(), &set_create_info, nullptr, &layout);
+	}
+
+	void VulkanDescriptorLayout::destroy(class GraphicsContext* const gfx_context)
+	{
+		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
+		assert(context_state != nullptr);
+
+		vkDestroyDescriptorSetLayout(context_state->get_device(), layout, nullptr);
 	}
 
 	bool VulkanDescriptorSet::build(GraphicsContext* const gfx_context, DescriptorLayout* descriptor_layout, void* descriptor_pool)
@@ -43,6 +69,18 @@ namespace Sunset
 		set_alloc_info.descriptorPool = static_cast<VkDescriptorPool>(descriptor_pool);
 		set_alloc_info.descriptorSetCount = 1;
 
+		if (descriptor_layout->supports_bindless())
+		{
+			uint32_t max_binding = MAX_DESCRIPTOR_BINDINGS - 1;
+			VkDescriptorSetVariableDescriptorCountAllocateInfoEXT count_info = {};
+			count_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO_EXT;
+			count_info.pNext = nullptr;
+			count_info.descriptorSetCount = 1;
+			count_info.pDescriptorCounts = &max_binding;
+
+			set_alloc_info.pNext = &count_info;
+		}
+
 		VkResult alloc_result = vkAllocateDescriptorSets(context_state->get_device(), &set_alloc_info, &descriptor_set);
 		switch (alloc_result)
 		{
@@ -53,18 +91,28 @@ namespace Sunset
 		}
 	}
 
-	void VulkanDescriptorSet::bind(class GraphicsContext* const gfx_context, void* cmd_buffer, PipelineStateID pipeline_state, const std::vector<uint32_t>& dynamic_buffer_offsets, uint32_t set_index)
+	void VulkanDescriptorSet::bind(class GraphicsContext* const gfx_context, void* cmd_buffer, ShaderLayoutID layout, PipelineStateType pipeline_state_type, const std::vector<uint32_t>& dynamic_buffer_offsets, uint32_t set_index)
 	{
-		assert(pipeline_state != 0);
+		assert(layout != 0);
 
-		ShaderPipelineLayout* const pipeline_layout = PipelineStateCache::get()->fetch(pipeline_state)->get_state_data().layout;
-		VkPipelineLayout layout = static_cast<VkPipelineLayout>(pipeline_layout->get_data());
-		VkCommandBuffer buffer = static_cast<VkCommandBuffer>(cmd_buffer);
+		ShaderPipelineLayout* const layout_obj = CACHE_FETCH(ShaderPipelineLayout, layout);
 
-		assert(layout != nullptr);
-		assert(buffer != nullptr);
+		VkPipelineLayout vk_layout = static_cast<VkPipelineLayout>(layout_obj->get_data());
+		VkCommandBuffer vk_buffer = static_cast<VkCommandBuffer>(cmd_buffer);
 
-		vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, set_index, 1, &descriptor_set, static_cast<uint32_t>(dynamic_buffer_offsets.size()), dynamic_buffer_offsets.data());
+		assert(vk_layout != nullptr);
+		assert(vk_buffer != nullptr);
+
+		vkCmdBindDescriptorSets(
+			vk_buffer,
+			VK_FROM_SUNSET_PIPELINE_STATE_BIND_TYPE(pipeline_state_type),
+			vk_layout,
+			set_index,
+			1,
+			&descriptor_set,
+			static_cast<uint32_t>(dynamic_buffer_offsets.size()),
+			dynamic_buffer_offsets.data()
+		);
 	}
 
 	void VulkanDescriptorSetAllocator::configure_pool_sizes(const std::initializer_list<std::pair<DescriptorType, uint32_t>>& sizes)
@@ -148,7 +196,7 @@ namespace Sunset
 			VkDescriptorPoolCreateInfo pool_create_info = {};
 			pool_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 			pool_create_info.pNext = nullptr;
-			pool_create_info.flags = 0;
+			pool_create_info.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT_EXT;
 			pool_create_info.maxSets = max_sets_per_pool;
 			pool_create_info.poolSizeCount = static_cast<uint32_t>(pool_sizes.size());
 			pool_create_info.pPoolSizes = pool_sizes.data();

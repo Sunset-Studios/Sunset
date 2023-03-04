@@ -1,9 +1,8 @@
 #pragma once
 
 #include <common.h>
-#include <graphics/pipeline_state.h>
-#include <graphics/render_task.h>
-#include <graphics/render_queue.h>
+#include <graphics/render_pass_types.h>
+#include <graphics/resource/resource_cache.h>
 
 namespace Sunset
 {
@@ -13,25 +12,15 @@ namespace Sunset
 	public:
 		GenericRenderPass() = default;
 
-		void initialize(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, const std::initializer_list<class Image*>& attachments)
+		void initialize_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, const RenderPassConfig& config)
 		{
-			render_pass_policy.initialize(gfx_context, swapchain, attachments);
-		}
-
-		void initialize_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, const std::initializer_list<class Image*>& attachments)
-		{
-			render_pass_policy.initialize_default(gfx_context, swapchain, attachments);
+			pass_config = config;
+			render_pass_policy.initialize_default(gfx_context, swapchain, pass_config);
 		}
 
 		void destroy(class GraphicsContext* const gfx_context)
 		{
 			render_pass_policy.destroy(gfx_context);
-		}
-
-		void draw(class GraphicsContext* const gfx_context, void* command_buffer)
-		{
-			render_pass_policy.draw(gfx_context, command_buffer);
-			render_queue.submit(gfx_context, command_buffer);
 		}
 
 		void* get_data()
@@ -49,24 +38,24 @@ namespace Sunset
 			render_pass_policy.set_output_framebuffers(std::forward<std::vector<class Framebuffer*>>(framebuffers));
 		}
 
-		void begin_pass(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, void* command_buffer)
+		void begin_pass(class GraphicsContext* const gfx_context, uint32_t framebuffer_index, void* command_buffer)
 		{
-			render_pass_policy.begin_pass(gfx_context, swapchain, command_buffer);
+			render_pass_policy.begin_pass(gfx_context, framebuffer_index, command_buffer, pass_config);
 		}
 
-		void end_pass(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, void* command_buffer)
+		void end_pass(class GraphicsContext* const gfx_context, void* command_buffer)
 		{
-			render_pass_policy.end_pass(gfx_context, swapchain, command_buffer);
+			render_pass_policy.end_pass(gfx_context, command_buffer, pass_config);
 		}
 
-		void push_task(RenderTask* task)
+		uint32_t get_num_color_attachments()
 		{
-			render_queue.add(task);
+			return render_pass_policy.get_num_color_attachments(pass_config);
 		}
 
 	private:
 		Policy render_pass_policy;
-		RenderQueue render_queue;
+		RenderPassConfig pass_config;
 	};
 
 	class NoopRenderPass
@@ -74,16 +63,10 @@ namespace Sunset
 	public:
 		NoopRenderPass() = default;
 
-		void initialize(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, const std::initializer_list<class Image*>& attachments)
-		{ }
-
-		void initialize_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, const std::initializer_list<class Image*>& attachments)
+		void initialize_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RenderPassConfig& config)
 		{ }
 
 		void destroy(class GraphicsContext* const gfx_context)
-		{ }
-
-		void draw(class GraphicsContext* const gfx_context)
 		{ }
 
 		void* get_data()
@@ -99,11 +82,16 @@ namespace Sunset
 		void set_output_framebuffers(std::vector<class Framebuffer*>&& framebuffers)
 		{ }
 
-		void begin_pass(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, void* command_buffer)
+		void begin_pass(class GraphicsContext* const gfx_context, uint32_t framebuffer_index, void* command_buffer, const RenderPassConfig& pass_config)
 		{ }
 
-		void end_pass(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, void* command_buffer)
+		void end_pass(class GraphicsContext* const gfx_context, void* command_buffer, const RenderPassConfig& pass_config)
 		{ }
+
+		uint32_t get_num_color_attachments(const RenderPassConfig& config)
+		{
+			return 0;
+		}
 	};
 
 #if USE_VULKAN_GRAPHICS
@@ -117,18 +105,8 @@ namespace Sunset
 	class RenderPassFactory
 	{
 	public:
-		static RenderPass* create(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, const std::initializer_list<class Image*>& attachments)
-		{
-			RenderPass* rp = new RenderPass;
-			rp->initialize(gfx_context, swapchain, attachments);
-			return rp;
-		}
-
-		static RenderPass* create_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, const std::initializer_list<class Image*>& attachments)
-		{
-			RenderPass* rp = new RenderPass;
-			rp->initialize_default(gfx_context, swapchain, attachments);
-			return rp;
-		}
+		static RenderPassID create_default(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, const RenderPassConfig& config, bool b_auto_delete = false);
 	};
+
+	DEFINE_RESOURCE_CACHE(RenderPassCache, RenderPassID, RenderPass);
 }

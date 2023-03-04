@@ -3,53 +3,140 @@
 #include <graphics/resource/buffer.h>
 #include <graphics/asset_pool.h>
 #include <graphics/renderer.h>
+#include <graphics/command_queue.h>
 #include <mesh_serializer.h>
 
 namespace Sunset
 {
-	void Mesh::upload(GraphicsContext* const gfx_context)
+	void upload_mesh(GraphicsContext* const gfx_context, Mesh* mesh)
 	{
 		{
 			// Upload vertex buffer
-			const size_t vertex_data_size = vertices.size() * sizeof(Vertex);
+			const size_t vertex_data_size = mesh->vertices.size() * sizeof(Vertex);
 
-			Buffer* const vertex_staging_buffer = BufferFactory::create(gfx_context, vertex_data_size, BufferType::TransferSource, MemoryUsageType::OnlyCPU, false);
+			std::string buffer_name = std::string(mesh->name);
+			buffer_name += "_vertex_staging";
+			const BufferID vertex_staging_buffer_id = BufferFactory::create(
+				gfx_context,
+				{
+					.name = buffer_name.c_str(),
+					.buffer_size = vertex_data_size,
+					.type = BufferType::TransferSource,
+					.memory_usage = MemoryUsageType::OnlyCPU
+				},
+				false
+			);
+			Buffer* const vertex_staging_buffer = CACHE_FETCH(Buffer, vertex_staging_buffer_id);
 
-			vertex_staging_buffer->copy_from(gfx_context, vertices.data(), vertex_data_size);
+			vertex_staging_buffer->copy_from(gfx_context, mesh->vertices.data(), vertex_data_size);
 
-			vertex_buffer = BufferFactory::create(gfx_context, vertex_data_size, BufferType::Vertex | BufferType::TransferDestination, MemoryUsageType::OnlyGPU);
+			buffer_name = std::string(mesh->name);
+			buffer_name += "_vertex";
+			mesh->vertex_buffer = BufferFactory::create(
+				gfx_context,
+				{
+					.name = buffer_name.c_str(),
+					.buffer_size = vertex_data_size,
+					.type = BufferType::Vertex | BufferType::TransferDestination,
+					.memory_usage = MemoryUsageType::OnlyGPU
+				}
+			);
 
-			Renderer::get()->graphics_command_queue()->submit_immediate(gfx_context, [this, gfx_context, vertex_staging_buffer, vertex_data_size](void* command_buffer)
+			gfx_context->get_command_queue(DeviceQueueType::Graphics)->submit_immediate(gfx_context, [mesh, gfx_context, vertex_staging_buffer, vertex_data_size](void* command_buffer)
 			{
-				vertex_buffer->copy_buffer(gfx_context, command_buffer, vertex_staging_buffer, vertex_data_size);
+				Buffer* const vertex_buffer_obj = CACHE_FETCH(Buffer, mesh->vertex_buffer);
+				vertex_buffer_obj->copy_buffer(gfx_context, command_buffer, vertex_staging_buffer, vertex_data_size);
 			});
 
-			vertex_staging_buffer->destroy(gfx_context);
-			GlobalAssetPools<Buffer>::get()->deallocate(vertex_staging_buffer);
+			CACHE_DELETE(Buffer, vertex_staging_buffer_id, gfx_context);
 		}
 
 		{
 			// Upload index buffer
-			const size_t index_data_size = indices.size() * sizeof(uint32_t);
+			const size_t index_data_size = mesh->indices.size() * sizeof(uint32_t);
 
-			Buffer* const index_staging_buffer = BufferFactory::create(gfx_context, index_data_size, BufferType::TransferSource, MemoryUsageType::OnlyCPU, false);
+			std::string buffer_name = std::string(mesh->name);
+			buffer_name += "_index_staging";
+			const BufferID index_staging_buffer_id = BufferFactory::create(
+				gfx_context,
+				{
+					.name = buffer_name.c_str(),
+					.buffer_size = index_data_size,
+					.type = BufferType::TransferSource,
+					.memory_usage = MemoryUsageType::OnlyCPU
+				},
+				false
+			);
+			Buffer* const index_staging_buffer = CACHE_FETCH(Buffer, index_staging_buffer_id);
 
-			index_staging_buffer->copy_from(gfx_context, indices.data(), index_data_size);
+			index_staging_buffer->copy_from(gfx_context, mesh->indices.data(), index_data_size);
 
-			index_buffer = BufferFactory::create(gfx_context, index_data_size, BufferType::Index | BufferType::TransferDestination, MemoryUsageType::OnlyGPU);
+			buffer_name = std::string(mesh->name);
+			buffer_name += "_index";
+			mesh->index_buffer = BufferFactory::create(
+				gfx_context,
+				{
+					.name = buffer_name.c_str(),
+					.buffer_size = index_data_size,
+					.type = BufferType::Index | BufferType::TransferDestination,
+					.memory_usage = MemoryUsageType::OnlyGPU
+				}
+			);
 
-			Renderer::get()->graphics_command_queue()->submit_immediate(gfx_context, [this, gfx_context, index_staging_buffer, index_data_size](void* command_buffer)
+			gfx_context->get_command_queue(DeviceQueueType::Graphics)->submit_immediate(gfx_context, [mesh, gfx_context, index_staging_buffer, index_data_size](void* command_buffer)
 			{
-				index_buffer->copy_buffer(gfx_context, command_buffer, index_staging_buffer, index_data_size);
+				Buffer* const index_buffer_obj = CACHE_FETCH(Buffer, mesh->index_buffer);
+				index_buffer_obj->copy_buffer(gfx_context, command_buffer, index_staging_buffer, index_data_size);
 			});
 
-			index_staging_buffer->destroy(gfx_context);
-			GlobalAssetPools<Buffer>::get()->deallocate(index_staging_buffer);
+			CACHE_DELETE(Buffer, index_staging_buffer_id, gfx_context);
 		}
 	}
 
-	void Mesh::destroy(GraphicsContext* const gfx_context)
+	void destroy_mesh(GraphicsContext* const gfx_context, Mesh* mesh)
 	{
+	}
+
+	Bounds calculate_mesh_bounds(Mesh* mesh, const glm::mat4& transform)
+	{
+		std::array<glm::vec3, 8> bounding_verts;
+
+		bounding_verts[0] = mesh->local_bounds.origin + mesh->local_bounds.extents * glm::vec3(1, 1, 1);
+		bounding_verts[1] = mesh->local_bounds.origin + mesh->local_bounds.extents * glm::vec3(1, 1, -1);
+		bounding_verts[2] = mesh->local_bounds.origin + mesh->local_bounds.extents * glm::vec3(1, -1, 1);
+		bounding_verts[3] = mesh->local_bounds.origin + mesh->local_bounds.extents * glm::vec3(1, -1, -1);
+		bounding_verts[4] = mesh->local_bounds.origin + mesh->local_bounds.extents * glm::vec3(-1, 1, 1);
+		bounding_verts[5] = mesh->local_bounds.origin + mesh->local_bounds.extents * glm::vec3(-1, 1, -1);
+		bounding_verts[6] = mesh->local_bounds.origin + mesh->local_bounds.extents * glm::vec3(-1, -1, 1);
+		bounding_verts[7] = mesh->local_bounds.origin + mesh->local_bounds.extents * glm::vec3(-1, -1, -1);
+		
+		glm::vec3 min{ std::numeric_limits<float>::max() };
+		glm::vec3 max{ std::numeric_limits<float>::min() };
+
+		for (uint8_t i = 0; i < 8; ++i)
+		{
+			bounding_verts[i] = transform * glm::vec4(bounding_verts[i], 1.0f);
+			min = glm::min(min, bounding_verts[i]);
+			max = glm::max(max, bounding_verts[i]);
+		}
+
+		float max_scale = 0.0f;
+		max_scale = glm::max(glm::length(glm::vec3(transform[0][0], transform[0][1], transform[0][2])), max_scale);
+		max_scale = glm::max(glm::length(glm::vec3(transform[1][0], transform[1][1], transform[1][2])), max_scale);
+		max_scale = glm::max(glm::length(glm::vec3(transform[2][0], transform[2][1], transform[2][2])), max_scale);
+
+		Bounds new_bounds;
+		new_bounds.extents = (max - min) / 2.0f;
+		new_bounds.origin = min + mesh->local_bounds.extents;
+		new_bounds.radius = mesh->local_bounds.radius > 0 ? max_scale * mesh->local_bounds.radius : new_bounds.extents.x;
+
+		return new_bounds;
+	}
+
+	Sunset::Bounds get_mesh_bounds(MeshID mesh)
+	{
+		assert(mesh != 0 && "Cannot fetch bounds on null mesh!");
+		return CACHE_FETCH(Mesh, mesh)->local_bounds;
 	}
 
 	Sunset::PipelineVertexInputDescription Vertex::get_description()
@@ -68,10 +155,12 @@ namespace Sunset
 
 	Sunset::MeshID MeshFactory::create_triangle(class GraphicsContext* const gfx_context)
 	{
-		static MeshID mesh_id = MeshCache::get()->fetch_or_add("triangle", gfx_context);
-		Mesh* const mesh = MeshCache::get()->fetch(mesh_id);
+		Identity id{ "engine_triangle" };
+		bool b_added{ false };
+		static MeshID mesh_id = MeshCache::get()->fetch_or_add(id, gfx_context, b_added);
+		Mesh* const mesh = CACHE_FETCH(Mesh, mesh_id);
 
-		if (mesh->vertices.size() == 0)
+		if (b_added)
 		{
 			mesh->vertices.resize(3);
 
@@ -83,7 +172,9 @@ namespace Sunset
 			mesh->vertices[1].color = { 0.0f, 1.0f, 0.0f };
 			mesh->vertices[2].color = { 0.0f, 1.0f, 0.0f };
 
-			mesh->upload(gfx_context);
+			mesh->name = id;
+
+			upload_mesh(gfx_context, mesh);
 		}
 
 		return mesh_id;
@@ -91,10 +182,12 @@ namespace Sunset
 
 	Sunset::MeshID MeshFactory::load(class GraphicsContext* const gfx_context, const char* path)
 	{
-		const MeshID mesh_id = MeshCache::get()->fetch_or_add(path, gfx_context);
-		Mesh* const mesh = MeshCache::get()->fetch(mesh_id);
+		Identity id{ path };
+		bool b_added{ false };
+		const MeshID mesh_id = MeshCache::get()->fetch_or_add(id, gfx_context, b_added);
+		Mesh* const mesh = CACHE_FETCH(Mesh, mesh_id);
 
-		if (mesh->vertex_buffer == nullptr)
+		if (b_added)
 		{
 			SerializedAsset asset;
 			if (!deserialize_asset(path, asset))
@@ -172,53 +265,21 @@ namespace Sunset
 				mesh->indices[i] = unpacked_indices[i];
 			}
 
-			mesh->upload(gfx_context);
+			mesh->name = id;
+
+			{
+				mesh->local_bounds.extents.x = serialized_mesh_info.bounds.extents[0];
+				mesh->local_bounds.extents.y = serialized_mesh_info.bounds.extents[1];
+				mesh->local_bounds.extents.z = serialized_mesh_info.bounds.extents[2];
+				mesh->local_bounds.origin.x = serialized_mesh_info.bounds.origin[0];
+				mesh->local_bounds.origin.y = serialized_mesh_info.bounds.origin[1];
+				mesh->local_bounds.origin.z = serialized_mesh_info.bounds.origin[2];
+				mesh->local_bounds.radius = serialized_mesh_info.bounds.radius;
+			}
+
+			upload_mesh(gfx_context, mesh);
 		}
 
 		return mesh_id;
-	}
-
-	void MeshCache::initialize()
-	{
-	}
-
-	void MeshCache::update()
-	{
-	}
-
-	Sunset::MeshID MeshCache::fetch_or_add(const char* file_path, class GraphicsContext* const gfx_context /*= nullptr*/)
-	{
-		MeshID id = std::hash<std::string>{}(file_path);
-		if (cache.find(id) == cache.end())
-		{
-			Mesh* const new_mesh = GlobalAssetPools<Mesh>::get()->allocate();
-			gfx_context->add_resource_deletion_execution([new_mesh, gfx_context]()
-			{
-				new_mesh->destroy(gfx_context);
-				GlobalAssetPools<Mesh>::get()->deallocate(new_mesh);
-			});
-			cache.insert({ id, new_mesh });
-		}
-		return id;
-	}
-
-	Sunset::Mesh* MeshCache::fetch(MeshID id)
-	{
-		assert(cache.find(id) != cache.end());
-		return cache[id];
-	}
-
-	void MeshCache::remove(MeshID id)
-	{
-		cache.erase(id);
-	}
-
-	void MeshCache::destroy(class GraphicsContext* const gfx_context)
-	{
-		for (const std::pair<size_t, Mesh*>& pair : cache)
-		{
-			pair.second->destroy(gfx_context);
-		}
-		cache.clear();
 	}
 }
