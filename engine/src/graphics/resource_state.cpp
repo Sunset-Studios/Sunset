@@ -32,12 +32,6 @@ namespace Sunset
 		return *this;
 	}
 
-	Sunset::ResourceStateBuilder& ResourceStateBuilder::set_instance_index(uint32_t index)
-	{
-		state_data.instance_index = index;
-		return *this;
-	}
-
 	Sunset::ResourceStateBuilder& ResourceStateBuilder::set_vertex_count(uint32_t count)
 	{
 		state_data.vertex_count = count;

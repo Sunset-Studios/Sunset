@@ -38,27 +38,30 @@ namespace Sunset
 		{
 			std::unique_ptr<Scene> scene = std::make_unique<Scene>();
 
-			EntityID mesh_ent = scene->make_entity();
+			for (uint32_t i = 0; i < 500; ++i)
+			{
+				EntityID mesh_ent = scene->make_entity();
 
-			TransformComponent* const transform_comp = scene->assign_component<TransformComponent>(mesh_ent);
+				TransformComponent* const transform_comp = scene->assign_component<TransformComponent>(mesh_ent);
 
-			set_position(transform_comp, glm::vec3(5.0f, -10.0f, 0.0f));
-			set_scale(transform_comp, glm::vec3(1.0f));
+				set_position(transform_comp, glm::vec3(5.0f + 50.0f * i, -50.0f, -150.0f));
+				set_scale(transform_comp, glm::vec3(1.0f));
 
-			MeshComponent* const mesh_comp = scene->assign_component<MeshComponent>(mesh_ent);
+				MeshComponent* const mesh_comp = scene->assign_component<MeshComponent>(mesh_ent);
 
-			MaterialID mesh_material = MaterialFactory::create(
-				Renderer::get()->context(),
-				{
-					.textures =
+				MaterialID mesh_material = MaterialFactory::create(
+					Renderer::get()->context(),
 					{
-						"../../assets/lost_empire-RGBA.sun"
+						.textures =
+						{
+							"../../assets/lost_empire-RGBA.sun"
+						}
 					}
-				}
-			);
+				);
 
-			set_mesh(mesh_comp, MeshFactory::load(Renderer::get()->context(), "../../assets/lost_empire.sun"));
-			set_material(mesh_comp, mesh_material);
+				set_mesh(mesh_comp, MeshFactory::load(Renderer::get()->context(), "../../assets/lost_empire.sun"));
+				set_material(mesh_comp, mesh_material);
+			}
 
 			SimulationCore::get()->register_layer(std::move(scene));
 		}

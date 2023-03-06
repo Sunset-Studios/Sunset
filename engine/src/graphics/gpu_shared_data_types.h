@@ -28,6 +28,7 @@ namespace Sunset
 		glm::vec4 bounds_pos_radius;
 		glm::vec4 bounds_extent;
 		int32_t material_index{ -1 };
+		glm::vec3 padding;
 	};
 
 	struct MaterialData

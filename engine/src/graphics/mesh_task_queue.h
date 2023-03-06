@@ -77,12 +77,12 @@ namespace Sunset
 			}
 
 			void sort_and_batch(class GraphicsContext* const gfx_context);
-			void submit_compute_cull(class GraphicsContext* const gfx_context, void* command_buffer);
+			void submit_compute_cull(class GraphicsContext* const gfx_context, void* command_buffer, ExecutionQueue* deletion_queue = nullptr);
 			void submit_draws(class GraphicsContext* const gfx_context, void* command_buffer, RenderPassID render_pass, DescriptorSet* pass_descriptor_set, PipelineStateID pipeline_state, bool b_flush = true);
 
 		private:
 			std::vector<IndirectDrawBatch> batch_indirect_draws(class GraphicsContext* const gfx_context);
-			void update_indirect_draw_buffers(class GraphicsContext* const gfx_context, void* command_buffer);
+			void update_indirect_draw_buffers(class GraphicsContext* const gfx_context, void* command_buffer, ExecutionQueue* deletion_queue = nullptr);
 
 		private:
 			std::vector<class MeshRenderTask*> queue;

@@ -33,10 +33,10 @@ struct EntitySceneData
 	mat4 transform;
 	vec4 bounds_pos_radius;
 	vec4 bounds_extent;
-	uint material_index;
+	int material_index;
 };
 
-layout (std140, set = 1, binding = 0) readonly buffer EntitySceneDataBuffer
+layout (std430, set = 1, binding = 0) readonly buffer EntitySceneDataBuffer
 {
 	EntitySceneData entities[];
 } entity_data;
@@ -48,10 +48,10 @@ layout (push_constant) uniform constants
 
 void main()
 {
-	mat4 model_matrix = entity_data.entities[gl_BaseInstance].transform;
+	mat4 model_matrix = entity_data.entities[gl_InstanceIndex].transform;
 	mat4 transform_matrix = camera_data.view_proj * model_matrix;
 	gl_Position = transform_matrix * vec4(in_position, 1.0f);
 	out_color = in_color;
 	out_tex_coord = in_tex_coord;
-	out_instance_index = gl_BaseInstance;
+	out_instance_index = gl_InstanceIndex;
 }

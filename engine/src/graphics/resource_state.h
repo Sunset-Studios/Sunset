@@ -33,7 +33,6 @@ namespace Sunset
 
 		ResourceStateBuilder& set_vertex_buffer(BufferID buffer);
 		ResourceStateBuilder& set_index_buffer(BufferID buffer);
-		ResourceStateBuilder& set_instance_index(uint32_t index);
 		ResourceStateBuilder& set_vertex_count(uint32_t count);
 		ResourceStateBuilder& set_index_count(uint32_t count);
 

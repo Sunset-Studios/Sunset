@@ -94,7 +94,8 @@ namespace Sunset
 					);
 					Renderer::get()->get_mesh_task_queue().submit_compute_cull(
 						gfx_context,
-						command_buffer
+						command_buffer,
+						frame_data.resource_deletion_queue
 					);
 				}
 			);

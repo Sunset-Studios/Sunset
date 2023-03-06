@@ -81,11 +81,11 @@ namespace Sunset
 
 		bounds_data[0] = serialized_mesh_info->bounds.origin[0];
 		bounds_data[1] = serialized_mesh_info->bounds.origin[1];
-		bounds_data[2] = serialized_mesh_info->bounds.origin[1];
+		bounds_data[2] = serialized_mesh_info->bounds.origin[2];
 
-		bounds_data[3] = serialized_mesh_info->bounds.extents[1];
+		bounds_data[3] = serialized_mesh_info->bounds.extents[0];
 		bounds_data[4] = serialized_mesh_info->bounds.extents[1];
-		bounds_data[5] = serialized_mesh_info->bounds.extents[1];
+		bounds_data[5] = serialized_mesh_info->bounds.extents[2];
 
 		bounds_data[6] = serialized_mesh_info->bounds.radius;
 
@@ -129,9 +129,9 @@ namespace Sunset
 			min[1] = std::min(min[1], vertices[i].position[1]);
 			min[2] = std::min(min[2], vertices[i].position[2]);
 
-			max[0] = std::min(max[0], vertices[i].position[0]);
-			max[1] = std::min(max[1], vertices[i].position[1]);
-			max[2] = std::min(max[2], vertices[i].position[2]);
+			max[0] = std::max(max[0], vertices[i].position[0]);
+			max[1] = std::max(max[1], vertices[i].position[1]);
+			max[2] = std::max(max[2], vertices[i].position[2]);
 		}
 
 		bounds.extents[0] = (max[0] - min[0]) / 2.0f;

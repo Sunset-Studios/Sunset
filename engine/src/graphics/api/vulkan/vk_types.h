@@ -16,7 +16,6 @@ namespace Sunset
 	struct VulkanGPUIndirectObject
 	{
 		VkDrawIndexedIndirectCommand indirect_command;
-		GPUObjectInstance object_instance;
 	};
 }
 

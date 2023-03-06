@@ -108,7 +108,7 @@ namespace Sunset
 
 	void VulkanContext::draw_indexed(void* buffer, uint32_t index_count, uint32_t instance_count, uint32_t instance_index /*= 0*/)
 	{
-		vkCmdDrawIndexed(static_cast<VkCommandBuffer>(buffer), index_count, instance_count, instance_index, 0, 0);
+		vkCmdDrawIndexed(static_cast<VkCommandBuffer>(buffer), index_count, instance_count, 0, 0, instance_index);
 	}
 
 	void VulkanContext::draw_indexed_indirect(void* buffer, class Buffer* indirect_buffer, uint32_t draw_count, uint32_t draw_first /*= 0*/)
@@ -225,15 +225,13 @@ namespace Sunset
 		return state.device.physical_device.properties.limits.minUniformBufferOffsetAlignment;
 	}
 
-	void VulkanContext::update_indirect_draw_command(void* commands, uint32_t command_index, uint32_t index_count, uint32_t first_index, uint32_t instance_count, uint32_t first_instance, uint64_t object_id, uint32_t batch_id)
+	void VulkanContext::update_indirect_draw_command(void* commands, uint32_t command_index, uint32_t index_count, uint32_t first_index, uint32_t instance_count, uint32_t first_instance)
 	{
 		VulkanGPUIndirectObject* vk_commands = static_cast<VulkanGPUIndirectObject*>(commands);
 		vk_commands[command_index].indirect_command.indexCount = index_count;
 		vk_commands[command_index].indirect_command.firstIndex = first_index;
 		vk_commands[command_index].indirect_command.instanceCount = instance_count;
 		vk_commands[command_index].indirect_command.firstInstance = first_instance;
-		vk_commands[command_index].object_instance.object_id = object_id;
-		vk_commands[command_index].object_instance.batch_id = batch_id;
 	}
 
 	Sunset::ShaderLayoutID VulkanContext::derive_layout_for_shader_stages(class GraphicsContext* const gfx_context, const std::vector<PipelineShaderStage>& stages, std::vector<DescriptorLayoutID>& out_descriptor_layouts)

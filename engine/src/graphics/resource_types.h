@@ -13,15 +13,13 @@ namespace Sunset
 	public:
 		BufferID vertex_buffer{ 0 };
 		BufferID index_buffer{ 0 };
-		uint32_t instance_index{ 0 };
 		uint32_t vertex_count{ 0 };
 		uint32_t index_count{ 0 };
 
 		bool operator==(const ResourceStateData& other) const
 		{
 			return vertex_buffer == other.vertex_buffer && index_buffer == other.index_buffer 
-				&& instance_index == other.instance_index && vertex_count == other.vertex_count
-				&& index_count == other.index_count;
+				&& vertex_count == other.vertex_count && index_count == other.index_count;
 		}
 	};
 }
@@ -37,7 +35,6 @@ struct std::hash<Sunset::ResourceStateData>
 	{
 		std::size_t seed = static_cast<int32_t>(psd.vertex_buffer);
 		seed = Sunset::Maths::cantor_pair_hash(static_cast<int32_t>(seed), static_cast<int32_t>(psd.index_buffer));
-		seed = Sunset::Maths::cantor_pair_hash(static_cast<int32_t>(seed), psd.instance_index);
 		return seed;
 	}
 };

@@ -26,10 +26,10 @@ struct EntitySceneData
 	mat4 transform;
 	vec4 bounds_pos_radius;
 	vec4 bounds_extent;
-	uint material_index;
+	int material_index;
 };
 
-layout (std140, set = 1, binding = 0) readonly buffer EntitySceneDataBuffer
+layout (std430, set = 1, binding = 0) readonly buffer EntitySceneDataBuffer
 {
 	EntitySceneData entities[];
 } entity_data;
@@ -57,8 +57,6 @@ struct DrawCommand
     uint first_index;
     int  vertex_offset;
     uint first_instance;
-	uint object_id;
-	uint batch_id;
 };
 
 layout (set = 1, binding = 3) buffer DrawIndirectBuffer

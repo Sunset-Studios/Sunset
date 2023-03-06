@@ -34,7 +34,7 @@ struct EntitySceneData
 	mat4 transform;
 	vec4 bounds_pos_radius;
 	vec4 bounds_extent;
-	uint material_index;
+	int material_index;
 };
 
 struct MaterialData
@@ -42,7 +42,7 @@ struct MaterialData
 	uint textures[MAX_TEXTURES_PER_MATERIAL];
 };
 
-layout (std140, set = 1, binding = 0) readonly buffer EntitySceneDataBuffer
+layout (std430, set = 1, binding = 0) readonly buffer EntitySceneDataBuffer
 {
 	EntitySceneData entities[];
 } entity_data;

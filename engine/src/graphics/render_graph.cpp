@@ -315,7 +315,8 @@ namespace Sunset
 		{
 			RGFrameData frame_data
 			{
-				.gfx_context = gfx_context
+				.gfx_context = gfx_context,
+				.resource_deletion_queue = &current_registry->resource_deletion_queue
 			};
 
 			for (RGPassHandle pass_handle : nonculled_passes)
@@ -453,6 +454,14 @@ namespace Sunset
 			if (current_registry->resource_metadata[resource].physical_id == 0)
 			{
 				current_registry->resource_metadata[resource].physical_id = BufferFactory::create(gfx_context, buffer_resource->config, false);
+				if (!current_registry->resource_metadata[resource].b_is_persistent)
+				{
+					current_registry->resource_deletion_queue.push_execution([gfx_context, physical_id = current_registry->resource_metadata[resource].physical_id]()
+						{
+							CACHE_DELETE(Buffer, physical_id, gfx_context);
+						}
+					);
+				}
 			}
 		}
 		else if (resource_type == ResourceType::Image)
@@ -465,6 +474,14 @@ namespace Sunset
 			{
 				current_registry->resource_metadata[resource].physical_id = ImageFactory::create(gfx_context, image_resource->config, b_is_persistent);
 				current_registry->resource_metadata[resource].b_is_persistent = b_is_persistent;
+				if (!current_registry->resource_metadata[resource].b_is_persistent)
+				{
+					current_registry->resource_deletion_queue.push_execution([gfx_context, physical_id = current_registry->resource_metadata[resource].physical_id]()
+						{
+							CACHE_DELETE(Image, physical_id, gfx_context);
+						}
+					);
+				}
 			}
 		}
 	}
@@ -732,22 +749,6 @@ namespace Sunset
 	void RenderGraph::free_physical_resources(class GraphicsContext* const gfx_context)
 	{
 		// TODO: Look into aliasing memory for expired resources as opposed to just flat out deleting them (though that should also be done)
-		for (RGResourceHandle resource : current_registry->all_resource_handles)
-		{
-			RGResourceMetadata& resource_meta = current_registry->resource_metadata[resource];
-			if (resource_meta.physical_id != 0 && !resource_meta.b_is_persistent)
-			{
-				const ResourceType resource_type = static_cast<ResourceType>(get_graph_resource_type(resource));
-				if (resource_type == ResourceType::Image)
-				{
-					CACHE_DELETE(Image, resource_meta.physical_id, gfx_context);
-				}
-				else if (resource_type == ResourceType::Buffer)
-				{
-					CACHE_DELETE(Buffer, resource_meta.physical_id, gfx_context);
-				}
-				resource_meta.physical_id = 0;
-			}
-		}
+		current_registry->resource_deletion_queue.flush();
 	}
 }

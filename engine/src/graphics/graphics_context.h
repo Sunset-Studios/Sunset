@@ -127,9 +127,9 @@ namespace Sunset
 				return graphics_policy.get_min_ubo_offset_alignment();
 			}
 
-			void update_indirect_draw_command(void* commands, uint32_t command_index, uint32_t index_count, uint32_t first_index, uint32_t instance_count, uint32_t first_instance, uint64_t object_id, uint32_t batch_id)
+			void update_indirect_draw_command(void* commands, uint32_t command_index, uint32_t index_count, uint32_t first_index, uint32_t instance_count, uint32_t first_instance)
 			{
-				graphics_policy.update_indirect_draw_command(commands, command_index, index_count, first_index, instance_count, first_instance, object_id, batch_id);
+				graphics_policy.update_indirect_draw_command(commands, command_index, index_count, first_index, instance_count, first_instance);
 			}
 
 			ShaderLayoutID derive_layout_for_shader_stages(class GraphicsContext* const gfx_context, const std::vector<PipelineShaderStage>& stages, std::vector<DescriptorLayoutID>& out_descriptor_layouts)
@@ -229,7 +229,7 @@ namespace Sunset
 				return 0;
 			}
 
-			void update_indirect_draw_command(void* commands, uint32_t command_index, uint32_t index_count, uint32_t first_index, uint32_t instance_count, uint32_t first_instance, uint64_t object_id, uint32_t batch_id)
+			void update_indirect_draw_command(void* commands, uint32_t command_index, uint32_t index_count, uint32_t first_index, uint32_t instance_count, uint32_t first_instance)
 			{ }
 
 			ShaderLayoutID derive_layout_for_shader_stages(class GraphicsContext* const gfx_context, const std::vector<PipelineShaderStage>& stages, std::vector<DescriptorLayoutID>& out_descriptor_layouts)

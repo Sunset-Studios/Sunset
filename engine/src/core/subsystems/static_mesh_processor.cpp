@@ -53,7 +53,7 @@ namespace Sunset
 
 			if (EntityGlobals::get()->entity_transform_dirty_states.test(entity_index))
 			{
-				Bounds transformed_bounds = transform_mesh_bounds(mesh_comp, transform_comp->transform.local_matrix);
+				const Bounds transformed_bounds = transform_mesh_bounds(mesh_comp, transform_comp->transform.local_matrix);
 				entity_data.bounds_extent = glm::vec4(transformed_bounds.extents, 1.0f);
 				entity_data.bounds_pos_radius = glm::vec4(transformed_bounds.origin, transformed_bounds.radius);
 				entity_data.local_transform = transform_comp->transform.local_matrix;
@@ -67,7 +67,6 @@ namespace Sunset
 					.set_index_buffer(mesh_index_buffer(mesh_comp))
 					.set_vertex_count(mesh_vertex_count(mesh_comp))
 					.set_index_count(mesh_index_count(mesh_comp))
-					.set_instance_index(entity_index)
 					.finish();
 			}
 
@@ -80,7 +79,7 @@ namespace Sunset
 				->fresh_rendertask()
 				->setup(mesh_comp->material, mesh_comp->resource_state, 0)
 				->set_push_constants(PushConstantPipelineData::create(&mesh_comp->additional_data, PipelineShaderStageType::Vertex | PipelineShaderStageType::Fragment))
-				->set_entity(entity)
+				->set_entity(entity_index)
 				->submit(Renderer::get()->get_mesh_task_queue());
 		}
 

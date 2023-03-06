@@ -79,6 +79,7 @@ namespace Sunset
 		class GraphicsContext* gfx_context{ nullptr };
 		DescriptorSet* pass_descriptor_set{ nullptr };
 		PipelineStateID pass_pipeline_state{ 0 };
+		ExecutionQueue* resource_deletion_queue{ nullptr };
 	};
 
 	struct RGShaderDataSetup
@@ -135,6 +136,7 @@ namespace Sunset
 		std::vector<RGPass*> render_passes;
 		std::vector<RGResourceHandle> all_resource_handles;
 		std::unordered_map<RGResourceHandle, RGResourceMetadata> resource_metadata;
+		ExecutionQueue resource_deletion_queue;
 	};
 
 	class RenderGraph
@@ -213,9 +215,8 @@ namespace Sunset
 		RenderGraphRegistry registries[MAX_BUFFERED_FRAMES];
 		RenderGraphRegistry* current_registry;
 
-		RGPassCache pass_cache;
-
 		std::vector<RGPassHandle> nonculled_passes;
+		RGPassCache pass_cache;
 
 		std::vector<DescriptorBufferDesc> queued_buffer_global_writes[MAX_BUFFERED_FRAMES];
 	};

@@ -22,9 +22,9 @@ namespace Sunset
 		indirect_draw_data.indirect_draws = batch_indirect_draws(gfx_context);
 	}
 
-	void MeshTaskQueue::submit_compute_cull(class GraphicsContext* const gfx_context, void* command_buffer)
+	void MeshTaskQueue::submit_compute_cull(class GraphicsContext* const gfx_context, void* command_buffer, ExecutionQueue* deletion_queue)
 	{
-		update_indirect_draw_buffers(gfx_context, command_buffer);
+		update_indirect_draw_buffers(gfx_context, command_buffer, deletion_queue);
 
 		gfx_context->dispatch_compute(command_buffer, static_cast<uint32_t>(queue.size() / 256) + 1, 1, 1);
 
@@ -108,7 +108,7 @@ namespace Sunset
 		return indirect_draws;
 	}
 
-	void MeshTaskQueue::update_indirect_draw_buffers(class GraphicsContext* const gfx_context, void* command_buffer)
+	void MeshTaskQueue::update_indirect_draw_buffers(class GraphicsContext* const gfx_context, void* command_buffer, ExecutionQueue* deletion_queue)
 	{
 		// TODO: Batch all barriers in here and only commit them right before pipeline execution
 
@@ -130,9 +130,7 @@ namespace Sunset
 						resource_state->state_data.index_count,
 						0,
 						0,
-						resource_state->state_data.instance_index,
-						0,
-						i
+						indirect_draw_data.indirect_draws[i].first
 					);
 				}
 			}
@@ -151,13 +149,23 @@ namespace Sunset
 				const BufferID staging_buffer = BufferFactory::create(
 					gfx_context,
 					{
-						.name = "staging_object_instance_buffer",
+						.name = "staging_object_instance_buffer" + gfx_context->get_buffered_frame_number(),
 						.buffer_size = queue.size() * sizeof(GPUObjectInstance),
 						.type = BufferType::TransferSource | BufferType::StorageBuffer,
 						.memory_usage = MemoryUsageType::CPUToGPU
 					},
 					false
 				);
+				
+				if (deletion_queue != nullptr)
+				{
+					deletion_queue->push_execution([gfx_context, staging_buffer]()
+						{
+							CACHE_DELETE(Buffer, staging_buffer, gfx_context);
+						}
+					);
+				}
+
 				{
 					ScopedGPUBufferMapping scoped_mapping(gfx_context, CACHE_FETCH(Buffer, staging_buffer));
 
@@ -179,7 +187,6 @@ namespace Sunset
 				Buffer* const object_instance_buffer = CACHE_FETCH(Buffer, indirect_draw_buffers.object_instance_buffer);
 
 				object_instance_buffer->copy_buffer(gfx_context, command_buffer, CACHE_FETCH(Buffer, staging_buffer), queue.size() * sizeof(GPUObjectInstance));
-				CACHE_DELETE(Buffer, staging_buffer, gfx_context);
 
 				object_instance_buffer->barrier(
 					gfx_context,
@@ -228,7 +235,7 @@ namespace Sunset
 			command_buffer,
 			static_cast<uint32_t>(CACHE_FETCH(ResourceState, resource_state)->state_data.index_count),
 			1,
-			CACHE_FETCH(ResourceState, resource_state)->state_data.instance_index);
+			0);
 	}
 
 	void MeshRenderTaskExecutor::operator()(
@@ -268,8 +275,8 @@ namespace Sunset
 		gfx_context->draw_indexed_indirect(
 			command_buffer,
 			indirect_buffer,
-			indirect_draw.count,
-			indirect_draw.first
+			1,
+			0
 		);
 	}
 
