@@ -71,15 +71,18 @@ namespace Sunset
 		RGPassHandle first_user;
 		RGPassHandle last_user;
 		bool b_is_persistent{ false };
+		bool b_is_bindless{ false };
 	};
 
 	struct RGFrameData
 	{
 		RenderPassID current_pass{ 0 };
 		class GraphicsContext* gfx_context{ nullptr };
+		DescriptorSet* global_descriptor_set{ nullptr };
 		DescriptorSet* pass_descriptor_set{ nullptr };
 		PipelineStateID pass_pipeline_state{ 0 };
 		ExecutionQueue* resource_deletion_queue{ nullptr };
+		DescriptorBindlessResourceIndices pass_bindless_resources;
 	};
 
 	struct RGShaderDataSetup
@@ -88,7 +91,9 @@ namespace Sunset
 		// pipeline shaders will have to handle pipeline state creation and/or binding internally within the pass callback.
 		std::vector<std::pair<PipelineShaderStageType, const char*>> pipeline_shaders;
 		// Same note as above, this is entirely optional data within a graph pass definition
-		PushConstantPipelineData push_constant_data;
+		std::optional<PushConstantPipelineData> push_constant_data;
+		std::optional<PipelineRasterizerState> rasterizer_state;
+		std::optional<PipelineAttachmentBlendState> attachment_blend;
 	};
 
 	struct RGPassParameters
@@ -99,10 +104,15 @@ namespace Sunset
 		std::vector<RGResourceHandle> inputs;
 		// Outputs that this pass either writes to or produces
 		std::vector<RGResourceHandle> outputs;
+		// Input resources that should be bound normally (auto computed)
+		std::vector<RGResourceHandle> pass_inputs;
+		// Input resources that are bindless and need special handling (auto computed)
+		std::vector<RGResourceHandle> bindless_inputs;
 	};
 
 	struct RGPassCache
-	{
+	{	
+		DescriptorSet* global_descriptor_set{ nullptr };
 		std::unordered_map<Identity, DescriptorDataList> descriptors;
 		std::unordered_map<Identity, PipelineStateID> pipeline_states;
 	};
@@ -136,7 +146,9 @@ namespace Sunset
 		std::vector<RGPass*> render_passes;
 		std::vector<RGResourceHandle> all_resource_handles;
 		std::unordered_map<RGResourceHandle, RGResourceMetadata> resource_metadata;
+		std::vector<int32_t> all_bindless_resource_indices;
 		ExecutionQueue resource_deletion_queue;
+		bool b_global_set_bound{ false };
 	};
 
 	class RenderGraph
@@ -195,11 +207,12 @@ namespace Sunset
 
 		void execute_pass(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGPass* pass, RGFrameData& frame_data, void* command_buffer);
 
-		void setup_physical_pass_and_resources(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGPassHandle pass, void* command_buffer);
+		void setup_physical_pass_and_resources(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGPassHandle pass, RGFrameData& frame_data, void* command_buffer);
 		void setup_physical_resource(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGResourceHandle pass, bool b_is_graphics_pass = true, bool b_is_input_resource = false);
 		void tie_resource_to_pass_config_attachments(class GraphicsContext* const gfx_context, RGResourceHandle resource, RGPass* pass, bool b_is_input_resource = false);
+		void setup_pass_input_resource_bindless_type(class GraphicsContext* const gfx_context, RGResourceHandle resource, RGPass* pass);
 		void setup_pass_pipeline_state(class GraphicsContext* const gfx_context, RGPass* pass, void* command_buffer);
-		void setup_pass_descriptors(class GraphicsContext* const gfx_context, RGPass* pass, void* command_buffer);
+		void setup_pass_descriptors(class GraphicsContext* const gfx_context, RGPass* pass, RGFrameData& frame_data, void* command_buffer);
 		void bind_pass_descriptors(class GraphicsContext* const gfx_context, RGPass* pass, void* command_buffer);
 		void push_pass_constants(class GraphicsContext* const gfx_context, RGPass* pass, void* command_buffer);
 		void update_transient_resources(class GraphicsContext* const gfx_context, RGPass* pass);

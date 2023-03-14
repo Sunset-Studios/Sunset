@@ -1,5 +1,6 @@
 #include <graphics/renderer.h>
 #include <graphics/resource/buffer.h>
+#include <graphics/resource/mesh.h>
 #include <graphics/pipeline_state.h>
 #include <graphics/resource_state.h>
 #include <graphics/descriptor.h>
@@ -50,6 +51,27 @@ namespace Sunset
 		swapchain->destroy(graphics_context.get());
 
 		graphics_context->destroy();
+	}
+
+	void Renderer::draw_fullscreen_quad(void* command_buffer)
+	{
+		static MeshID fullscreen_quad_id = MeshFactory::create_quad(graphics_context.get());
+		Mesh* const fullscreen_quad = CACHE_FETCH(Mesh, fullscreen_quad_id);
+
+		static ResourceStateID fullscreen_quad_resource_state = ResourceStateBuilder::create()
+			.set_vertex_buffer(fullscreen_quad->vertex_buffer)
+			.set_index_buffer(fullscreen_quad->index_buffer)
+			.set_vertex_count(fullscreen_quad->vertices.size())
+			.set_index_count(fullscreen_quad->indices.size())
+			.finish();
+
+		CACHE_FETCH(ResourceState, fullscreen_quad_resource_state)->bind(graphics_context.get(), command_buffer);
+
+		graphics_context->draw_indexed(
+			command_buffer,
+			static_cast<uint32_t>(CACHE_FETCH(ResourceState, fullscreen_quad_resource_state)->state_data.index_count),
+			1,
+			0);
 	}
 
 	void Renderer::begin_frame()

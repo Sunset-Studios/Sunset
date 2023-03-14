@@ -36,15 +36,16 @@ namespace Sunset
 
 	struct DrawCullData
 	{
-		glm::mat4 view;
 		float p00;
 		float p11;
-		float z_near;
-		float z_far;
-		float frustum[4];
 		uint32_t draw_count;
 		uint32_t culling_enabled;
 		uint32_t occlusion_enabled;
 		uint32_t distance_check;
+	};
+
+	struct FullscreenData
+	{
+		int32_t scene_texture_index;
 	};
 }

@@ -9,7 +9,8 @@ namespace Sunset
 	{
 		Identity name;
 		size_t buffer_size;
-		BufferType type = BufferType::StorageBuffer;
-		MemoryUsageType memory_usage = MemoryUsageType::CPUToGPU;
+		BufferType type{ BufferType::StorageBuffer };
+		MemoryUsageType memory_usage{ MemoryUsageType::CPUToGPU };
+		bool b_is_bindless{ false };
 	};
 }

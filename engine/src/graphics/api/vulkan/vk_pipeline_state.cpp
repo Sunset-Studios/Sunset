@@ -53,7 +53,7 @@ namespace Sunset
 		std::vector<VkPipelineColorBlendAttachmentState> color_blend_attachment_states(num_attachments);
 		for (int i = 0; i < num_attachments; ++i)
 		{
-			color_blend_attachment_states[i] = new_color_blend_attachment_state();
+			color_blend_attachment_states[i] = VK_FROM_SUNSET_ATTACHMENT_BLEND_STATE(state_data->attachment_blend_state);
 		}
 		VkPipelineColorBlendStateCreateInfo color_blending_state = new_color_blending_state(color_blend_attachment_states);
 

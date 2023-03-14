@@ -7,6 +7,8 @@
 
 namespace Sunset
 {
+	constexpr uint32_t ImageBindTableSlot = 2;
+
 	using DescriptorLayoutID = size_t;
 	using DescriptorSetID = size_t;
 
@@ -83,6 +85,16 @@ namespace Sunset
 		DescriptorType type;
 		void* buffer{ nullptr };
 		class DescriptorSet* set{ nullptr };
+	};
+
+	struct DescriptorBindlessResourceIndices
+	{
+		std::vector<int32_t> indices;
+
+		constexpr bool empty() const noexcept
+		{
+			return indices.empty();
+		}
 	};
 
 	struct DescriptorBinding

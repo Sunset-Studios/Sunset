@@ -164,6 +164,25 @@ namespace Sunset
 		gfx_context->push_descriptor_writes(writes);
 	}
 
+	void DescriptorHelpers::free_bindless_image_descriptors(class GraphicsContext* const gfx_context, DescriptorSet* descriptor_set, const std::vector<int32_t> indices)
+	{
+		for (int32_t index : indices)
+		{
+			descriptor_set->release_bindless_index(ImageBindTableSlot, index);
+		}
+	}
+
+	DescriptorBindlessWrite DescriptorHelpers::new_descriptor_image_bindless_write(class DescriptorSet* set, ImageID image)
+	{
+		return
+		{
+			.slot = ImageBindTableSlot,
+			.type = DescriptorType::Image,
+			.buffer = CACHE_FETCH(Image, image),
+			.set = set
+		};
+	}
+
 	bool DescriptorBindingTable::has_binding_slot(uint32_t slot)
 	{
 		return binding_table.contains(slot);

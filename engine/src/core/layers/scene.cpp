@@ -6,8 +6,10 @@
 #include <core/subsystems/scene_lighting_processor.h>
 #include <core/ecs/components/camera_control_component.h>
 
+#include <window/window.h>
 #include <graphics/renderer.h>
 #include <graphics/resource/buffer.h>
+#include <graphics/resource/image.h>
 
 namespace Sunset
 {
@@ -73,15 +75,17 @@ namespace Sunset
 	{
 		if (active_camera == 0)
 		{
+			Window* const window = Renderer::get()->context()->get_window();
+
 			active_camera = make_entity();
 			CameraControlComponent* const camera_control_comp = assign_component<CameraControlComponent>(active_camera);
-			set_fov(camera_control_comp, 90.0f);
-			set_aspect_ratio(camera_control_comp, 1280.0f / 720.0f);
+			set_fov(camera_control_comp, 75.0f);
+			set_aspect_ratio(camera_control_comp, (float)window->get_extent().x / (float)window->get_extent().y);
 			set_near_plane(camera_control_comp, 0.1f);
-			set_far_plane(camera_control_comp, 200.0f);
+			set_far_plane(camera_control_comp, 500.0f);
 			set_position(camera_control_comp, glm::vec3(0.0f, 0.0f, 0.0f));
-			set_move_speed(camera_control_comp, 1.0f);
-			set_look_speed(camera_control_comp, 0.1f);
+			set_move_speed(camera_control_comp, 50.0f);
+			set_look_speed(camera_control_comp, 5.0f);
 		}
 	}
 
@@ -98,7 +102,7 @@ namespace Sunset
 	void Scene::setup_renderer_data()
 	{
 		const size_t min_ubo_alignment = Renderer::get()->context()->get_min_ubo_offset_alignment();
-		const size_t aligned_cam_data_size = BufferHelpers::pad_ubo_size(sizeof(CameraMatrices), min_ubo_alignment);
+		const size_t aligned_cam_data_size = BufferHelpers::pad_ubo_size(sizeof(CameraData), min_ubo_alignment);
 		const size_t aligned_lighting_data_size = BufferHelpers::pad_ubo_size(sizeof(SceneLightingData), min_ubo_alignment);
 
 		scene_data.cam_data_buffer_start = 0;
@@ -116,6 +120,8 @@ namespace Sunset
 			);
 		}
 
+		const ImageID default_image = ImageFactory::create_default(Renderer::get()->context());
+
 		for (uint32_t i = 0; i < MAX_BUFFERED_FRAMES; ++i)
 		{
 			const uint32_t cam_data_buffer_offset = static_cast<uint32_t>(scene_data.cam_data_buffer_start + aligned_cam_data_size * i);
@@ -126,13 +132,16 @@ namespace Sunset
 			{
 				{
 					.buffer = CACHE_FETCH(Buffer, buffer)->get(),
-					.buffer_range = sizeof(CameraMatrices),
+					.buffer_range = sizeof(CameraData),
 					.buffer_offset = cam_data_buffer_offset
 				},
 				{
 					.buffer = CACHE_FETCH(Buffer, buffer)->get(),
 					.buffer_range = sizeof(SceneLightingData),
 					.buffer_offset = lighting_data_buffer_offset
+				},
+				{
+					.buffer = CACHE_FETCH(Image, default_image)
 				}
 			});
 		}

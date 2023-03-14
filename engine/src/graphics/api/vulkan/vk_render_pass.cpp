@@ -166,12 +166,10 @@ namespace Sunset
 		{
 			clear_values.reserve(pass_config.attachments.size() + static_cast<size_t>(pass_config.b_is_present_pass));
 
-			const float flash = std::abs(std::sin(gfx_context->get_frame_number() / 120.0f));
-
 			if (pass_config.b_is_present_pass)
 			{
 				VkClearValue& clear_value = clear_values.emplace_back();
-				clear_value.color = { { 0.0f, 0.0f, flash, 1.0f } };
+				clear_value.color = { { 0.9f, 0.9f, 0.9f, 1.0f } };
 			}
 
 			for (ImageID image_attachment_id : pass_config.attachments)
@@ -186,7 +184,7 @@ namespace Sunset
 				else if ((image_attachment_config.flags & ImageFlags::Color) != ImageFlags::None)
 				{
 					VkClearValue& clear_value = clear_values.emplace_back();
-					clear_value.color = { { 0.0f, 0.0f, flash, 1.0f } };
+					clear_value.color = { { 0.9f, 0.9f, 0.9f, 1.0f } };
 				}
 			}
 		}

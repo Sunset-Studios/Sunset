@@ -35,7 +35,6 @@ namespace Sunset
 		RGImageResource* const new_image_resource = image_resource_allocator.get_new();
 		new_image_resource->config = config;
 		new_image_resource->config.flags |= ImageFlags::Transient;
-		new_image_resource->config.name.computed_hash += gfx_context->get_buffered_frame_number();
 
 		const uint32_t index = current_registry->image_resources.size();
 		current_registry->image_resources.push_back(new_image_resource);
@@ -43,6 +42,7 @@ namespace Sunset
 
 		current_registry->all_resource_handles.push_back(new_image_resource->handle);
 		current_registry->resource_metadata.insert({ new_image_resource->handle, {} });
+		current_registry->resource_metadata[new_image_resource->handle].b_is_bindless = config.is_bindless;
 
 		return new_image_resource->handle;
 	}
@@ -61,6 +61,7 @@ namespace Sunset
 		current_registry->resource_metadata.insert({ new_image_resource->handle, {} });
 		current_registry->resource_metadata[new_image_resource->handle].physical_id = image;
 		current_registry->resource_metadata[new_image_resource->handle].b_is_persistent = true;
+		current_registry->resource_metadata[new_image_resource->handle].b_is_bindless = new_image_resource->config.is_bindless;
 
 		return new_image_resource->handle;
 	}
@@ -70,7 +71,6 @@ namespace Sunset
 		RGBufferResource* const new_buffer_resource = buffer_resource_allocator.get_new();
 		new_buffer_resource->config = config;
 		new_buffer_resource->config.type |= BufferType::Transient;
-		new_buffer_resource->config.name.computed_hash += gfx_context->get_buffered_frame_number();
 
 		const uint32_t index = current_registry->buffer_resources.size();
 		current_registry->buffer_resources.push_back(new_buffer_resource);
@@ -78,6 +78,7 @@ namespace Sunset
 
 		current_registry->all_resource_handles.push_back(new_buffer_resource->handle);
 		current_registry->resource_metadata.insert({ new_buffer_resource->handle, {} });
+		current_registry->resource_metadata[new_buffer_resource->handle].b_is_bindless = config.b_is_bindless;
 
 		return new_buffer_resource->handle;
 	}
@@ -96,6 +97,7 @@ namespace Sunset
 		current_registry->resource_metadata.insert({ new_buffer_resource->handle, {} });
 		current_registry->resource_metadata[new_buffer_resource->handle].physical_id = buffer;
 		current_registry->resource_metadata[new_buffer_resource->handle].b_is_persistent = true;
+		current_registry->resource_metadata[new_buffer_resource->handle].b_is_bindless = new_buffer_resource->config.b_is_bindless;
 
 		return new_buffer_resource->handle;
 	}
@@ -357,8 +359,10 @@ namespace Sunset
 		current_registry->all_resource_handles.clear();
 		current_registry->buffer_resources.clear();
 		current_registry->image_resources.clear();
+		current_registry->all_bindless_resource_indices.clear();
 		current_registry->render_passes.clear();
 		current_registry->resource_metadata.clear();
+		current_registry->b_global_set_bound = false;
 
 		image_resource_allocator.reset();
 		buffer_resource_allocator.reset();
@@ -375,13 +379,16 @@ namespace Sunset
 		}
 		else
 		{
-			setup_physical_pass_and_resources(gfx_context, swapchain, pass->handle, command_buffer);
+			setup_physical_pass_and_resources(gfx_context, swapchain, pass->handle, frame_data, command_buffer);
 
 			{
+				const uint32_t pass_type_index = static_cast<uint32_t>(DescriptorSetType::Pass);
+
 				DescriptorDataList& descriptor_data_list = pass_cache.descriptors[pass->pass_config.name];
-				frame_data.pass_descriptor_set = descriptor_data_list.descriptor_sets.empty()
-					? nullptr
-					: descriptor_data_list.descriptor_sets[static_cast<uint32_t>(DescriptorSetType::Pass)];
+				if (pass_type_index < descriptor_data_list.descriptor_sets.size())
+				{
+					frame_data.pass_descriptor_set = descriptor_data_list.descriptor_sets[pass_type_index];
+				}
 			}
 
 			frame_data.pass_pipeline_state = pass->pipeline_state_id;
@@ -406,40 +413,47 @@ namespace Sunset
 		}
 	}
 
-	void RenderGraph::setup_physical_pass_and_resources(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGPassHandle pass, void* command_buffer)
+	void RenderGraph::setup_physical_pass_and_resources(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGPassHandle pass, RGFrameData& frame_data, void* command_buffer)
 	{
 		RGPass* const graph_pass = current_registry->render_passes[pass];
 
 		const bool b_is_graphics_pass = (graph_pass->pass_config.flags & RenderPassFlags::Graphics) != RenderPassFlags::None;
 
+		const auto setup_resource = [this, gfx_context, swapchain, b_is_graphics_pass, graph_pass](RGResourceHandle resource, bool b_is_input_resource)
+		{
+			setup_physical_resource(gfx_context, swapchain, resource, b_is_graphics_pass, b_is_input_resource);
+			if (b_is_graphics_pass)
+			{
+				tie_resource_to_pass_config_attachments(gfx_context, resource, graph_pass, b_is_input_resource);
+			}
+			if (b_is_input_resource)
+			{
+				setup_pass_input_resource_bindless_type(gfx_context, resource, graph_pass);
+			}
+		};
+
 		// Setup resource used by the render pass. If they are output/input attachments we will handle those here as well but cache those off
 		// as those necessarily need caching along with the render passes.
 		for (RGResourceHandle input_resource : graph_pass->parameters.inputs)
 		{
-			setup_physical_resource(gfx_context, swapchain, input_resource, b_is_graphics_pass, true);
-			if (b_is_graphics_pass)
-			{
-				tie_resource_to_pass_config_attachments(gfx_context, input_resource, graph_pass, true);
-			}
+			setup_resource(input_resource, true);
 		}
 		for (RGResourceHandle output_resource : graph_pass->parameters.outputs)
 		{
-			setup_physical_resource(gfx_context, swapchain, output_resource, b_is_graphics_pass, false);
-			if (b_is_graphics_pass)
-			{
-				tie_resource_to_pass_config_attachments(gfx_context, output_resource, graph_pass, false);
-			}
+			setup_resource(output_resource, false);
 		}
 
 		// Create our physical render pass (is internally cached if necessary using a hash based on the pass config)
 		graph_pass->physical_id = RenderPassFactory::create_default(gfx_context, swapchain, graph_pass->pass_config, true);
 
 		// Setup render pass pipeline state if render pass-level shader stages were provided. Otherwise, pipeline state should be handled
-		// and bound by render pass callbacks. Also sparsely bind our descriptors and push constants.
+		// and bound by render pass callbacks.
 		setup_pass_pipeline_state(gfx_context, graph_pass, command_buffer);
-		setup_pass_descriptors(gfx_context, graph_pass, command_buffer);
+
+		setup_pass_descriptors(gfx_context, graph_pass, frame_data, command_buffer);
 
 		bind_pass_descriptors(gfx_context, graph_pass, command_buffer);
+
 		push_pass_constants(gfx_context, graph_pass, command_buffer);
 	}
 
@@ -453,7 +467,13 @@ namespace Sunset
 			// We check for an empty ID first because registered external resources would have already had this field populated
 			if (current_registry->resource_metadata[resource].physical_id == 0)
 			{
+				if (!current_registry->resource_metadata[resource].b_is_persistent)
+				{
+					buffer_resource->config.name.computed_hash += gfx_context->get_buffered_frame_number();
+				}
+
 				current_registry->resource_metadata[resource].physical_id = BufferFactory::create(gfx_context, buffer_resource->config, false);
+
 				if (!current_registry->resource_metadata[resource].b_is_persistent)
 				{
 					current_registry->resource_deletion_queue.push_execution([gfx_context, physical_id = current_registry->resource_metadata[resource].physical_id]()
@@ -472,8 +492,15 @@ namespace Sunset
 			// We check for an empty ID first because registered external resources would have already had this field populated
 			if (current_registry->resource_metadata[resource].physical_id == 0)
 			{
-				current_registry->resource_metadata[resource].physical_id = ImageFactory::create(gfx_context, image_resource->config, b_is_persistent);
 				current_registry->resource_metadata[resource].b_is_persistent = b_is_persistent;
+
+				if (!current_registry->resource_metadata[resource].b_is_persistent)
+				{
+					image_resource->config.name.computed_hash += gfx_context->get_buffered_frame_number();
+				}
+
+				current_registry->resource_metadata[resource].physical_id = ImageFactory::create(gfx_context, image_resource->config, b_is_persistent);
+
 				if (!current_registry->resource_metadata[resource].b_is_persistent)
 				{
 					current_registry->resource_deletion_queue.push_execution([gfx_context, physical_id = current_registry->resource_metadata[resource].physical_id]()
@@ -497,6 +524,36 @@ namespace Sunset
 			if (!b_is_input_resource || b_is_local_load)
 			{
 				pass->pass_config.attachments.push_back(current_registry->resource_metadata[resource].physical_id);
+			}
+		}
+	}
+
+	void RenderGraph::setup_pass_input_resource_bindless_type(class GraphicsContext* const gfx_context, RGResourceHandle resource, RGPass* pass)
+	{
+		const ResourceType resource_type = static_cast<ResourceType>(get_graph_resource_type(resource));
+		const RGResourceIndex resource_index = get_graph_resource_index(resource);
+		if (resource_type == ResourceType::Image)
+		{
+			RGImageResource* const image_resource = current_registry->image_resources[resource_index];
+			if (image_resource->config.is_bindless)
+			{
+				pass->parameters.bindless_inputs.push_back(resource);
+			}
+			else
+			{
+				pass->parameters.pass_inputs.push_back(resource);
+			}
+		}
+		else if (resource_type == ResourceType::Buffer)
+		{
+			RGBufferResource* const buffer_resource = current_registry->buffer_resources[resource_index];
+			if (buffer_resource->config.b_is_bindless)
+			{
+				pass->parameters.bindless_inputs.push_back(resource);
+			}
+			else
+			{
+				pass->parameters.pass_inputs.push_back(resource);
 			}
 		}
 	}
@@ -529,9 +586,9 @@ namespace Sunset
 					.clear_shader_stages()
 					.value();
 
-				if (shader_setup.push_constant_data.data != nullptr)
+				if (shader_setup.push_constant_data.has_value())
 				{
-					state_builder.set_push_constants(shader_setup.push_constant_data);
+					state_builder.set_push_constants(shader_setup.push_constant_data.value());
 				}
 
 				for (const auto& shader_stage : shader_setup.pipeline_shaders)
@@ -550,9 +607,19 @@ namespace Sunset
 					.set_pass(pass->physical_id)
 					.value();
 
-				if (shader_setup.push_constant_data.data != nullptr)
+				if (shader_setup.rasterizer_state.has_value())
 				{
-					state_builder.set_push_constants(shader_setup.push_constant_data);
+					state_builder.set_rasterizer_state(shader_setup.rasterizer_state.value());
+				}
+
+				if (shader_setup.attachment_blend.has_value())
+				{
+					state_builder.set_attachment_blend_state(shader_setup.attachment_blend.value());
+				}
+
+				if (shader_setup.push_constant_data.has_value())
+				{
+					state_builder.set_push_constants(shader_setup.push_constant_data.value());
 				}
 
 				for (const auto& shader_stage : shader_setup.pipeline_shaders)
@@ -575,48 +642,80 @@ namespace Sunset
 		pass_cache.descriptors[pass->pass_config.name].descriptor_sets.resize(descriptor_layouts.size(), nullptr);
 	}
 
-	void RenderGraph::setup_pass_descriptors(class GraphicsContext* const gfx_context, RGPass* pass, void* command_buffer)
+	void RenderGraph::setup_pass_descriptors(class GraphicsContext* const gfx_context, RGPass* pass, RGFrameData& frame_data, void* command_buffer)
 	{
 		DescriptorDataList& pass_descriptor_data = pass_cache.descriptors[pass->pass_config.name];
 
 		if (!pass_descriptor_data.descriptor_layouts.empty())
 		{
-			// Update global descriptor set
+			// Update global descriptor set (should happen once, lazily, on startup)
+			if (pass_cache.global_descriptor_set == nullptr)
 			{
 				const uint32_t global_type_index = static_cast<uint32_t>(DescriptorSetType::Global);
 
-				DescriptorSet*& global_descriptor_set = pass_descriptor_data.descriptor_sets[global_type_index];
-				DescriptorLayoutID& global_descriptor_layout = pass_descriptor_data.descriptor_layouts[global_type_index];
+				const DescriptorLayoutID global_descriptor_layout = pass_descriptor_data.descriptor_layouts[global_type_index];
 
-				if (global_descriptor_set == nullptr)
+				pass_cache.global_descriptor_set = DescriptorHelpers::new_descriptor_set_with_layout(gfx_context, global_descriptor_layout);
+
+				const uint32_t current_buffered_frame = gfx_context->get_buffered_frame_number();
+
+				DescriptorLayout* const layout = CACHE_FETCH(DescriptorLayout, global_descriptor_layout);
+				std::vector<DescriptorBinding>& descriptor_bindings = layout->get_bindings();
+
+				std::vector<DescriptorWrite> descriptor_writes;
+				for (uint32_t j = 0; j < descriptor_bindings.size(); ++j)
 				{
-					global_descriptor_set = DescriptorHelpers::new_descriptor_set_with_layout(gfx_context, global_descriptor_layout);
-
-					const uint32_t current_buffered_frame = gfx_context->get_buffered_frame_number();
-
-					DescriptorLayout* const layout = CACHE_FETCH(DescriptorLayout, global_descriptor_layout);
-					std::vector<DescriptorBinding>& descriptor_bindings = layout->get_bindings();
-
-					std::vector<DescriptorWrite> descriptor_writes;
-					for (uint32_t j = 0; j < descriptor_bindings.size(); ++j)
-					{
-						assert(j < queued_buffer_global_writes[current_buffered_frame].size());
-						DescriptorWrite& new_write = descriptor_writes.emplace_back();
-						new_write.slot = descriptor_bindings[j].slot;
-						new_write.type = descriptor_bindings[j].type;
-						new_write.count = descriptor_bindings[j].count;
-						new_write.set = global_descriptor_set;
-						new_write.buffer_desc = queued_buffer_global_writes[current_buffered_frame][j];
-					}
-
-					DescriptorHelpers::write_descriptors(gfx_context, global_descriptor_set, descriptor_writes);
+					assert(j < queued_buffer_global_writes[current_buffered_frame].size());
+					DescriptorWrite& new_write = descriptor_writes.emplace_back();
+					new_write.slot = descriptor_bindings[j].slot;
+					new_write.type = descriptor_bindings[j].type;
+					new_write.count = descriptor_bindings[j].count;
+					new_write.set = pass_cache.global_descriptor_set;
+					new_write.buffer_desc = queued_buffer_global_writes[current_buffered_frame][j];
 				}
+
+				DescriptorHelpers::write_descriptors(gfx_context, pass_cache.global_descriptor_set, descriptor_writes);
+			}
+
+			// Write bindless pass resources
+			{
+				// Writes the bindless resources into the corresponding global binding tables. The resulting binding indices get passed as a struct as
+				// part of the frame data for this pass, to allow custom handling by internal pass lambdas
+				const size_t num_bindless_inputs = pass->parameters.bindless_inputs.size();
+
+				frame_data.pass_bindless_resources.indices.clear();
+				frame_data.pass_bindless_resources.indices.resize(num_bindless_inputs, -1);
+
+				std::vector<DescriptorBindlessWrite> bindless_writes;
+				bindless_writes.reserve(num_bindless_inputs);
+
+				for (uint32_t j = 0; j < num_bindless_inputs; ++j)
+				{
+					const RGResourceHandle resource = pass->parameters.bindless_inputs[j];
+					if (static_cast<ResourceType>(get_graph_resource_type(resource)) == ResourceType::Image)
+					{
+						bindless_writes.push_back(
+							DescriptorHelpers::new_descriptor_image_bindless_write(pass_cache.global_descriptor_set, current_registry->resource_metadata[resource].physical_id)
+						);
+					}
+				}
+
+				DescriptorHelpers::write_bindless_descriptors(gfx_context, bindless_writes, frame_data.pass_bindless_resources.indices.data());
+
+				current_registry->all_bindless_resource_indices.insert(
+					current_registry->all_bindless_resource_indices.end(),
+					frame_data.pass_bindless_resources.indices.begin(),
+					frame_data.pass_bindless_resources.indices.end()
+				);
+
+				frame_data.global_descriptor_set = pass_cache.global_descriptor_set;
 			}
 		
-			// Update per-pass descriptor set and create it if necessary
-			{
-				const uint32_t pass_type_index = static_cast<uint32_t>(DescriptorSetType::Pass);
+			// Update per-pass descriptor set and write regular descriptor resources
+			const uint32_t pass_type_index = static_cast<uint32_t>(DescriptorSetType::Pass);
 
+			if (pass_type_index < pass_descriptor_data.descriptor_layouts.size())
+			{
 				DescriptorSet*& pass_descriptor_set = pass_descriptor_data.descriptor_sets[pass_type_index];
 				DescriptorLayoutID pass_descriptor_layout = pass_descriptor_data.descriptor_layouts[pass_type_index];
 
@@ -625,32 +724,35 @@ namespace Sunset
 
 				const auto write_descriptors = [&](bool b_persistent_resources)
 				{
-					std::vector<DescriptorWrite> descriptor_writes;
-					for (uint32_t j = 0; j < descriptor_bindings.size(); ++j)
+					// Writes regular per-pass descriptor bindings based on passed in inputs that are NOT bindless
 					{
-						if (current_registry->resource_metadata[pass->parameters.inputs[j]].b_is_persistent == b_persistent_resources)
+						std::vector<DescriptorWrite> descriptor_writes;
+						for (uint32_t j = 0; j < descriptor_bindings.size(); ++j)
 						{
-							DescriptorWrite& new_write = descriptor_writes.emplace_back();
-							new_write.slot = descriptor_bindings[j].slot;
-							new_write.type = descriptor_bindings[j].type;
-							new_write.count = descriptor_bindings[j].count;
-							new_write.set = pass_descriptor_set;
+							if (current_registry->resource_metadata[pass->parameters.pass_inputs[j]].b_is_persistent == b_persistent_resources)
+							{
+								DescriptorWrite& new_write = descriptor_writes.emplace_back();
+								new_write.slot = descriptor_bindings[j].slot;
+								new_write.type = descriptor_bindings[j].type;
+								new_write.count = descriptor_bindings[j].count;
+								new_write.set = pass_descriptor_set;
 
-							if (new_write.type == DescriptorType::Image)
-							{
-								Image* const image = CACHE_FETCH(Image, current_registry->resource_metadata[pass->parameters.inputs[j]].physical_id);
-								new_write.buffer_desc.buffer = image;
-							}
-							else
-							{
-								Buffer* const buffer = CACHE_FETCH(Buffer, current_registry->resource_metadata[pass->parameters.inputs[j]].physical_id);
-								new_write.buffer_desc.buffer = buffer->get();
-								new_write.buffer_desc.buffer_range = buffer->get_size();
-								new_write.buffer_desc.buffer_size = buffer->get_size();
+								if (new_write.type == DescriptorType::Image)
+								{
+									Image* const image = CACHE_FETCH(Image, current_registry->resource_metadata[pass->parameters.pass_inputs[j]].physical_id);
+									new_write.buffer_desc.buffer = image;
+								}
+								else
+								{
+									Buffer* const buffer = CACHE_FETCH(Buffer, current_registry->resource_metadata[pass->parameters.pass_inputs[j]].physical_id);
+									new_write.buffer_desc.buffer = buffer->get();
+									new_write.buffer_desc.buffer_range = buffer->get_size();
+									new_write.buffer_desc.buffer_size = buffer->get_size();
+								}
 							}
 						}
+						DescriptorHelpers::write_descriptors(gfx_context, pass_descriptor_set, descriptor_writes);
 					}
-					DescriptorHelpers::write_descriptors(gfx_context, pass_descriptor_set, descriptor_writes);
 				};
 
 				if (pass_descriptor_set == nullptr)
@@ -664,6 +766,8 @@ namespace Sunset
 					const bool b_write_only_persistent_resources = false;
 					write_descriptors(b_write_only_persistent_resources);
 				}
+
+				frame_data.pass_descriptor_set = pass_descriptor_set;
 			}
 		}
 
@@ -679,28 +783,31 @@ namespace Sunset
 
 		DescriptorDataList& pass_descriptor_data = pass_cache.descriptors[pass->pass_config.name];
 
-		if (!pass_descriptor_data.descriptor_sets.empty())
+		if (!pass_descriptor_data.descriptor_layouts.empty())
 		{
 			// Bind global descriptors
 			const uint32_t global_type_index = static_cast<uint32_t>(DescriptorSetType::Global);
 
-			DescriptorSet*& global_descriptor_set = pass_descriptor_data.descriptor_sets[global_type_index];
-
-			if (global_descriptor_set != nullptr)
+			// TODO: Can't currently guarantee that two passes will equate in their push constant ranges, which is
+			// required for vulkan pipeline compatibility when trying to share a descriptor set across layouts,
+			// so we bind the global descriptor set per-pass for now
+			//if (pass_cache.global_descriptor_set != nullptr && !current_registry->b_global_set_bound)
 			{
-				global_descriptor_set->bind(
+				pass_cache.global_descriptor_set->bind(
 					gfx_context,
 					command_buffer,
 					pass_descriptor_data.pipeline_layout,
 					b_is_compute_pass ? PipelineStateType::Compute : PipelineStateType::Graphics,
 					global_type_index
 				);
+				current_registry->b_global_set_bound = true;
 			}
 
 			// Bind pass descriptors
-			{
-				const uint32_t pass_type_index = static_cast<uint32_t>(DescriptorSetType::Pass);
+			const uint32_t pass_type_index = static_cast<uint32_t>(DescriptorSetType::Pass);
 
+			if (pass_type_index < pass_descriptor_data.descriptor_layouts.size())
+			{
 				DescriptorSet*& pass_descriptor_set = pass_descriptor_data.descriptor_sets[pass_type_index];
 
 				if (pass_descriptor_set != nullptr)
@@ -719,9 +826,9 @@ namespace Sunset
 
 	void RenderGraph::push_pass_constants(class GraphicsContext* const gfx_context, RGPass* pass, void* command_buffer)
 	{
-		if (pass->parameters.shader_setup.push_constant_data.is_valid())
+		if (pass->parameters.shader_setup.push_constant_data.has_value() && pass->parameters.shader_setup.push_constant_data->is_valid())
 		{
-			gfx_context->push_constants(command_buffer, pass->pipeline_state_id, pass->parameters.shader_setup.push_constant_data);
+			gfx_context->push_constants(command_buffer, pass->pipeline_state_id, pass->parameters.shader_setup.push_constant_data.value());
 		}
 	}
 
@@ -750,5 +857,6 @@ namespace Sunset
 	{
 		// TODO: Look into aliasing memory for expired resources as opposed to just flat out deleting them (though that should also be done)
 		current_registry->resource_deletion_queue.flush();
+		DescriptorHelpers::free_bindless_image_descriptors(gfx_context, pass_cache.global_descriptor_set, current_registry->all_bindless_resource_indices);
 	}
 }

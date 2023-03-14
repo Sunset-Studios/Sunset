@@ -236,6 +236,8 @@ namespace Sunset
 
 	Sunset::ShaderLayoutID VulkanContext::derive_layout_for_shader_stages(class GraphicsContext* const gfx_context, const std::vector<PipelineShaderStage>& stages, std::vector<DescriptorLayoutID>& out_descriptor_layouts)
 	{
+		const uint32_t global_descriptor_set_index = static_cast<uint32_t>(DescriptorSetType::Global);
+
 		std::vector<uint64_t> set_binding_pairs;
 		std::vector<DescriptorBinding> all_bindings;
 		std::vector<PushConstantPipelineData> push_constant_data;
@@ -265,14 +267,16 @@ namespace Sunset
 
 				for (int b = 0; b < reflected_set.binding_count; ++b)
 				{
+					const bool b_is_image_bind_table = (s == global_descriptor_set_index && b == ImageBindTableSlot);
+
 					const SpvReflectDescriptorBinding& reflected_binding = *(reflected_set.bindings[b]);
 
 					DescriptorBinding& binding = all_bindings.emplace_back();
 					binding.slot = reflected_binding.binding;
-					binding.count = reflected_binding.count > 0 ? reflected_binding.count : MAX_DESCRIPTOR_BINDINGS - 1;
+					binding.count = reflected_binding.count > 0 && !b_is_image_bind_table ? reflected_binding.count : MAX_DESCRIPTOR_BINDINGS - 1;
 					binding.type = SUNSET_FROM_VK_DESCRIPTOR_TYPE(static_cast<VkDescriptorType>(reflected_binding.descriptor_type));
-					binding.pipeline_stages = stage.stage_type;
-					binding.b_supports_bindless = static_cast<bool>(reflected_binding.count ^ 1);
+					binding.pipeline_stages = s == global_descriptor_set_index ? PipelineShaderStageType::All : stage.stage_type;
+					binding.b_supports_bindless = static_cast<bool>(reflected_binding.count ^ 1) || b_is_image_bind_table;
 
 					set_binding_pairs.push_back(((uint64_t)reflected_set.set << 32) | (uint32_t)(all_bindings.size() - 1));
 				}

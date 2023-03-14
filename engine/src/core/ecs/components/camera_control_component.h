@@ -9,12 +9,13 @@
 
 namespace Sunset
 {
-	struct CameraMatrices
+	struct CameraData
 	{
 		glm::mat4 view_matrix;
 		glm::mat4 projection_matrix;
 		glm::mat4 view_projection_matrix;
 		glm::mat4 inverse_view_projection_matrix;
+		glm::vec4 frustum_planes[6];
 	};
 
 	struct CameraTransformData
@@ -27,7 +28,7 @@ namespace Sunset
 		float pitch{ 0.0f };
 		glm::vec3 position;
 		glm::vec3 forward{ 0.0f, 0.0f, -1.0f };
-		CameraMatrices matrices;
+		CameraData gpu_data;
 		bool b_dirty{ false };
 	};
 

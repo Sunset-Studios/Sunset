@@ -2,11 +2,16 @@
 #include <graphics/renderer.h>
 #include <graphics/graphics_context.h>
 #include <graphics/resource/buffer.h>
+#include <graphics/resource/mesh.h>
+#include <graphics/pipeline_state.h>
 #include <graphics/resource_state.h>
 #include <graphics/mesh_render_task.h>
+#include <utility/cvar.h>
 
 namespace Sunset
 {
+	AutoCVar_Bool cvar_enable_debug_bounds_draw("ren.enable_debug_bounds_draw", "Whether or not to draw mesh object bounds", false);
+
 	void MeshTaskQueue::sort_and_batch(class GraphicsContext* const gfx_context)
 	{
 		std::sort(queue.begin(), queue.end(), [](MeshRenderTask* const first, MeshRenderTask* const second) -> bool
@@ -50,28 +55,95 @@ namespace Sunset
 		}
 	}
 
-	void MeshTaskQueue::submit_draws(class GraphicsContext* const gfx_context, void* command_buffer, RenderPassID render_pass, DescriptorSet* pass_descriptor_set, PipelineStateID pipeline_state, bool b_flush /*= true*/)
+	void MeshTaskQueue::submit_draws(class GraphicsContext* const gfx_context, void* command_buffer, RenderPassID render_pass, DescriptorSet* descriptor_set, PipelineStateID pipeline_state, bool b_flush /*= true*/)
 	{
-		for (const IndirectDrawBatch& draw : indirect_draw_data.indirect_draws)
+		for (uint32_t i = 0; i < indirect_draw_data.indirect_draws.size(); ++i)
 		{
+			IndirectDrawBatch& draw = indirect_draw_data.indirect_draws[i];
+
 			draw_executor(
 				gfx_context,
 				command_buffer,
 				render_pass,
-				pass_descriptor_set,
+				descriptor_set,
 				draw,
+				i,
 				CACHE_FETCH(Buffer, indirect_draw_buffers.draw_indirect_buffer),
 				pipeline_state,
 				draw.push_constants
 			);
 		}
 
+		if (cvar_enable_debug_bounds_draw.get())
+		{
+			submit_bounds_debug_draws(gfx_context, command_buffer, render_pass);
+		}
+
 		if (b_flush)
 		{
 			queue.clear();
+			draw_executor.reset();
+		}
+	}
+
+	void MeshTaskQueue::submit_bounds_debug_draws(class GraphicsContext* const gfx_context, void* command_buffer, RenderPassID render_pass)
+	{
+		static MeshID sphere_mesh_id = MeshFactory::create_sphere(gfx_context, glm::ivec2(8, 8), 1.0f);
+		Mesh* const sphere_mesh = CACHE_FETCH(Mesh, sphere_mesh_id);
+
+		static ResourceStateID sphere_resource_state = ResourceStateBuilder::create()
+			.set_vertex_buffer(sphere_mesh->vertex_buffer)
+			.set_index_buffer(sphere_mesh->index_buffer)
+			.set_vertex_count(sphere_mesh->vertices.size())
+			.set_index_count(sphere_mesh->indices.size())
+			.finish();
+
+		static PipelineStateID pipeline_state;
+		if (pipeline_state == 0)
+		{
+			PipelineGraphicsStateBuilder state_builder = PipelineGraphicsStateBuilder::create_default(gfx_context->get_window())
+				.clear_shader_stages()
+				.set_pass(render_pass)
+				.value();
+
+			state_builder.set_rasterizer_state(PipelineRasterizerPolygonMode::Line, 1.0f, PipelineRasterizerCullMode::None);
+			state_builder.set_attachment_blend_state(PipelineAttachmentBlendState
+			{
+				.b_blend_enabled = true,
+				.source_color_blend = BlendFactor::One,
+				.destination_color_blend = BlendFactor::Zero,
+				.color_blend_op = BlendOp::Add
+			});
+			state_builder.set_shader_stage(PipelineShaderStageType::Vertex, "../../shaders/debug_bounds.vert.spv");
+			state_builder.set_shader_stage(PipelineShaderStageType::Fragment, "../../shaders/debug_bounds.frag.spv");
+
+			{
+				std::vector<DescriptorLayoutID> descriptor_layouts;
+				state_builder.derive_shader_layout(descriptor_layouts);
+			}
+
+			pipeline_state = state_builder.finish();
 		}
 
-		draw_executor.reset();
+		CACHE_FETCH(PipelineState, pipeline_state)->bind(gfx_context, command_buffer);
+
+		for (uint32_t i = 0; i < indirect_draw_data.indirect_draws.size(); ++i)
+		{
+			IndirectDrawBatch& draw = indirect_draw_data.indirect_draws[i];
+
+			draw.resource_state = sphere_resource_state;
+
+			draw_executor(
+				gfx_context,
+				command_buffer,
+				render_pass,
+				nullptr,
+				draw,
+				i,
+				CACHE_FETCH(Buffer, indirect_draw_buffers.draw_indirect_buffer),
+				pipeline_state
+			);
+		}
 	}
 
 	std::vector<Sunset::IndirectDrawBatch> MeshTaskQueue::batch_indirect_draws(class GraphicsContext* const gfx_context)
@@ -206,17 +278,11 @@ namespace Sunset
 		GraphicsContext* const gfx_context,
 		void* command_buffer,
 		RenderPassID render_pass,
-		DescriptorSet* pass_descriptor_set,
-		MaterialID material,
 		ResourceStateID resource_state,
 		PipelineStateID pipeline_state,
+		uint32_t instance_count,
 		const PushConstantPipelineData& push_constants)
 	{
-		if (cached_material != material)
-		{
-			cached_material = material;
-		}
-
 		// TODO: Given that most of our resources will go through descriptors, this resource state will likely get deprecated.
 		// Only using it to store vertex buffer info at the moment, but this can be moved to a global merged vertex descriptor buffer
 		// that we can index from the vertex shader using some push constant object ID.
@@ -234,7 +300,7 @@ namespace Sunset
 		gfx_context->draw_indexed(
 			command_buffer,
 			static_cast<uint32_t>(CACHE_FETCH(ResourceState, resource_state)->state_data.index_count),
-			1,
+			instance_count,
 			0);
 	}
 
@@ -242,8 +308,9 @@ namespace Sunset
 		class GraphicsContext* const gfx_context,
 		void* command_buffer,
 		RenderPassID render_pass,
-		DescriptorSet* pass_descriptor_set,
+		DescriptorSet* descriptor_set,
 		const IndirectDrawBatch& indirect_draw,
+		uint32_t indirect_draw_index,
 		class Buffer* indirect_buffer,
 		PipelineStateID pipeline_state,
 		const PushConstantPipelineData& push_constants)
@@ -253,9 +320,9 @@ namespace Sunset
 			cached_material = indirect_draw.material;
 		}
 
-		if (pass_descriptor_set != nullptr)
+		if (descriptor_set != nullptr)
 		{
-			material_upload_textures(gfx_context, cached_material, pass_descriptor_set);
+			material_upload_textures(gfx_context, cached_material, descriptor_set);
 		}
 
 		// TODO: Given that most of our resources will go through descriptors, this resource state will likely get deprecated.
@@ -276,7 +343,7 @@ namespace Sunset
 			command_buffer,
 			indirect_buffer,
 			1,
-			0
+			indirect_draw_index
 		);
 	}
 

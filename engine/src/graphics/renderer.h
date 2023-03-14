@@ -35,6 +35,8 @@ namespace Sunset
 				graphics_context->advance_frame();
 			}
 
+			void draw_fullscreen_quad(void* command_buffer);
+
 			GraphicsContext* context() const
 			{
 				return graphics_context.get();

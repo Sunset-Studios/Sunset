@@ -113,6 +113,11 @@ namespace Sunset
 			state_data.rasterizer_state.cull_mode = cull_mode;
 		}
 
+		void set_attachment_blend_state(const PipelineAttachmentBlendState& blend_state)
+		{
+			state_data.attachment_blend_state = blend_state;
+		}
+
 		void set_multisample_count(class GraphicsContext* const gfx_context, uint16_t count)
 		{
 			state_data.multisample_count = count;
@@ -180,6 +185,8 @@ namespace Sunset
 			PipelineGraphicsStateBuilder& set_vertex_input_description(PipelineVertexInputDescription vertex_input_description);
 			PipelineGraphicsStateBuilder& set_primitive_topology_type(PipelinePrimitiveTopologyType topology_type);
 			PipelineGraphicsStateBuilder& set_rasterizer_state(PipelineRasterizerPolygonMode polygon_mode, float line_width, PipelineRasterizerCullMode cull_mode);
+			PipelineGraphicsStateBuilder& set_rasterizer_state(const PipelineRasterizerState& rasterizer_state);
+			PipelineGraphicsStateBuilder& set_attachment_blend_state(const PipelineAttachmentBlendState& blend_state);
 			PipelineGraphicsStateBuilder& set_multisample_count(uint16_t count);
 			PipelineGraphicsStateBuilder& set_depth_stencil_state(bool b_depth_test_enabled, bool b_depth_write_enabled, CompareOperation compare_op);
 			PipelineGraphicsStateBuilder& set_pass(RenderPassID pass);

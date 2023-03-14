@@ -13,8 +13,8 @@ namespace Sunset
 		~MeshRenderTaskExecutor() = default;
 
 		void reset();
-		void operator()(class GraphicsContext* const gfx_context, void* command_buffer, RenderPassID render_pass, DescriptorSet* pass_descriptor_set, MaterialID material, ResourceStateID resource_state, PipelineStateID pipeline_state, const PushConstantPipelineData& push_constants = {});
-		void operator()(class GraphicsContext* const gfx_context, void* command_buffer, RenderPassID render_pass, DescriptorSet* pass_descriptor_set, const IndirectDrawBatch& indirect_draw, class Buffer* indirect_buffer, PipelineStateID pipeline_state, const PushConstantPipelineData& push_constants = {});
+		void operator()(class GraphicsContext* const gfx_context, void* command_buffer, RenderPassID render_pass, ResourceStateID resource_state, PipelineStateID pipeline_state, uint32_t instance_count = 1, const PushConstantPipelineData& push_constants = {});
+		void operator()(class GraphicsContext* const gfx_context, void* command_buffer, RenderPassID render_pass, DescriptorSet* descriptor_set, const IndirectDrawBatch& indirect_draw, uint32_t indirect_draw_index, class Buffer* indirect_buffer, PipelineStateID pipeline_state, const PushConstantPipelineData& push_constants = {});
 
 	private:
 		MaterialID cached_material{ 0 };
@@ -78,7 +78,8 @@ namespace Sunset
 
 			void sort_and_batch(class GraphicsContext* const gfx_context);
 			void submit_compute_cull(class GraphicsContext* const gfx_context, void* command_buffer, ExecutionQueue* deletion_queue = nullptr);
-			void submit_draws(class GraphicsContext* const gfx_context, void* command_buffer, RenderPassID render_pass, DescriptorSet* pass_descriptor_set, PipelineStateID pipeline_state, bool b_flush = true);
+			void submit_draws(class GraphicsContext* const gfx_context, void* command_buffer, RenderPassID render_pass, DescriptorSet* descriptor_set, PipelineStateID pipeline_state, bool b_flush = true);
+			void submit_bounds_debug_draws(class GraphicsContext* const gfx_context, void* command_buffer, RenderPassID render_pass);
 
 		private:
 			std::vector<IndirectDrawBatch> batch_indirect_draws(class GraphicsContext* const gfx_context);

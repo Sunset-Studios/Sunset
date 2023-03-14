@@ -16,6 +16,7 @@ layout (set = 0, binding = 0) uniform CameraBuffer
 	mat4 proj;
 	mat4 view_proj;
 	mat4 inverse_view_proj;
+	vec4 frustum_planes[6];
 } camera_data;
 
 // TODO: Put this global data in a shader include
@@ -28,29 +29,13 @@ layout (set = 0, binding = 1) uniform SceneLightingData
 	vec4 sunlight_color;
 } scene_lighting_data;
 
-struct EntitySceneData
-{
-	mat4 transform;
-	vec4 bounds_pos_radius;
-	vec4 bounds_extent;
-	int material_index;
-};
-
-layout (std430, set = 1, binding = 0) readonly buffer EntitySceneDataBuffer
-{
-	EntitySceneData entities[];
-} entity_data;
-
-layout (push_constant) uniform constants
-{
-	vec4 user_data;
-} push_constant_uniforms;
+// TODO: Put this global data in a shader include
+layout (set = 0, binding = 2) uniform sampler2D textures_2D[];
+layout (set = 0, binding = 2) uniform sampler3D textures_3D[];
 
 void main()
 {
-	mat4 model_matrix = entity_data.entities[gl_InstanceIndex].transform;
-	mat4 transform_matrix = camera_data.view_proj * model_matrix;
-	gl_Position = transform_matrix * vec4(in_position, 1.0f);
+	gl_Position = vec4(in_position, 1.0f);
 	out_color = in_color;
 	out_tex_coord = in_tex_coord;
 	out_instance_index = gl_InstanceIndex;

@@ -47,6 +47,16 @@ namespace Sunset
 			}
 		);
 
+		RGResourceHandle entity_data_buffer_desc = render_graph.register_buffer(
+			gfx_context,
+			EntityGlobals::get()->entity_data.data_buffer[gfx_context->get_buffered_frame_number()]
+		);
+
+		RGResourceHandle material_data_buffer_desc = render_graph.register_buffer(
+			gfx_context,
+			MaterialGlobals::get()->material_data.data_buffer[gfx_context->get_buffered_frame_number()]
+		);
+
 		// Compute mesh cull pass
 		{
 			render_graph.add_pass(
@@ -111,25 +121,24 @@ namespace Sunset
 				{
 					{ PipelineShaderStageType::Vertex, "../../shaders/default_mesh.vert.spv" },
 					{ PipelineShaderStageType::Fragment, "../../shaders/default_lit.frag.spv"}
-				},
+				}
 			};
 
-			RGResourceHandle entity_data_buffer_desc = render_graph.register_buffer(
-				gfx_context,
-				EntityGlobals::get()->entity_data.data_buffer[gfx_context->get_buffered_frame_number()]
-			);
-
-			RGResourceHandle material_data_buffer_desc = render_graph.register_buffer(
-				gfx_context,
-				MaterialGlobals::get()->material_data.data_buffer[gfx_context->get_buffered_frame_number()]
-			);
-
-			RGResourceHandle default_image_desc = render_graph.register_image(
-				gfx_context,
-				ImageFactory::create_default(gfx_context)
-			);
-
 			const glm::vec2 image_extent = gfx_context->get_window()->get_extent();
+			main_color_image_desc = render_graph.create_image(
+				gfx_context,
+				{
+					.name = "main_color",
+					.format = Format::Float4x32,
+					.extent = glm::vec3(image_extent.x, image_extent.y, 1.0f),
+					.flags = ImageFlags::Color | ImageFlags::Image2D | ImageFlags::Sampled,
+					.usage_type = MemoryUsageType::OnlyGPU,
+					.sampler_address_mode = SamplerAddressMode::Repeat,
+					.image_filter = ImageFilter::Linear,
+					.attachment_clear = true,
+					.attachment_stencil_clear = false,
+				}
+			);
 			main_depth_image_desc = render_graph.create_image(
 				gfx_context,
 				{
@@ -148,12 +157,12 @@ namespace Sunset
 			render_graph.add_pass(
 				gfx_context,
 				"forward_pass",
-				RenderPassFlags::Graphics | RenderPassFlags::Present,
+				RenderPassFlags::Graphics,
 				{
 					.shader_setup = shader_setup,
-					.inputs = { entity_data_buffer_desc, material_data_buffer_desc, default_image_desc,
-								object_instance_buffer_desc, compacted_object_instance_buffer_desc, draw_indirect_buffer_desc },
-					.outputs = { main_depth_image_desc }
+					.inputs = { entity_data_buffer_desc, material_data_buffer_desc,
+								compacted_object_instance_buffer_desc, draw_indirect_buffer_desc },
+					.outputs = { main_color_image_desc, main_depth_image_desc }
 				},
 				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
 				{
@@ -161,12 +170,46 @@ namespace Sunset
 						gfx_context,
 						command_buffer,
 						frame_data.current_pass,
-						frame_data.pass_descriptor_set,
+						frame_data.global_descriptor_set,
 						frame_data.pass_pipeline_state
 					);
 				}
 			);
+		}
 
+		// Full screen present pass
+		{
+			RGShaderDataSetup shader_setup
+			{
+				.pipeline_shaders =
+				{
+					{ PipelineShaderStageType::Vertex, "../../shaders/fullscreen.vert.spv" },
+					{ PipelineShaderStageType::Fragment, "../../shaders/fullscreen.frag.spv"}
+				}
+			};
+
+			render_graph.add_pass(
+				gfx_context,
+				"present_pass",
+				RenderPassFlags::Graphics | RenderPassFlags::Present,
+				{
+					.shader_setup = shader_setup,
+					.inputs = { main_color_image_desc }
+				},
+				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
+				{
+					FullscreenData fullscreen_data
+					{
+						.scene_texture_index = frame_data.pass_bindless_resources.empty() ? -1 : frame_data.pass_bindless_resources.indices[0]
+					};
+
+					PushConstantPipelineData pass_data = PushConstantPipelineData::create(&fullscreen_data, PipelineShaderStageType::Fragment);
+
+					gfx_context->push_constants(command_buffer, frame_data.pass_pipeline_state, pass_data);
+
+					Renderer::get()->draw_fullscreen_quad(command_buffer);
+				}
+			);
 		}
 #ifndef NDEBUG
 		// IMGui pass

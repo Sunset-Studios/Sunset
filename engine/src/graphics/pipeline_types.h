@@ -189,6 +189,51 @@ namespace Sunset
 		}
 	};
 
+	enum class BlendFactor : uint32_t
+	{
+		Zero = 0,
+		One,
+		SourceColor,
+		OneMinusSourceColor,
+		DestinationColor,
+		OneMinusDestinationColor,
+		SourceAlpha,
+		OneMinusSourceAlpha,
+		DestinationAlpha,
+		OneMinusDestinationAlpha
+	};
+
+	enum class BlendOp : uint32_t
+	{
+		Add = 0,
+		Subtract,
+		ReverseSubtract,
+		Min,
+		Max
+	};
+
+	struct PipelineAttachmentBlendState
+	{
+		bool b_blend_enabled{ true };
+		BlendFactor source_color_blend{ BlendFactor::One };
+		BlendFactor destination_color_blend{ BlendFactor::Zero };
+		BlendOp color_blend_op{ BlendOp::Add };
+		BlendFactor source_alpha_blend{ BlendFactor::One };
+		BlendFactor destination_alpha_blend{ BlendFactor::Zero };
+		BlendOp alpha_blend_op{ BlendOp::Add };
+
+		bool operator==(const PipelineAttachmentBlendState& other) const
+		{
+			return b_blend_enabled == other.b_blend_enabled
+				&& source_color_blend == other.source_color_blend
+				&& destination_color_blend == other.destination_color_blend
+				&& color_blend_op == other.color_blend_op
+				&& source_alpha_blend == other.source_alpha_blend
+				&& destination_alpha_blend == other.destination_alpha_blend
+				&& alpha_blend_op == other.alpha_blend_op;
+		}
+	};
+
 	struct PipelineStateData
 	{
 		public:
@@ -200,6 +245,7 @@ namespace Sunset
 			ShaderLayoutID layout{ 0 };
 			PipelinePrimitiveTopologyType primitive_topology_type{ PipelinePrimitiveTopologyType::TriangleList };
 			PipelineRasterizerState rasterizer_state{{}};
+			PipelineAttachmentBlendState attachment_blend_state{{}};
 			uint16_t multisample_count{ 1 };
 			bool b_depth_test_enabled{ false };
 			bool b_depth_write_enabled{ false };
@@ -217,6 +263,7 @@ namespace Sunset
 					&& layout == other.layout
 					&& primitive_topology_type == other.primitive_topology_type
 					&& rasterizer_state == other.rasterizer_state
+					&& attachment_blend_state == other.attachment_blend_state
 					&& multisample_count == other.multisample_count
 					&& b_depth_test_enabled == other.b_depth_test_enabled
 					&& b_depth_write_enabled == other.b_depth_write_enabled
@@ -230,6 +277,21 @@ namespace Sunset
 #pragma warning( push )
 #pragma warning( disable : 4244)
 #pragma warning( disable : 4267)
+
+template<>
+struct std::hash<Sunset::PipelineAttachmentBlendState>
+{
+	std::size_t operator()(const Sunset::PipelineAttachmentBlendState& bd_data) const
+	{
+		std::size_t hash = Sunset::Maths::cantor_pair_hash(bd_data.b_blend_enabled, static_cast<int32_t>(bd_data.source_color_blend));
+		hash = Sunset::Maths::cantor_pair_hash(hash, static_cast<int32_t>(bd_data.destination_color_blend));
+		hash = Sunset::Maths::cantor_pair_hash(hash, static_cast<int32_t>(bd_data.color_blend_op));
+		hash = Sunset::Maths::cantor_pair_hash(hash, static_cast<int32_t>(bd_data.source_alpha_blend));
+		hash = Sunset::Maths::cantor_pair_hash(hash, static_cast<int32_t>(bd_data.destination_alpha_blend));
+		hash = Sunset::Maths::cantor_pair_hash(hash, static_cast<int32_t>(bd_data.alpha_blend_op));
+		return hash;
+	}
+};
 
 template<>
 struct std::hash<Sunset::PushConstantPipelineData>
@@ -300,6 +362,8 @@ struct std::hash<Sunset::PipelineStateData>
 			rasterizer_state_seed ^= hash + 0x9e3779b9 + (rasterizer_state_seed << 6) + (rasterizer_state_seed >> 2);
 		}
 
+		std::size_t attachment_blend_seed = std::hash<Sunset::PipelineAttachmentBlendState>{}(psd.attachment_blend_state);
+
 		std::size_t pipeline_layout_seed = static_cast<int32_t>(psd.layout);
 
 		std::size_t topology_seed = static_cast<int32_t>(psd.primitive_topology_type);
@@ -320,6 +384,7 @@ struct std::hash<Sunset::PipelineStateData>
 		final_hash = Sunset::Maths::cantor_pair_hash(final_hash, static_cast<int32_t>(viewport_seed));
 		final_hash = Sunset::Maths::cantor_pair_hash(final_hash, static_cast<int32_t>(scissors_seed));
 		final_hash = Sunset::Maths::cantor_pair_hash(final_hash, static_cast<int32_t>(vertex_input_seed));
+		final_hash = Sunset::Maths::cantor_pair_hash(final_hash, static_cast<int32_t>(attachment_blend_seed));
 		final_hash = Sunset::Maths::cantor_pair_hash(final_hash, static_cast<int32_t>(pipeline_layout_seed));
 		final_hash = Sunset::Maths::cantor_pair_hash(final_hash, static_cast<int32_t>(topology_seed));
 		final_hash = Sunset::Maths::cantor_pair_hash(final_hash, static_cast<int32_t>(rasterizer_state_seed));

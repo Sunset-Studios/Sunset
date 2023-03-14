@@ -9,6 +9,7 @@ layout (set = 0, binding = 0) uniform CameraBuffer
 	mat4 proj;
 	mat4 view_proj;
 	mat4 inverse_view_proj;
+	vec4 frustum_planes[6];
 } camera_data;
 
 // TODO: Put this global data in a shader include
@@ -20,6 +21,10 @@ layout (set = 0, binding = 1) uniform SceneLightingData
 	vec4 sunlight_direction;
 	vec4 sunlight_color;
 } scene_lighting_data;
+
+// TODO: Put this global data in a shader include
+layout (set = 0, binding = 2) uniform sampler2D textures_2D[];
+layout (set = 0, binding = 2) uniform sampler3D textures_3D[];
 
 struct EntitySceneData
 {
@@ -66,12 +71,8 @@ layout (set = 1, binding = 3) buffer DrawIndirectBuffer
 
 layout (push_constant) uniform constants
 {
-	mat4 view;
 	float p00;
 	float p11;
-	float z_near;
-	float z_far;
-	float frustum[4];
 	uint draw_count;
 	uint culling_enabled;
 	uint occlusion_enabled;
@@ -86,17 +87,20 @@ bool is_occluded(uint object_index)
 bool is_in_frustum(uint object_index)
 {
 	const vec4 sphere_bounds = entity_data.entities[object_index].bounds_pos_radius;
-	vec3 center = sphere_bounds.xyz;
-	center = (draw_cull_constants.view * vec4(center, 1.0f)).xyz;
+	const vec4 center = vec4(sphere_bounds.xyz, 1.0f);
 	const float radius = sphere_bounds.w;
 
 	bool visible = true;
-	visible = visible && (center.z * draw_cull_constants.frustum[1]) - (abs(center.x) * draw_cull_constants.frustum[0]) > -radius;
-	visible = visible && (center.z * draw_cull_constants.frustum[3]) - (abs(center.y) * draw_cull_constants.frustum[2]) > -radius;
+
+	visible = visible && dot(center, camera_data.frustum_planes[0]) > -radius;
+	visible = visible && dot(center, camera_data.frustum_planes[1]) > -radius;
+	visible = visible && dot(center, camera_data.frustum_planes[2]) > -radius;
+	visible = visible && dot(center, camera_data.frustum_planes[3]) > -radius;
 
 	if (draw_cull_constants.distance_check != 0)
 	{
-		visible = visible && (center.z + radius) > draw_cull_constants.z_near && (center.z - radius) < draw_cull_constants.z_far;
+		visible = visible && dot(center, camera_data.frustum_planes[4]) > -radius;
+		visible = visible && dot(center, camera_data.frustum_planes[5]) > -radius;
 	}
 
 	return visible || draw_cull_constants.culling_enabled == 0;

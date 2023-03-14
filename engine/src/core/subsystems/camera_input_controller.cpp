@@ -13,20 +13,20 @@ namespace Sunset
 			glm::vec3 prev_camera_pos(camera_pos);
 			if (InputProvider::get()->get_state(InputKey::K_w))
 			{
-				camera_pos += camera_control_comp->input.move_speed * camera_control_comp->data.forward;
+				camera_pos += camera_control_comp->input.move_speed * camera_control_comp->data.forward * static_cast<float>(delta_time);
 			}
 			if (InputProvider::get()->get_state(InputKey::K_s))
 			{
-				camera_pos -= camera_control_comp->input.move_speed * camera_control_comp->data.forward;
+				camera_pos -= camera_control_comp->input.move_speed * camera_control_comp->data.forward * static_cast<float>(delta_time);
 			}
 
 			if (InputProvider::get()->get_state(InputKey::K_a))
 			{
-				camera_pos -= camera_control_comp->input.move_speed * glm::normalize(glm::cross(camera_control_comp->data.forward, WORLD_UP));
+				camera_pos -= camera_control_comp->input.move_speed * glm::normalize(glm::cross(camera_control_comp->data.forward, WORLD_UP)) * static_cast<float>(delta_time);
 			}
 			if (InputProvider::get()->get_state(InputKey::K_d))
 			{
-				camera_pos += camera_control_comp->input.move_speed * glm::normalize(glm::cross(camera_control_comp->data.forward, WORLD_UP));
+				camera_pos += camera_control_comp->input.move_speed * glm::normalize(glm::cross(camera_control_comp->data.forward, WORLD_UP)) * static_cast<float>(delta_time);
 			}
 
 			if (InputProvider::get()->get_state(InputKey::B_mouse_left))
@@ -38,8 +38,8 @@ namespace Sunset
 					float& pitch = camera_control_comp->data.pitch;
 					float& yaw = camera_control_comp->data.yaw;
 
-					x *= camera_control_comp->input.look_speed;
-					y *= camera_control_comp->input.look_speed;
+					x *= camera_control_comp->input.look_speed * delta_time;
+					y *= camera_control_comp->input.look_speed * delta_time;
 
 					yaw += x;
 					pitch = glm::clamp(pitch + y, -89.0f, 89.0f);

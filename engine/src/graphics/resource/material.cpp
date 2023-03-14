@@ -51,7 +51,7 @@ namespace Sunset
 				{
 					bindless_writes.push_back(
 						DescriptorBindlessWrite{
-							.slot = 2,
+							.slot = ImageBindTableSlot,
 							.type = DescriptorType::Image,
 							.buffer = CACHE_FETCH(Image, texture),
 							.set = descriptor_set

@@ -14,7 +14,7 @@ namespace Sunset
 			// Upload vertex buffer
 			const size_t vertex_data_size = mesh->vertices.size() * sizeof(Vertex);
 
-			std::string buffer_name = std::string(mesh->name);
+			std::string buffer_name = std::to_string(mesh->name.computed_hash);
 			buffer_name += "_vertex_staging";
 			const BufferID vertex_staging_buffer_id = BufferFactory::create(
 				gfx_context,
@@ -30,7 +30,7 @@ namespace Sunset
 
 			vertex_staging_buffer->copy_from(gfx_context, mesh->vertices.data(), vertex_data_size);
 
-			buffer_name = std::string(mesh->name);
+			buffer_name = std::to_string(mesh->name.computed_hash);
 			buffer_name += "_vertex";
 			mesh->vertex_buffer = BufferFactory::create(
 				gfx_context,
@@ -55,7 +55,7 @@ namespace Sunset
 			// Upload index buffer
 			const size_t index_data_size = mesh->indices.size() * sizeof(uint32_t);
 
-			std::string buffer_name = std::string(mesh->name);
+			std::string buffer_name = std::to_string(mesh->name.computed_hash);
 			buffer_name += "_index_staging";
 			const BufferID index_staging_buffer_id = BufferFactory::create(
 				gfx_context,
@@ -71,7 +71,7 @@ namespace Sunset
 
 			index_staging_buffer->copy_from(gfx_context, mesh->indices.data(), index_data_size);
 
-			buffer_name = std::string(mesh->name);
+			buffer_name = std::to_string(mesh->name.computed_hash);
 			buffer_name += "_index";
 			mesh->index_buffer = BufferFactory::create(
 				gfx_context,
@@ -127,8 +127,8 @@ namespace Sunset
 
 		Bounds new_bounds;
 		new_bounds.extents = (max - min) / 2.0f;
-		new_bounds.origin = min + mesh->local_bounds.extents;
-		new_bounds.radius = mesh->local_bounds.radius > 0 ? max_scale * mesh->local_bounds.radius : new_bounds.extents.x;
+		new_bounds.origin = min + new_bounds.extents;
+		new_bounds.radius = max_scale * mesh->local_bounds.radius;
 
 		return new_bounds;
 	}
@@ -171,6 +171,116 @@ namespace Sunset
 			mesh->vertices[0].color = { 0.0f, 1.0f, 0.0f };
 			mesh->vertices[1].color = { 0.0f, 1.0f, 0.0f };
 			mesh->vertices[2].color = { 0.0f, 1.0f, 0.0f };
+
+			mesh->indices.insert(mesh->indices.end(), { 0, 1, 2 });
+
+			mesh->name = id;
+
+			upload_mesh(gfx_context, mesh);
+		}
+
+		return mesh_id;
+	}
+
+	Sunset::MeshID MeshFactory::create_quad(class GraphicsContext* const gfx_context)
+	{
+		Identity id{ "engine_quad" };
+		bool b_added{ false };
+		static MeshID mesh_id = MeshCache::get()->fetch_or_add(id, gfx_context, b_added);
+		Mesh* const mesh = CACHE_FETCH(Mesh, mesh_id);
+
+		if (b_added)
+		{
+			mesh->vertices.resize(4);
+
+			mesh->vertices[0].position = { -1.0f, 1.0f, 0.0f };
+			mesh->vertices[1].position = { -1.0f, -1.0f, 0.0f };
+			mesh->vertices[2].position = { 1.0f, -1.0f, 0.0f };
+			mesh->vertices[3].position = { 1.0f, 1.0f, 0.0f };
+
+			mesh->vertices[0].uv = { 0.0f, 1.0f };
+			mesh->vertices[1].uv = { 0.0f, 0.0f };
+			mesh->vertices[2].uv = { 1.0f, 0.0f };
+			mesh->vertices[3].uv = { 1.0f, 1.0f };
+
+			mesh->indices.insert(mesh->indices.end(), { 0, 1, 2, 0, 2, 3 });
+
+			mesh->name = id;
+
+			upload_mesh(gfx_context, mesh);
+		}
+
+		return mesh_id;
+	}
+
+	Sunset::MeshID MeshFactory::create_sphere(class GraphicsContext* const gfx_context, const glm::ivec2& segments, float radius)
+	{
+		Identity id{ "engine_sphere" };
+		bool b_added{ false };
+		static MeshID mesh_id = MeshCache::get()->fetch_or_add(id, gfx_context, b_added);
+		Mesh* const mesh = CACHE_FETCH(Mesh, mesh_id);
+
+		if (b_added)
+		{
+			float x, y, z;
+			float xy;
+			float nx, ny, nz;
+			float lengthInv = 1.0f / radius;
+			float s, t;
+
+			const uint32_t sectorCount = segments.x;
+			const uint32_t stackCount = segments.y;
+
+			const float sectorStep = TWOPI / sectorCount;
+			const float stackStep = PI / stackCount;
+
+			float sectorAngle, stackAngle;
+
+			for (uint32_t i = 0; i <= stackCount; ++i)
+			{
+				stackAngle = PI * 0.5f - i * stackStep;
+				xy = radius * cosf(stackAngle);
+				z = radius * sinf(stackAngle);
+
+				for (uint32_t j = 0; j <= sectorCount; ++j)
+				{
+					sectorAngle = j * sectorStep;
+
+					x = xy * cosf(sectorAngle);
+					y = xy * sinf(sectorAngle);
+
+					mesh->vertices.emplace_back(
+						glm::vec3(x, y, z),
+						glm::vec3(x * lengthInv, y * lengthInv, z * lengthInv),
+						glm::vec3(1.0f, 1.0f, 1.0f),
+						glm::vec2((float)j / sectorCount, (float)i / stackCount)
+					);
+				}
+			}
+
+			uint32_t k1, k2;
+			for (uint32_t i = 0; i < stackCount; ++i)
+			{
+				k1 = i * (sectorCount + 1);
+				k2 = k1 + sectorCount + 1;
+
+				for (uint32_t j = 0; j < sectorCount; ++j, ++k1, ++k2)
+				{
+					if (i != 0)
+					{
+						mesh->indices.insert(mesh->indices.end(),
+							{ k1, k2, k1 + 1 }
+						);
+					}
+
+					if (i != (stackCount - 1))
+					{
+						mesh->indices.insert(mesh->indices.end(),
+							{ k1 + 1, k2, k2 + 1 }
+						);
+					}
+				}
+			}
 
 			mesh->name = id;
 

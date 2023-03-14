@@ -61,7 +61,7 @@ namespace Sunset
 
 		~CVarArray()
 		{
-			delete cvars;
+			delete[] cvars;
 		}
 
 		T get_current_value(int32_t index)

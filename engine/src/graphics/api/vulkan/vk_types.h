@@ -453,6 +453,54 @@ inline VkAccessFlagBits VK_FROM_SUNSET_ACCESS_FLAGS(Sunset::AccessFlags access_f
 	return static_cast<VkAccessFlagBits>(vk_access_flags);
 }
 
+inline VkBlendFactor VK_FROM_SUNSET_BLEND_FACTOR(Sunset::BlendFactor blend_factor)
+{
+	switch (blend_factor)
+	{
+	case Sunset::BlendFactor::Zero:
+		return VK_BLEND_FACTOR_ZERO;
+	case Sunset::BlendFactor::One:
+		return VK_BLEND_FACTOR_ONE;
+	case Sunset::BlendFactor::SourceColor:
+		return VK_BLEND_FACTOR_SRC_COLOR;
+	case Sunset::BlendFactor::OneMinusSourceColor:
+		return VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR;
+	case Sunset::BlendFactor::DestinationColor:
+		return VK_BLEND_FACTOR_DST_COLOR;
+	case Sunset::BlendFactor::OneMinusDestinationColor:
+		return VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR;
+	case Sunset::BlendFactor::SourceAlpha:
+		return VK_BLEND_FACTOR_SRC_ALPHA;
+	case Sunset::BlendFactor::OneMinusSourceAlpha:
+		return VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+	case Sunset::BlendFactor::DestinationAlpha:
+		return VK_BLEND_FACTOR_DST_ALPHA;
+	case Sunset::BlendFactor::OneMinusDestinationAlpha:
+		return VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
+	default:
+		return VK_BLEND_FACTOR_ZERO;
+	}
+}
+
+inline VkBlendOp VK_FROM_SUNSET_BLEND_OP(Sunset::BlendOp blend_op)
+{
+	switch (blend_op)
+	{
+	case Sunset::BlendOp::Add:
+		return VK_BLEND_OP_ADD;
+	case Sunset::BlendOp::Subtract:
+		return VK_BLEND_OP_SUBTRACT;
+	case Sunset::BlendOp::ReverseSubtract:
+		return VK_BLEND_OP_REVERSE_SUBTRACT;
+	case Sunset::BlendOp::Min:
+		return VK_BLEND_OP_MIN;
+	case Sunset::BlendOp::Max:
+		return VK_BLEND_OP_MAX;
+	default:
+		return VK_BLEND_OP_ADD;
+	}
+}
+
 inline std::vector<VkDescriptorSetLayoutBinding> VK_FROM_SUNSET_DESCRIPTOR_BINDINGS(const std::vector<Sunset::DescriptorBinding>& bindings)
 {
 	std::vector<VkDescriptorSetLayoutBinding> vk_bindings;

@@ -34,6 +34,7 @@ namespace Sunset
 		uint8_t attachment_clear : 1 = 1;
 		uint8_t attachment_stencil_clear : 1 = 0;
 		uint8_t has_store_op : 1 = 1;
-		uint8_t padding : 5 = 0;
+		uint8_t is_bindless : 1 = 1;
+		uint8_t padding : 4 = 0;
 	};
 }

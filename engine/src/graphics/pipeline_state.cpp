@@ -95,6 +95,18 @@ namespace Sunset
 		return *this;
 	}
 
+	Sunset::PipelineGraphicsStateBuilder& PipelineGraphicsStateBuilder::set_rasterizer_state(const PipelineRasterizerState& rasterizer_state)
+	{
+		state_data.rasterizer_state = rasterizer_state;
+		return *this;
+	}
+
+	Sunset::PipelineGraphicsStateBuilder& PipelineGraphicsStateBuilder::set_attachment_blend_state(const PipelineAttachmentBlendState& blend_state)
+	{
+		state_data.attachment_blend_state = blend_state;
+		return *this;
+	}
+
 	Sunset::PipelineGraphicsStateBuilder& PipelineGraphicsStateBuilder::set_multisample_count(uint16_t count)
 	{
 		state_data.multisample_count = count;
