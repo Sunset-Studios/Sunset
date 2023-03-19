@@ -3,7 +3,6 @@
 #include <vector>
 
 #include <vk_types.h>
-#include <vk_initializers.h>
 
 #include <graphics/pipeline_types.h>
 #include <graphics/render_pass_types.h>

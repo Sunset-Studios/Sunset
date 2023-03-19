@@ -94,9 +94,19 @@ namespace Sunset
 			return buffer_policy.get_size();
 		}
 
+		AccessFlags get_access_flags() const
+		{
+			return buffer_policy.get_access_flags();
+		}
+
 		BufferConfig& get_buffer_config()
 		{
 			return buffer_config;
+		}
+
+		void set_access_flags(AccessFlags access)
+		{
+			buffer_policy.set_access_flags(access);
 		}
 
 	private:
@@ -160,10 +170,18 @@ namespace Sunset
 			return nullptr;
 		}
 
+		AccessFlags get_access_flags() const
+		{
+			return AccessFlags::None;
+		}
+
 		size_t get_size() const
 		{
 			return 0;
 		}
+
+		void set_access_flags(AccessFlags access)
+		{ }
 	};
 
 #if USE_VULKAN_GRAPHICS

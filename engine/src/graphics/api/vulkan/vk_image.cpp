@@ -34,24 +34,6 @@ namespace Sunset
 		return usage_flags > 0 ? static_cast<VkImageUsageFlags>(usage_flags) : VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 	}
 
-	inline VkImageAspectFlags VK_FROM_SUNSET_IMAGE_USAGE_ASPECT_FLAGS(ImageFlags flags)
-	{
-		int32_t aspect_flags{ 0 };
-		if (static_cast<int32_t>(flags & ImageFlags::Color) > 0)
-		{
-			aspect_flags |= VK_IMAGE_ASPECT_COLOR_BIT;
-		}
-		else if (static_cast<int32_t>(flags & (ImageFlags::Depth | ImageFlags::DepthStencil)) > 0)
-		{
-			aspect_flags |= VK_IMAGE_ASPECT_DEPTH_BIT;
-		}
-		else if (static_cast<int32_t>(flags & (ImageFlags::Depth | ImageFlags::DepthStencil)) > 0)
-		{
-			aspect_flags |= VK_IMAGE_ASPECT_STENCIL_BIT;
-		}
-		return aspect_flags > 0 ? static_cast<VkImageAspectFlags>(aspect_flags) : VK_IMAGE_ASPECT_COLOR_BIT;
-	}
-
 	void VulkanImage::initialize(class GraphicsContext* const gfx_context, AttachmentConfig& config)
 	{
 		assert(gfx_context->get_buffer_allocator() != nullptr);
@@ -116,6 +98,8 @@ namespace Sunset
 
 		image = existing_image;
 		image_view = existing_image_view;
+		access_flags = AccessFlags::None;
+		layout = ImageLayout::Undefined;
 		b_external_handling = true;
 	}
 
@@ -147,11 +131,11 @@ namespace Sunset
 
 		VkImageMemoryBarrier image_barrier_to_transfer = {};
 		image_barrier_to_transfer.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-		image_barrier_to_transfer.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		image_barrier_to_transfer.oldLayout = VK_FROM_SUNSET_IMAGE_LAYOUT_FLAGS(layout);
 		image_barrier_to_transfer.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 		image_barrier_to_transfer.image = image;
 		image_barrier_to_transfer.subresourceRange = range;
-		image_barrier_to_transfer.srcAccessMask = 0;
+		image_barrier_to_transfer.srcAccessMask = VK_FROM_SUNSET_ACCESS_FLAGS(access_flags);
 		image_barrier_to_transfer.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 
 		VkCommandBuffer cmd = static_cast<VkCommandBuffer>(command_buffer);

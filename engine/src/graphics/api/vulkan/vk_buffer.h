@@ -1,7 +1,6 @@
 #pragma once
 
 #include <vk_types.h>
-#include <vk_initializers.h>
 #include <vk_mem_alloc.h>
 
 #include <graphics/resource/buffer_types.h>
@@ -39,18 +38,26 @@ namespace Sunset
 		void unmap_gpu(class GraphicsContext* const gfx_context);
 		void bind(class GraphicsContext* const gfx_context, BufferType type, void* command_buffer);
 		void barrier(class GraphicsContext* const gfx_context, void* command_buffer, AccessFlags src_access, AccessFlags dst_access, PipelineStageType src_pipeline_stage, PipelineStageType dst_pipeline_stage);
+
 		void* get()
 		{
 			return buffer;
+		}
+		AccessFlags get_access_flags() const
+		{
+			return access_flags;
 		}
 		size_t get_size() const
 		{
 			return size;
 		}
 
+		void set_access_flags(AccessFlags access);
+
 	protected:
 		size_t size;
 		VkBuffer buffer;
+		AccessFlags access_flags;
 		VmaAllocation allocation;
 	};
 }

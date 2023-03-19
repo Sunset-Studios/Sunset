@@ -3,7 +3,6 @@
 #include <command_queue_types.h>
 
 #include <vk_types.h>
-#include <vk_initializers.h>
 #include <vk_sync.h>
 
 namespace Sunset

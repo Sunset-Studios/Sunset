@@ -61,6 +61,7 @@ namespace Sunset
 
 	void set_position(CameraControlComponent* camera_comp, const glm::vec3& new_position)
 	{
+		camera_comp->data.prev_position = camera_comp->data.position;
 		camera_comp->data.position = new_position;
 		camera_comp->data.b_dirty = true;
 	}
@@ -75,6 +76,7 @@ namespace Sunset
 
 	void set_forward(CameraControlComponent* camera_comp, const glm::vec3& new_forward)
 	{
+		camera_comp->data.prev_forward = camera_comp->data.forward;
 		camera_comp->data.forward = new_forward;
 		camera_comp->data.b_dirty = true;
 	}

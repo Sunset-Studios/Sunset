@@ -6,7 +6,6 @@
 #include <window/window.h>
 
 #include <vk_types.h>
-#include <vk_initializers.h>
 
 #include <VkBootstrap.h>
 

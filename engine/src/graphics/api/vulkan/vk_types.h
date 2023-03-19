@@ -569,3 +569,48 @@ inline VkSamplerAddressMode VK_FROM_SUNSET_SAMPLER_ADDRESS_MODE(Sunset::SamplerA
 		return VK_SAMPLER_ADDRESS_MODE_REPEAT;
 	}
 }
+
+inline VkImageLayout VK_FROM_SUNSET_IMAGE_LAYOUT_FLAGS(Sunset::ImageLayout layout)
+{
+	switch (layout)
+	{
+	case Sunset::ImageLayout::Undefined:
+		return VK_IMAGE_LAYOUT_UNDEFINED;
+	case Sunset::ImageLayout::General:
+		return VK_IMAGE_LAYOUT_GENERAL;
+	case Sunset::ImageLayout::ColorAttachment:
+		return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	case Sunset::ImageLayout::DepthStencilAttachment:
+		return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+	case Sunset::ImageLayout::DepthStencilReadOnly:
+		return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+	case Sunset::ImageLayout::ShaderReadOnly:
+		return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	case Sunset::ImageLayout::TransferSource:
+		return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+	case Sunset::ImageLayout::TransferDestination:
+		return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+	case Sunset::ImageLayout::Preinitialized:
+		return VK_IMAGE_LAYOUT_PREINITIALIZED;
+	default:
+		return VK_IMAGE_LAYOUT_UNDEFINED;
+	}
+}
+
+inline VkImageAspectFlags VK_FROM_SUNSET_IMAGE_USAGE_ASPECT_FLAGS(Sunset::ImageFlags flags)
+{
+	int32_t aspect_flags{ 0 };
+	if (static_cast<int32_t>(flags & Sunset::ImageFlags::Color) > 0)
+	{
+		aspect_flags |= VK_IMAGE_ASPECT_COLOR_BIT;
+	}
+	else if (static_cast<int32_t>(flags & (Sunset::ImageFlags::Depth | Sunset::ImageFlags::DepthStencil)) > 0)
+	{
+		aspect_flags |= VK_IMAGE_ASPECT_DEPTH_BIT;
+	}
+	else if (static_cast<int32_t>(flags & (Sunset::ImageFlags::Depth | Sunset::ImageFlags::DepthStencil)) > 0)
+	{
+		aspect_flags |= VK_IMAGE_ASPECT_STENCIL_BIT;
+	}
+	return aspect_flags > 0 ? static_cast<VkImageAspectFlags>(aspect_flags) : VK_IMAGE_ASPECT_COLOR_BIT;
+}

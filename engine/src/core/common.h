@@ -2,8 +2,13 @@
 
 #include <minimal.h>
 
+#ifndef USE_VULKAN_GRAPHICS
 #define USE_VULKAN_GRAPHICS 1
+#endif
+
+#ifndef USE_SDL_WINDOWING
 #define USE_SDL_WINDOWING 1
+#endif
 
 #if USE_VULKAN_GRAPHICS
 #include <graphics/api/vulkan/vk_context.h>
@@ -17,6 +22,7 @@
 #include <graphics/api/vulkan/vk_buffer.h>
 #include <graphics/api/vulkan/vk_image.h>
 #include <graphics/api/vulkan/vk_descriptor.h>
+#include <graphics/api/vulkan/vk_barrier_batcher.h>
 #endif
 
 #if USE_SDL_WINDOWING

@@ -49,12 +49,16 @@ namespace Sunset
 						glm::sin(glm::radians(pitch)),
 						glm::sin(glm::radians(yaw)) * glm::cos(glm::radians(pitch))
 					);
+
+					new_forward = glm::mix(new_forward, camera_control_comp->data.prev_forward, 0.5f);
+
 					set_forward(camera_control_comp, glm::normalize(new_forward));
 				}
 			}
 
 			if (camera_pos != prev_camera_pos)
 			{
+				camera_pos = glm::mix(camera_pos, camera_control_comp->data.prev_position, 0.5f);
 				set_position(camera_control_comp, camera_pos);
 			}
 		}

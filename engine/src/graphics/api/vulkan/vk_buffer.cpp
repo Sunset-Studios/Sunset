@@ -194,5 +194,12 @@ namespace Sunset
 			1, &buffer_barrier,
 			0, nullptr
 		);
+
+		access_flags = dst_access;
+	}
+
+	void VulkanBuffer::set_access_flags(AccessFlags access)
+	{
+		access_flags = access;
 	}
 }

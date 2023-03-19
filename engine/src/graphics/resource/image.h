@@ -60,6 +60,26 @@ namespace Sunset
 			return image_policy.get_sampler();
 		}
 
+		AccessFlags get_access_flags() const
+		{
+			return image_policy.get_access_flags();
+		}
+
+		ImageLayout get_layout() const
+		{
+			return image_policy.get_layout();
+		}
+
+		void set_access_flags(AccessFlags access)
+		{
+			image_policy.set_access_flags(access);
+		}
+
+		void set_layout(ImageLayout new_layout)
+		{
+			image_policy.set_layout(new_layout);
+		}
+
 	private:
 		Policy image_policy;
 		AttachmentConfig attachment_config;
@@ -99,6 +119,22 @@ namespace Sunset
 		{
 			return nullptr;
 		}
+
+		AccessFlags get_access_flags() const
+		{
+			return AccessFlags::None;
+		}
+
+		ImageLayout get_layout() const
+		{
+			return ImageLayout::Undefined;
+		}
+
+		void set_access_flags(AccessFlags access)
+		{ }
+
+		void set_layout(ImageLayout new_layout)
+		{ }
 	};
 
 #if USE_VULKAN_GRAPHICS

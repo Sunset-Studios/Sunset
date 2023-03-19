@@ -1,7 +1,6 @@
 #pragma once
 
 #include <vk_types.h>
-#include <vk_initializers.h>
 #include <minimal.h>
 #include <graphics/resource/image_types.h>
 
@@ -33,10 +32,32 @@ namespace Sunset
 			return sampler;
 		}
 
+		AccessFlags get_access_flags() const
+		{
+			return access_flags;
+		}
+
+		ImageLayout get_layout() const
+		{
+			return layout;
+		}
+
+		void set_access_flags(AccessFlags access)
+		{
+			access_flags = access;
+		}
+
+		void set_layout(ImageLayout new_layout)
+		{
+			layout = new_layout;
+		}
+
 	protected:
 		VkImage image;
 		VkImageView image_view;
 		VkSampler sampler;
+		AccessFlags access_flags;
+		ImageLayout layout;
 		VmaAllocation allocation;
 		bool b_external_handling{ false };
 	};

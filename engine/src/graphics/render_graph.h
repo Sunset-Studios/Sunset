@@ -2,6 +2,7 @@
 
 #include <common.h>
 
+#include <graphics/barrier_batcher.h>
 #include <graphics/resource/image_types.h>
 #include <graphics/resource/buffer_types.h>
 #include <graphics/render_pass_types.h>
@@ -66,10 +67,12 @@ namespace Sunset
 	{
 		int32_t reference_count{ 0 };
 		size_t physical_id{ 0 };
-		std::vector<RGPassHandle> producers;
-		std::vector<RGPassHandle> consumers;
 		RGPassHandle first_user;
 		RGPassHandle last_user;
+		std::vector<AccessFlags> access_flags;
+		std::vector<ImageLayout> layouts;
+		std::vector<RGPassHandle> producers;
+		std::vector<RGPassHandle> consumers;
 		bool b_is_persistent{ false };
 		bool b_is_bindless{ false };
 	};
@@ -146,6 +149,7 @@ namespace Sunset
 		std::vector<RGPass*> render_passes;
 		std::vector<RGResourceHandle> all_resource_handles;
 		std::unordered_map<RGResourceHandle, RGResourceMetadata> resource_metadata;
+		BarrierBatcher barrier_batcher;
 		std::vector<int32_t> all_bindless_resource_indices;
 		ExecutionQueue resource_deletion_queue;
 		bool b_global_set_bound{ false };
@@ -203,12 +207,13 @@ namespace Sunset
 		void update_present_pass_status(RGPass* pass);
 		void cull_graph_passes(class GraphicsContext* const gfx_context);
 		void compute_resource_first_and_last_users(class GraphicsContext* const gfx_context);
+		void compute_resource_barriers(class GraphicsContext* const gfx_context);
 		void compile(class GraphicsContext* const gfx_context, class Swapchain* const swapchain);
 
 		void execute_pass(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGPass* pass, RGFrameData& frame_data, void* command_buffer);
 
-		void setup_physical_pass_and_resources(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGPassHandle pass, RGFrameData& frame_data, void* command_buffer);
-		void setup_physical_resource(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGResourceHandle pass, bool b_is_graphics_pass = true, bool b_is_input_resource = false);
+		void setup_physical_pass_and_resources(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGPass* pass, RGFrameData& frame_data, void* command_buffer);
+		void setup_physical_resource(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGPass* pass, RGResourceHandle resource, bool b_is_graphics_pass = true, bool b_is_input_resource = false);
 		void tie_resource_to_pass_config_attachments(class GraphicsContext* const gfx_context, RGResourceHandle resource, RGPass* pass, bool b_is_input_resource = false);
 		void setup_pass_input_resource_bindless_type(class GraphicsContext* const gfx_context, RGResourceHandle resource, RGPass* pass);
 		void setup_pass_pipeline_state(class GraphicsContext* const gfx_context, RGPass* pass, void* command_buffer);

@@ -132,6 +132,19 @@ namespace Sunset
 		return lhs = lhs & rhs;
 	}
 
+	enum class ImageLayout : int32_t
+	{
+		Undefined = 0,
+		General,
+		ColorAttachment,
+		DepthStencilAttachment,
+		DepthStencilReadOnly,
+		ShaderReadOnly,
+		TransferSource,
+		TransferDestination,
+		Preinitialized
+	};
+
 	enum class AccessFlags : int32_t
 	{
 		None = 0,

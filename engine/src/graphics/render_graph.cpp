@@ -294,11 +294,71 @@ namespace Sunset
 		}
 	}
 
+	void RenderGraph::compute_resource_barriers(class GraphicsContext* const gfx_context)
+	{
+		// For each resource we compute the per-pass access masks and image layouts. We can then diff these
+		// when executing passes based on prev -> current in order to determine whether the resource needs
+		// a memory barrier.
+		for (RGResourceHandle resource : current_registry->all_resource_handles)
+		{
+			if (auto it = current_registry->resource_metadata.find(resource); it != current_registry->resource_metadata.end())
+			{
+				RGResourceMetadata& metadata = (*it).second;
+				if (metadata.reference_count == 0)
+				{
+					continue;
+				}
+
+				const ResourceType resource_type = static_cast<ResourceType>(get_graph_resource_type(resource));
+
+				std::vector<RGPassHandle> all_users;
+				all_users.insert(all_users.end(), metadata.producers.begin(), metadata.producers.end());
+				all_users.insert(all_users.end(), metadata.consumers.begin(), metadata.consumers.end());
+				std::sort(all_users.begin(), all_users.end());
+
+				for (RGPassHandle pass : all_users)
+				{
+					if (pass < metadata.first_user || pass > metadata.last_user)
+					{
+						continue;
+					}
+
+					if (metadata.access_flags.empty())
+					{
+						metadata.access_flags.resize(current_registry->render_passes.size(), AccessFlags::None);
+					}
+					if (metadata.layouts.empty())
+					{
+						metadata.layouts.resize(current_registry->render_passes.size(), ImageLayout::Undefined);
+					}
+
+					if (std::find(metadata.producers.begin(), metadata.producers.end(), pass) != metadata.producers.end())
+					{
+						if (resource_type == ResourceType::Buffer)
+						{
+							metadata.access_flags[pass] = AccessFlags::ShaderRead | AccessFlags::ShaderWrite;
+						}
+						else
+						{
+							metadata.access_flags[pass] = AccessFlags::ColorAttachmentWrite;
+							metadata.layouts[pass] = ImageLayout::ColorAttachment;
+						}
+					}
+					else
+					{
+						metadata.access_flags[pass] = AccessFlags::ShaderRead;
+						metadata.layouts[pass] = ImageLayout::ShaderReadOnly;
+					}
+				}
+			}
+		}
+	}
+
 	void RenderGraph::compile(class GraphicsContext* const gfx_context, class Swapchain* const swapchain)
 	{
 		cull_graph_passes(gfx_context);
 		compute_resource_first_and_last_users(gfx_context);
-		// TODO: Compute async wait points and resource barriers for non-culled resources
+		compute_resource_barriers(gfx_context);
 		// TODO: Not entirely sure how to do this yet (with VMA?) but walk resource lifetimes to account for how much GPU memory should be allocated up front for aliasing
 	}
 
@@ -310,6 +370,8 @@ namespace Sunset
 		{
 			return;
 		}
+
+		current_registry->barrier_batcher.begin(gfx_context, PipelineStageType::TopOfPipe);
 
 		// TODO: switch the queue based on the pass type
 		void* cmd_buffer = gfx_context->get_command_queue(DeviceQueueType::Graphics)->begin_one_time_buffer_record(gfx_context);
@@ -379,7 +441,7 @@ namespace Sunset
 		}
 		else
 		{
-			setup_physical_pass_and_resources(gfx_context, swapchain, pass->handle, frame_data, command_buffer);
+			setup_physical_pass_and_resources(gfx_context, swapchain, pass, frame_data, command_buffer);
 
 			{
 				const uint32_t pass_type_index = static_cast<uint32_t>(DescriptorSetType::Pass);
@@ -413,51 +475,54 @@ namespace Sunset
 		}
 	}
 
-	void RenderGraph::setup_physical_pass_and_resources(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGPassHandle pass, RGFrameData& frame_data, void* command_buffer)
+	void RenderGraph::setup_physical_pass_and_resources(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGPass* pass, RGFrameData& frame_data, void* command_buffer)
 	{
-		RGPass* const graph_pass = current_registry->render_passes[pass];
+		const bool b_is_graphics_pass = (pass->pass_config.flags & RenderPassFlags::Graphics) != RenderPassFlags::None;
 
-		const bool b_is_graphics_pass = (graph_pass->pass_config.flags & RenderPassFlags::Graphics) != RenderPassFlags::None;
-
-		const auto setup_resource = [this, gfx_context, swapchain, b_is_graphics_pass, graph_pass](RGResourceHandle resource, bool b_is_input_resource)
+		const auto setup_resource = [this, gfx_context, swapchain, pass, b_is_graphics_pass](RGResourceHandle resource, bool b_is_input_resource)
 		{
-			setup_physical_resource(gfx_context, swapchain, resource, b_is_graphics_pass, b_is_input_resource);
+			setup_physical_resource(gfx_context, swapchain, pass, resource, b_is_graphics_pass, b_is_input_resource);
 			if (b_is_graphics_pass)
 			{
-				tie_resource_to_pass_config_attachments(gfx_context, resource, graph_pass, b_is_input_resource);
+				tie_resource_to_pass_config_attachments(gfx_context, resource, pass, b_is_input_resource);
 			}
 			if (b_is_input_resource)
 			{
-				setup_pass_input_resource_bindless_type(gfx_context, resource, graph_pass);
+				setup_pass_input_resource_bindless_type(gfx_context, resource, pass);
 			}
 		};
 
 		// Setup resource used by the render pass. If they are output/input attachments we will handle those here as well but cache those off
 		// as those necessarily need caching along with the render passes.
-		for (RGResourceHandle input_resource : graph_pass->parameters.inputs)
+		for (RGResourceHandle input_resource : pass->parameters.inputs)
 		{
 			setup_resource(input_resource, true);
 		}
-		for (RGResourceHandle output_resource : graph_pass->parameters.outputs)
+		for (RGResourceHandle output_resource : pass->parameters.outputs)
 		{
 			setup_resource(output_resource, false);
 		}
 
 		// Create our physical render pass (is internally cached if necessary using a hash based on the pass config)
-		graph_pass->physical_id = RenderPassFactory::create_default(gfx_context, swapchain, graph_pass->pass_config, true);
+		pass->physical_id = RenderPassFactory::create_default(gfx_context, swapchain, pass->pass_config, true);
 
 		// Setup render pass pipeline state if render pass-level shader stages were provided. Otherwise, pipeline state should be handled
 		// and bound by render pass callbacks.
-		setup_pass_pipeline_state(gfx_context, graph_pass, command_buffer);
+		setup_pass_pipeline_state(gfx_context, pass, command_buffer);
 
-		setup_pass_descriptors(gfx_context, graph_pass, frame_data, command_buffer);
+		setup_pass_descriptors(gfx_context, pass, frame_data, command_buffer);
 
-		bind_pass_descriptors(gfx_context, graph_pass, command_buffer);
+		bind_pass_descriptors(gfx_context, pass, command_buffer);
 
-		push_pass_constants(gfx_context, graph_pass, command_buffer);
+		push_pass_constants(gfx_context, pass, command_buffer);
+
+		PipelineStageType barrier_execution_stage = (pass->pass_config.flags & RenderPassFlags::Compute) != RenderPassFlags::None
+			? PipelineStageType::ComputeShader
+			: PipelineStageType::AllGraphics;
+		current_registry->barrier_batcher.execute(gfx_context, command_buffer, barrier_execution_stage, pass->pass_config.name);
 	}
 
-	void RenderGraph::setup_physical_resource(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGResourceHandle resource, bool b_is_graphics_pass, bool b_is_input_resource)
+	void RenderGraph::setup_physical_resource(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGPass* pass, RGResourceHandle resource, bool b_is_graphics_pass, bool b_is_input_resource)
 	{
 		const ResourceType resource_type = static_cast<ResourceType>(get_graph_resource_type(resource));
 		const RGResourceIndex resource_index = get_graph_resource_index(resource);
@@ -481,6 +546,22 @@ namespace Sunset
 							CACHE_DELETE(Buffer, physical_id, gfx_context);
 						}
 					);
+				}
+
+				// Add a buffer barrier if the requested access flags seem different than the current buffer state
+				if (!current_registry->resource_metadata[resource].access_flags.empty())
+				{
+					Buffer* const buffer = CACHE_FETCH(Buffer, current_registry->resource_metadata[resource].physical_id);
+					const AccessFlags access_flags = current_registry->resource_metadata[resource].access_flags[pass->handle];
+					if (buffer->get_access_flags() != access_flags)
+					{
+						current_registry->barrier_batcher.add_buffer_barrier(
+							gfx_context,
+							buffer,
+							pass->pass_config.name,
+							access_flags
+						);
+					}
 				}
 			}
 		}
@@ -508,6 +589,24 @@ namespace Sunset
 							CACHE_DELETE(Image, physical_id, gfx_context);
 						}
 					);
+				}
+
+				// Add an image barrier if the requested access flags and image layout seem different than the current image state
+				if (!current_registry->resource_metadata[resource].access_flags.empty() && !current_registry->resource_metadata[resource].layouts.empty())
+				{
+					Image* const image = CACHE_FETCH(Image, current_registry->resource_metadata[resource].physical_id);
+					const AccessFlags access_flags = current_registry->resource_metadata[resource].access_flags[pass->handle];
+					const ImageLayout layout = current_registry->resource_metadata[resource].layouts[pass->handle];
+					if (image->get_access_flags() != access_flags || image->get_layout() != layout)
+					{
+						current_registry->barrier_batcher.add_image_barrier(
+							gfx_context,
+							image,
+							pass->pass_config.name,
+							access_flags,
+							layout
+						);
+					}
 				}
 			}
 		}

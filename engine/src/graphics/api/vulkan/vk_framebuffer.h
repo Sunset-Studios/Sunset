@@ -1,7 +1,6 @@
 #pragma once
 
 #include <vk_types.h>
-#include <vk_initializers.h>
 
 namespace Sunset
 {
