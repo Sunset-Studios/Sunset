@@ -31,6 +31,10 @@ namespace Sunset
 		{
 			usage_flags |= VK_IMAGE_USAGE_SAMPLED_BIT;
 		}
+		if (static_cast<int32_t>(flags & ImageFlags::Storage) > 0)
+		{
+			usage_flags |= VK_IMAGE_USAGE_STORAGE_BIT;
+		}
 		return usage_flags > 0 ? static_cast<VkImageUsageFlags>(usage_flags) : VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 	}
 
@@ -49,8 +53,8 @@ namespace Sunset
 		image_info.imageType = VK_FROM_SUNSET_IMAGE_TYPE(config.flags);
 		image_info.format = VK_FROM_SUNSET_FORMAT(config.format);
 		image_info.extent = VkExtent3D{ static_cast<unsigned int>(config.extent.x), static_cast<unsigned int>(config.extent.y), static_cast<unsigned int>(glm::max(1.0f, config.extent.z)) };
-		image_info.mipLevels = 1;
-		image_info.arrayLayers = 1;
+		image_info.mipLevels = config.mip_count;
+		image_info.arrayLayers = config.array_count;
 		image_info.samples = VK_SAMPLE_COUNT_1_BIT;
 		image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
 		image_info.usage = VK_FROM_SUNSET_IMAGE_USAGE(config.flags);
@@ -61,19 +65,25 @@ namespace Sunset
 
 		vmaCreateImage(allocator, &image_info, &img_alloc_info, &image, &allocation, nullptr);
 
-		VkImageViewCreateInfo image_view_info = {};
-		image_view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-		image_view_info.pNext = nullptr;
-		image_view_info.viewType = VK_FROM_SUNSET_IMAGE_VIEW_TYPE(config.flags);
-		image_view_info.image = image;
-		image_view_info.format = VK_FROM_SUNSET_FORMAT(config.format);
-		image_view_info.subresourceRange.baseMipLevel = 0;
-		image_view_info.subresourceRange.levelCount = 1;
-		image_view_info.subresourceRange.baseArrayLayer = 0;
-		image_view_info.subresourceRange.layerCount = 1;
-		image_view_info.subresourceRange.aspectMask = VK_FROM_SUNSET_IMAGE_USAGE_ASPECT_FLAGS(config.flags);
+		// TODO: Maybe create config.mip_count * config.array_count instead? array count is totally skipped in general
+		image_views.reserve(config.mip_count);
+		for (uint32_t i = 0; i < config.mip_count; ++i)
+		{
+			VkImageViewCreateInfo image_view_info = {};
+			image_view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+			image_view_info.pNext = nullptr;
+			image_view_info.viewType = VK_FROM_SUNSET_IMAGE_VIEW_TYPE(config.flags);
+			image_view_info.image = image;
+			image_view_info.format = VK_FROM_SUNSET_FORMAT(config.format);
+			image_view_info.subresourceRange.baseMipLevel = i;
+			image_view_info.subresourceRange.levelCount = 1;
+			image_view_info.subresourceRange.baseArrayLayer = 0;
+			image_view_info.subresourceRange.layerCount = 1;
+			image_view_info.subresourceRange.aspectMask = VK_FROM_SUNSET_IMAGE_USAGE_ASPECT_FLAGS(config.flags);
 
-		VK_CHECK(vkCreateImageView(context_state->get_device(), &image_view_info, nullptr, &image_view));
+			VkImageView& image_view = image_views.emplace_back();
+			VK_CHECK(vkCreateImageView(context_state->get_device(), &image_view_info, nullptr, &image_view));
+		}
 
 		if ((config.flags & ImageFlags::Sampled) != ImageFlags::None)
 		{
@@ -85,6 +95,18 @@ namespace Sunset
 			sampler_create_info.addressModeU = VK_FROM_SUNSET_SAMPLER_ADDRESS_MODE(config.sampler_address_mode);
 			sampler_create_info.addressModeV = VK_FROM_SUNSET_SAMPLER_ADDRESS_MODE(config.sampler_address_mode);
 			sampler_create_info.addressModeW = VK_FROM_SUNSET_SAMPLER_ADDRESS_MODE(config.sampler_address_mode);
+			sampler_create_info.minLod = 0.0f;
+			sampler_create_info.maxLod = 16.0f;
+			sampler_create_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+
+			VkSamplerReductionModeCreateInfo create_info_sampler_reduction = {};
+			if (config.does_min_reduction)
+			{
+				create_info_sampler_reduction.sType = VK_STRUCTURE_TYPE_SAMPLER_REDUCTION_MODE_CREATE_INFO_EXT;
+				create_info_sampler_reduction.pNext = nullptr;
+				create_info_sampler_reduction.reductionMode = VK_SAMPLER_REDUCTION_MODE_MIN;
+				sampler_create_info.pNext = &create_info_sampler_reduction;
+			}
 
 			vkCreateSampler(context_state->get_device(), &sampler_create_info, nullptr, &sampler);
 		}
@@ -95,6 +117,8 @@ namespace Sunset
 		VkImage existing_image = static_cast<VkImage>(image_handle);
 		VkImageView existing_image_view = static_cast<VkImageView>(image_view_handle);
 		assert(existing_image != nullptr && existing_image_view != nullptr);
+
+		VkImageView& image_view = image_views.emplace_back();
 
 		image = existing_image;
 		image_view = existing_image_view;
@@ -116,55 +140,113 @@ namespace Sunset
 		VmaAllocator allocator = static_cast<VmaAllocator>(gfx_context->get_buffer_allocator()->get_handle());
 
 		vkDestroySampler(context_state->get_device(), sampler, nullptr);
-		vkDestroyImageView(context_state->get_device(), image_view, nullptr);
+		for (VkImageView& image_view : image_views)
+		{
+			vkDestroyImageView(context_state->get_device(), image_view, nullptr);
+		}
 		vmaDestroyImage(allocator, image, allocation);
 	}
 
 	void VulkanImage::copy_buffer(class GraphicsContext* const gfx_context, void* command_buffer, const AttachmentConfig& config, Buffer* buffer)
 	{
-		VkImageSubresourceRange range;
-		range.aspectMask = VK_FROM_SUNSET_IMAGE_USAGE_ASPECT_FLAGS(config.flags);
-		range.baseMipLevel = 0;
-		range.levelCount = 1;
-		range.baseArrayLayer = 0;
-		range.layerCount = 1;
+		barrier(
+			gfx_context,
+			command_buffer,
+			config,
+			access_flags,
+			AccessFlags::TransferWrite,
+			layout,
+			ImageLayout::TransferDestination,
+			PipelineStageType::TopOfPipe,
+			PipelineStageType::Transfer
+		);
 
-		VkImageMemoryBarrier image_barrier_to_transfer = {};
-		image_barrier_to_transfer.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-		image_barrier_to_transfer.oldLayout = VK_FROM_SUNSET_IMAGE_LAYOUT_FLAGS(layout);
-		image_barrier_to_transfer.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-		image_barrier_to_transfer.image = image;
-		image_barrier_to_transfer.subresourceRange = range;
-		image_barrier_to_transfer.srcAccessMask = VK_FROM_SUNSET_ACCESS_FLAGS(access_flags);
-		image_barrier_to_transfer.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		{
+			VkCommandBuffer cmd = static_cast<VkCommandBuffer>(command_buffer);
 
-		VkCommandBuffer cmd = static_cast<VkCommandBuffer>(command_buffer);
-		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &image_barrier_to_transfer);
+			VkBufferImageCopy buffer_image_copy = {};
+			buffer_image_copy.bufferOffset = 0;
+			buffer_image_copy.bufferRowLength = 0;
+			buffer_image_copy.bufferImageHeight = 0;
+			buffer_image_copy.imageSubresource.aspectMask = VK_FROM_SUNSET_IMAGE_USAGE_ASPECT_FLAGS(config.flags);
+			buffer_image_copy.imageSubresource.mipLevel = 0;
+			buffer_image_copy.imageSubresource.baseArrayLayer = 0;
+			buffer_image_copy.imageSubresource.layerCount = 1;
+			buffer_image_copy.imageExtent = VkExtent3D{ static_cast<unsigned int>(config.extent.x), static_cast<unsigned int>(config.extent.y), static_cast<unsigned int>(glm::max(1.0f, config.extent.z)) };
 
-		VkBufferImageCopy buffer_image_copy = {};
-		buffer_image_copy.bufferOffset = 0;
-		buffer_image_copy.bufferRowLength = 0;
-		buffer_image_copy.bufferImageHeight = 0;
-		buffer_image_copy.imageSubresource.aspectMask = VK_FROM_SUNSET_IMAGE_USAGE_ASPECT_FLAGS(config.flags);
-		buffer_image_copy.imageSubresource.mipLevel = 0;
-		buffer_image_copy.imageSubresource.baseArrayLayer = 0;
-		buffer_image_copy.imageSubresource.layerCount = 1;
-		buffer_image_copy.imageExtent = VkExtent3D{ static_cast<unsigned int>(config.extent.x), static_cast<unsigned int>(config.extent.y), static_cast<unsigned int>(glm::max(1.0f, config.extent.z)) };
+			VkBuffer other_buffer = static_cast<VkBuffer>(buffer->get());
+			vkCmdCopyBufferToImage(cmd, other_buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &buffer_image_copy);
+		}
 
-		VkBuffer other_buffer = static_cast<VkBuffer>(buffer->get());
-		vkCmdCopyBufferToImage(cmd, other_buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &buffer_image_copy);
-
-		VkImageMemoryBarrier image_barrier_to_readable = image_barrier_to_transfer;
-		image_barrier_to_readable.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-		image_barrier_to_readable.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		image_barrier_to_readable.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-		image_barrier_to_readable.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &image_barrier_to_readable);
+		barrier(
+			gfx_context,
+			command_buffer,
+			config,
+			AccessFlags::TransferWrite,
+			AccessFlags::ShaderRead,
+			ImageLayout::TransferDestination,
+			ImageLayout::ShaderReadOnly,
+			PipelineStageType::Transfer,
+			PipelineStageType::FragmentShader
+		);
 	}
 
 	void VulkanImage::bind(class GraphicsContext* const gfx_context, void* command_buffer)
 	{
 
+	}
+
+	void VulkanImage::barrier(class GraphicsContext* const gfx_context, void* command_buffer, const AttachmentConfig& config, AccessFlags src_access, AccessFlags dst_access, ImageLayout src_layout, ImageLayout dst_layout, PipelineStageType src_pipeline_stage, PipelineStageType dst_pipeline_stage)
+	{
+		VkImageMemoryBarrier image_barrier = {};
+		image_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		image_barrier.pNext = nullptr;
+		image_barrier.srcAccessMask = VK_FROM_SUNSET_ACCESS_FLAGS(src_access);
+		image_barrier.dstAccessMask = VK_FROM_SUNSET_ACCESS_FLAGS(dst_access);
+		image_barrier.oldLayout = VK_FROM_SUNSET_IMAGE_LAYOUT_FLAGS(src_layout);
+		image_barrier.newLayout = VK_FROM_SUNSET_IMAGE_LAYOUT_FLAGS(dst_layout);
+		image_barrier.image = image;
+		image_barrier.subresourceRange.levelCount = config.mip_count;
+		image_barrier.subresourceRange.layerCount = 1;
+		image_barrier.subresourceRange.aspectMask = VK_FROM_SUNSET_IMAGE_USAGE_ASPECT_FLAGS(config.flags);
+		image_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		image_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+		VkCommandBuffer cmd = static_cast<VkCommandBuffer>(command_buffer);
+		vkCmdPipelineBarrier(
+			cmd,
+			VK_FROM_SUNSET_PIPELINE_STAGE_TYPE(src_pipeline_stage),
+			VK_FROM_SUNSET_PIPELINE_STAGE_TYPE(dst_pipeline_stage),
+			0,
+			0, nullptr,
+			0, nullptr,
+			1, &image_barrier
+		);
+
+		access_flags = dst_access;
+		layout = dst_layout;
+	}
+
+	void VulkanImage::clear(class GraphicsContext* const gfx_context, void* command_buffer, const AttachmentConfig& config, const glm::vec4& clear_color)
+	{
+		const bool b_is_depth_stencil = (config.flags & (ImageFlags::DepthStencil | ImageFlags::Depth | ImageFlags::Stencil)) != ImageFlags::None;
+
+		VkImageSubresourceRange range = {};
+		range.aspectMask = b_is_depth_stencil ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+		range.baseMipLevel = 0;
+		range.levelCount = config.mip_count;
+		range.baseArrayLayer = 0;
+		range.layerCount = 1;
+
+		if (b_is_depth_stencil)
+		{
+			VkClearDepthStencilValue vk_clear_color = { .depth = clear_color.r, .stencil = 0 };
+			vkCmdClearDepthStencilImage(static_cast<VkCommandBuffer>(command_buffer), image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &vk_clear_color, 1, &range);
+		}
+		else
+		{
+			VkClearColorValue vk_clear_color = { .float32 = { clear_color.r, clear_color.g, clear_color.b, clear_color.a } };
+			vkCmdClearColorImage(static_cast<VkCommandBuffer>(command_buffer), image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &vk_clear_color, 1, &range);
+		}
 	}
 }

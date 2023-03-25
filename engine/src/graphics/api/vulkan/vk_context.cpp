@@ -30,9 +30,10 @@ namespace Sunset
 
 		vkb::PhysicalDeviceSelector device_selector{ instance_result };
 		state.physical_device = device_selector
-			.set_minimum_version(1, 1)
+			.set_minimum_version(1, 3)
 			.set_surface(state.surface)
 			.add_required_extension("VK_EXT_descriptor_indexing")
+			.add_required_extension("VK_EXT_sampler_filter_minmax")
 			.select()
 			.value();
 
@@ -169,7 +170,7 @@ namespace Sunset
 
 		for (const DescriptorWrite& write : descriptor_writes)
 		{
-			if (write.type == DescriptorType::Image)
+			if (write.type == DescriptorType::Image || write.type == DescriptorType::StorageImage)
 			{
 				Image* const image = static_cast<Image*>(write.buffer_desc.buffer);
 
@@ -178,8 +179,8 @@ namespace Sunset
 				{
 					VkDescriptorImageInfo& image_info = vk_image_infos.emplace_back();
 					image_info.sampler = static_cast<VkSampler>(image->get_sampler());
-					image_info.imageView = static_cast<VkImageView>(image->get_image_view());
-					image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+					image_info.imageView = static_cast<VkImageView>(image->get_image_view(write.buffer_desc.buffer_offset));
+					image_info.imageLayout = write.type == DescriptorType::StorageImage ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 				}
 				auto data_it = vk_image_infos.begin() + image_infos_write_start;
 
@@ -200,7 +201,7 @@ namespace Sunset
 				{
 					VkDescriptorBufferInfo& buffer_info = vk_buffer_infos.emplace_back();
 					buffer_info.buffer = static_cast<VkBuffer>(write.buffer_desc.buffer);
-					buffer_info.offset = 0;
+					buffer_info.offset = write.type == DescriptorType::DynamicUniformBuffer ? 0 : write.buffer_desc.buffer_offset;
 					buffer_info.range = write.buffer_desc.buffer_range;
 				}
 				auto data_it = vk_buffer_infos.begin() + buffer_infos_write_start;
@@ -238,6 +239,12 @@ namespace Sunset
 	{
 		const uint32_t global_descriptor_set_index = static_cast<uint32_t>(DescriptorSetType::Global);
 
+		const auto is_bind_table = [global_descriptor_set_index](uint32_t set, uint32_t binding)
+		{
+			return set == global_descriptor_set_index 
+				&& (binding == ImageBindTableSlot || binding == StorageImageBindTableSlot);
+		};
+
 		std::vector<uint64_t> set_binding_pairs;
 		std::vector<DescriptorBinding> all_bindings;
 		std::vector<PushConstantPipelineData> push_constant_data;
@@ -267,16 +274,16 @@ namespace Sunset
 
 				for (int b = 0; b < reflected_set.binding_count; ++b)
 				{
-					const bool b_is_image_bind_table = (s == global_descriptor_set_index && b == ImageBindTableSlot);
-
 					const SpvReflectDescriptorBinding& reflected_binding = *(reflected_set.bindings[b]);
+
+					const bool b_is_bind_table = is_bind_table(reflected_set.set, reflected_binding.binding);
 
 					DescriptorBinding& binding = all_bindings.emplace_back();
 					binding.slot = reflected_binding.binding;
-					binding.count = reflected_binding.count > 0 && !b_is_image_bind_table ? reflected_binding.count : MAX_DESCRIPTOR_BINDINGS - 1;
+					binding.count = reflected_binding.count > 0 && !b_is_bind_table ? reflected_binding.count : MAX_DESCRIPTOR_BINDINGS - 1;
 					binding.type = SUNSET_FROM_VK_DESCRIPTOR_TYPE(static_cast<VkDescriptorType>(reflected_binding.descriptor_type));
 					binding.pipeline_stages = s == global_descriptor_set_index ? PipelineShaderStageType::All : stage.stage_type;
-					binding.b_supports_bindless = static_cast<bool>(reflected_binding.count ^ 1) || b_is_image_bind_table;
+					binding.b_supports_bindless = static_cast<bool>(reflected_binding.count ^ 1) || b_is_bind_table;
 
 					set_binding_pairs.push_back(((uint64_t)reflected_set.set << 32) | (uint32_t)(all_bindings.size() - 1));
 				}

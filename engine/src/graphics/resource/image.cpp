@@ -45,7 +45,7 @@ namespace Sunset
 			config.name = "default";
 			config.format = Format::Float4x16;
 			config.extent = glm::vec3(1.0f, 1.0f, 1.0f);
-			config.flags = ImageFlags::Color | ImageFlags::Sampled;
+			config.flags = ImageFlags::Color | ImageFlags::Sampled | ImageFlags::Storage;
 			config.usage_type = MemoryUsageType::OnlyGPU;
 			config.sampler_address_mode = SamplerAddressMode::Repeat;
 			config.image_filter = ImageFilter::Linear;

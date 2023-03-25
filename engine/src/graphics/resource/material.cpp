@@ -84,6 +84,10 @@ namespace Sunset
 		{
 			material_ptr->gpu_data = MaterialGlobals::get()->new_shared_data();
 			material_ptr->gpu_data_buffer_offset = MaterialGlobals::get()->get_shared_data_index(material_ptr->gpu_data);
+			for (uint32_t i = 0; i < MAX_MATERIAL_TEXTURES; ++i)
+			{
+				material_ptr->gpu_data->textures[i] = -1;
+			}
 		}
 	}
 

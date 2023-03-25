@@ -35,6 +35,16 @@ namespace Sunset
 			image_policy.bind(gfx_context, command_buffer);
 		}
 
+		void barrier(class GraphicsContext* const gfx_context, void* command_buffer, AccessFlags src_access, AccessFlags dst_access, ImageLayout src_layout, ImageLayout dst_layout, PipelineStageType src_pipeline_stage, PipelineStageType dst_pipeline_stage)
+		{
+			image_policy.barrier(gfx_context, command_buffer, attachment_config, src_access, dst_access, src_layout, dst_layout, src_pipeline_stage, dst_pipeline_stage);
+		}
+
+		void clear(class GraphicsContext* const gfx_context, void* command_buffer, const glm::vec4& clear_color)
+		{
+			image_policy.clear(gfx_context, command_buffer, attachment_config, clear_color);
+		}
+
 		void destroy(class GraphicsContext* const gfx_context)
 		{
 			image_policy.destroy(gfx_context);
@@ -50,9 +60,14 @@ namespace Sunset
 			return image_policy.get_image();
 		}
 
-		void* get_image_view()
+		uint32_t get_num_image_views() const
 		{
-			return image_policy.get_image_view();
+			return image_policy.get_num_image_views();
+		}
+
+		void* get_image_view(uint32_t index = 0)
+		{
+			return image_policy.get_image_view(index);
 		}
 
 		void* get_sampler()
@@ -105,12 +120,23 @@ namespace Sunset
 		void bind(class GraphicsContext* const gfx_context, void* command_buffer)
 		{ }
 
+		void barrier(class GraphicsContext* const gfx_context, void* command_buffer, AccessFlags src_access, AccessFlags dst_access, ImageLayout src_layout, ImageLayout dst_layout, PipelineStageType src_pipeline_stage, PipelineStageType dst_pipeline_stage)
+		{ }
+
+		void clear(class GraphicsContext* const gfx_context, void* command_buffer, const AttachmentConfig& config, const glm::vec4& clear_color)
+		{ }
+
 		void* get_image()
 		{
 			return nullptr;
 		}
 
-		void* get_image_view()
+		uint32_t get_num_image_views() const
+		{
+			return 0;
+		}
+
+		void* get_image_view(uint32_t index = 0)
 		{
 			return nullptr;
 		}

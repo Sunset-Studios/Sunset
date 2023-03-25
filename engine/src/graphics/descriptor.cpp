@@ -69,11 +69,6 @@ namespace Sunset
 			}
 		}
 
-		for (DescriptorWrite& write : descriptor_writes)
-		{
-			write.set = out_descriptor_set;
-		}
-
 		DescriptorHelpers::write_descriptors(gfx_context, out_descriptor_set, descriptor_writes);
 
 		return true;
@@ -120,15 +115,17 @@ namespace Sunset
 		return descriptor_set;
 	}
 
-	void DescriptorHelpers::write_descriptors(GraphicsContext* const gfx_context, DescriptorSet* descriptor_set, const std::vector<DescriptorWrite>& descriptor_writes)
+	void DescriptorHelpers::write_descriptors(GraphicsContext* const gfx_context, DescriptorSet* descriptor_set, std::vector<DescriptorWrite>& descriptor_writes)
 	{
 		if (!descriptor_writes.empty())
 		{
 			// Set our dynamic uniform/SSBO offsets if we have any
 			{
 				std::vector<uint32_t> dynamic_buffer_offsets;
-				for (const DescriptorWrite& write : descriptor_writes)
+				for (DescriptorWrite& write : descriptor_writes)
 				{
+					write.set = descriptor_set;
+
 					if (write.type == DescriptorType::DynamicUniformBuffer)
 					{
 						dynamic_buffer_offsets.push_back(write.buffer_desc.buffer_offset);
@@ -142,7 +139,7 @@ namespace Sunset
 		}
 	}
 
-	void DescriptorHelpers::write_bindless_descriptors(class GraphicsContext* const gfx_context, const std::vector<DescriptorBindlessWrite>& descriptor_writes, int32_t* out_array_indices)
+	void DescriptorHelpers::write_bindless_descriptors(class GraphicsContext* const gfx_context, const std::vector<DescriptorBindlessWrite>& descriptor_writes, BindingTableHandle* out_binding_table_handles)
 	{
 		std::vector<DescriptorWrite> writes;
 
@@ -150,37 +147,69 @@ namespace Sunset
 		{
 			const DescriptorBindlessWrite& bindless_write = descriptor_writes[i];
 
-			out_array_indices[i] = bindless_write.set->get_free_bindless_index(bindless_write.slot);
+			if (out_binding_table_handles[i] < 0)
+			{
+				out_binding_table_handles[i] = bindless_write.set->get_free_bindless_index(bindless_write.slot);
+			}
 
 			DescriptorWrite& write = writes.emplace_back();
 			write.slot = bindless_write.slot;
 			write.count = 1;
-			write.array_index = out_array_indices[i];
+			write.array_index = (int32_t)(0x0000ffff & out_binding_table_handles[i]);
 			write.type = bindless_write.type;
 			write.buffer_desc.buffer = bindless_write.buffer;
+			write.buffer_desc.buffer_offset = bindless_write.level;
 			write.set = bindless_write.set;
 		}
 
 		gfx_context->push_descriptor_writes(writes);
 	}
 
-	void DescriptorHelpers::free_bindless_image_descriptors(class GraphicsContext* const gfx_context, DescriptorSet* descriptor_set, const std::vector<int32_t> indices)
+	void DescriptorHelpers::free_bindless_image_descriptors(class GraphicsContext* const gfx_context, DescriptorSet* descriptor_set, const std::vector<BindingTableHandle> handles)
 	{
-		for (int32_t index : indices)
+		for (BindingTableHandle handle : handles)
 		{
-			descriptor_set->release_bindless_index(ImageBindTableSlot, index);
+			descriptor_set->release_bindless_index(handle);
 		}
 	}
 
-	DescriptorBindlessWrite DescriptorHelpers::new_descriptor_image_bindless_write(class DescriptorSet* set, ImageID image)
+	std::vector<DescriptorBindlessWrite> DescriptorHelpers::new_descriptor_image_bindless_writes(class DescriptorSet* set, ImageID image)
 	{
-		return
+		std::vector<DescriptorBindlessWrite> writes;
+
+		Image* const image_obj = CACHE_FETCH(Image, image);
+
+		const uint32_t num_mips = image_obj->get_attachment_config().mip_count;
+		writes.reserve(num_mips);
+		for (uint32_t i = 0; i < num_mips; ++i)
 		{
-			.slot = ImageBindTableSlot,
-			.type = DescriptorType::Image,
-			.buffer = CACHE_FETCH(Image, image),
-			.set = set
-		};
+			writes.push_back(
+				{
+					.slot = ImageBindTableSlot,
+					.level = i,
+					.type = DescriptorType::Image,
+					.buffer = CACHE_FETCH(Image, image),
+					.set = set
+				}
+			);
+		}
+		for (uint32_t i = 0; i < num_mips; ++i)
+		{
+			if ((image_obj->get_attachment_config().flags & ImageFlags::Storage) != ImageFlags::None)
+			{
+				writes.push_back(
+					{
+						.slot = StorageImageBindTableSlot,
+						.level = i,
+						.type = DescriptorType::StorageImage,
+						.buffer = CACHE_FETCH(Image, image),
+						.set = set
+					}
+				);
+			}
+		}
+
+		return writes;
 	}
 
 	bool DescriptorBindingTable::has_binding_slot(uint32_t slot)
@@ -195,7 +224,7 @@ namespace Sunset
 		reset(slot);
 	}
 
-	int32_t DescriptorBindingTable::get_new(uint32_t slot)
+	BindingTableHandle DescriptorBindingTable::get_new(uint32_t slot)
 	{
 		assert(binding_table.contains(slot));
 
@@ -208,18 +237,28 @@ namespace Sunset
 		binding_table[slot].free_indices.pop_back();
 		binding_table[slot].bound_indices.push_back(new_index);
 
-		return new_index;
+		BindingTableHandle handle = (((int64_t)slot) << 32) | (int64_t)new_index;
+
+		return handle;
 	}
 
-	void DescriptorBindingTable::free(uint32_t slot, int32_t index)
+	void DescriptorBindingTable::free(BindingTableHandle handle)
 	{
+		uint32_t slot = handle >> 32;
+		uint32_t index = 0x0000ffff & handle;
+
 		assert(binding_table.contains(slot));
 
-		binding_table[slot].free_indices.push_back(index);
-		binding_table[slot].bound_indices.erase(
-			std::remove(binding_table[slot].bound_indices.begin(), binding_table[slot].bound_indices.end(), index),
-			binding_table[slot].bound_indices.end()
-		);
+		// TODO: Consider keeping fetched handles in an unordered_set so we don't have to do a costly linear search for existing slot indeces,
+		// but only if index allocations at any given time start becoming numerous
+		if (std::find(binding_table[slot].bound_indices.begin(), binding_table[slot].bound_indices.end(), index) != binding_table[slot].bound_indices.end())
+		{
+			binding_table[slot].free_indices.push_back(index);
+			binding_table[slot].bound_indices.erase(
+				std::remove(binding_table[slot].bound_indices.begin(), binding_table[slot].bound_indices.end(), index),
+				binding_table[slot].bound_indices.end()
+			);
+		}
 	}
 
 	void DescriptorBindingTable::reset(uint32_t slot)

@@ -3,13 +3,8 @@
 #extension GL_EXT_nonuniform_qualifier : enable
 
 #define MAX_DESCRIPTOR_BINDINGS 16535
-#define MAX_TEXTURES_PER_MATERIAL 16
 
-layout (location = 0) in vec3 in_color;
-layout (location = 1) in vec2 in_tex_coord;
-layout (location = 2) flat in int in_instance_index;
-
-layout (location = 0) out vec4 out_frag_color;
+layout (local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
 
 // TODO: Put this global data in a shader include
 layout (set = 0, binding = 0) uniform CameraBuffer
@@ -39,19 +34,18 @@ layout (set = 0, binding = 2) uniform writeonly image3D storage_3D[MAX_DESCRIPTO
 layout (set = 0, binding = 3) uniform sampler2D textures_2D[];
 layout (set = 0, binding = 3) uniform sampler3D textures_3D[];
 
-layout (push_constant) uniform constants
+layout(push_constant) uniform constants
 {
-	int scene_color_index;
-} fullscreen_push_constants;
+	vec2 image_size;
+	int input_depth_index;
+	int output_depth_index;
+} hzb_constants;
 
 void main()
 {
-	vec3 color = vec3(0.0f, 0.0f, 0.0f);
+	vec2 uv = gl_GlobalInvocationID.xy;
 
-	if (fullscreen_push_constants.scene_color_index > -1)
-	{
-		color = texture(textures_2D[nonuniformEXT(fullscreen_push_constants.scene_color_index)], in_tex_coord).xyz;
-	}
+	float depth = texture(textures_2D[nonuniformEXT(hzb_constants.input_depth_index)], (uv + vec2(0.5f)) / hzb_constants.image_size).x;
 
-	out_frag_color = vec4(color, 1.0f);
+	imageStore(storage_2D[nonuniformEXT(hzb_constants.output_depth_index)], ivec2(uv), vec4(depth));
 }

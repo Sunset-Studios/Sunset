@@ -31,10 +31,13 @@ namespace Sunset
 		MemoryUsageType usage_type;
 		SamplerAddressMode sampler_address_mode;
 		ImageFilter image_filter;
+		uint32_t mip_count{ 1 };
+		uint32_t array_count{ 1 };
 		uint8_t attachment_clear : 1 = 1;
 		uint8_t attachment_stencil_clear : 1 = 0;
 		uint8_t has_store_op : 1 = 1;
 		uint8_t is_bindless : 1 = 1;
-		uint8_t padding : 4 = 0;
+		uint8_t does_min_reduction : 1 = 0;
+		uint8_t padding : 3 = 0;
 	};
 }

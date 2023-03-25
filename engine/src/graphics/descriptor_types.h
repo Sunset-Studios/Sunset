@@ -7,15 +7,18 @@
 
 namespace Sunset
 {
-	constexpr uint32_t ImageBindTableSlot = 2;
+	constexpr uint32_t StorageImageBindTableSlot = 2;
+	constexpr uint32_t ImageBindTableSlot = 3;
 
 	using DescriptorLayoutID = size_t;
 	using DescriptorSetID = size_t;
+	using BindingTableHandle = int64_t;
 
 	enum class DescriptorType : int16_t
 	{
 		UniformBuffer,
 		Image,
+		StorageImage,
 		DynamicUniformBuffer,
 		StorageBuffer
 	};
@@ -73,7 +76,7 @@ namespace Sunset
 	{
 		uint16_t slot{ 0 };
 		uint32_t count{ 0 };
-		uint32_t array_index{ 0 };
+		int32_t array_index{ 0 };
 		DescriptorType type;
 		DescriptorBufferDesc buffer_desc;
 		class DescriptorSet* set{ nullptr };
@@ -82,6 +85,7 @@ namespace Sunset
 	struct DescriptorBindlessWrite
 	{
 		uint16_t slot{ 0 };
+		uint32_t level{ 0 };
 		DescriptorType type;
 		void* buffer{ nullptr };
 		class DescriptorSet* set{ nullptr };
@@ -89,11 +93,11 @@ namespace Sunset
 
 	struct DescriptorBindlessResourceIndices
 	{
-		std::vector<int32_t> indices;
+		std::vector<BindingTableHandle> handles;
 
 		constexpr bool empty() const noexcept
 		{
-			return indices.empty();
+			return handles.empty();
 		}
 	};
 

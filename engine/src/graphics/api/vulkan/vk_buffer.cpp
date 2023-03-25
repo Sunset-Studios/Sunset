@@ -183,6 +183,8 @@ namespace Sunset
 		buffer_barrier.buffer = buffer;
 		buffer_barrier.offset = 0;
 		buffer_barrier.size = size;
+		buffer_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		buffer_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
 		VkCommandBuffer cmd = static_cast<VkCommandBuffer>(command_buffer);
 		vkCmdPipelineBarrier(

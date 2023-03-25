@@ -2,6 +2,7 @@
 
 #extension GL_EXT_nonuniform_qualifier : enable
 
+#define MAX_DESCRIPTOR_BINDINGS 16535
 #define MAX_TEXTURES_PER_MATERIAL 16
 
 layout (location = 0) in vec3 in_color;
@@ -31,8 +32,12 @@ layout (set = 0, binding = 1) uniform SceneLightingData
 } scene_lighting_data;
 
 // TODO: Put this global data in a shader include
-layout (set = 0, binding = 2) uniform sampler2D textures_2D[];
-layout (set = 0, binding = 2) uniform sampler3D textures_3D[];
+layout (set = 0, binding = 2) uniform writeonly image2D storage_2D[MAX_DESCRIPTOR_BINDINGS];
+layout (set = 0, binding = 2) uniform writeonly image3D storage_3D[MAX_DESCRIPTOR_BINDINGS];
+
+// TODO: Put this global data in a shader include
+layout (set = 0, binding = 3) uniform sampler2D textures_2D[];
+layout (set = 0, binding = 3) uniform sampler3D textures_3D[];
 
 struct EntitySceneData
 {

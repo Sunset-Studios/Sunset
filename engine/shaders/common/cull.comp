@@ -1,5 +1,9 @@
 #version 460
 
+#extension GL_EXT_nonuniform_qualifier : enable
+
+#define MAX_DESCRIPTOR_BINDINGS 16535
+
 layout (local_size_x = 256) in;
 
 // TODO: Put this global data in a shader include
@@ -23,8 +27,12 @@ layout (set = 0, binding = 1) uniform SceneLightingData
 } scene_lighting_data;
 
 // TODO: Put this global data in a shader include
-layout (set = 0, binding = 2) uniform sampler2D textures_2D[];
-layout (set = 0, binding = 2) uniform sampler3D textures_3D[];
+layout (set = 0, binding = 2) uniform writeonly image2D storage_2D[MAX_DESCRIPTOR_BINDINGS];
+layout (set = 0, binding = 2) uniform writeonly image3D storage_3D[MAX_DESCRIPTOR_BINDINGS];
+
+// TODO: Put this global data in a shader include
+layout (set = 0, binding = 3) uniform sampler2D textures_2D[];
+layout (set = 0, binding = 3) uniform sampler3D textures_3D[];
 
 struct EntitySceneData
 {
@@ -71,25 +79,70 @@ layout (set = 1, binding = 3) buffer DrawIndirectBuffer
 
 layout (push_constant) uniform constants
 {
+	float z_near;
+	float z_far;
 	float p00;
 	float p11;
+	float hzb_width;
+	float hzb_height;
 	uint draw_count;
 	uint culling_enabled;
 	uint occlusion_enabled;
 	uint distance_check;
+	int hzb_texture;
 } draw_cull_constants;
 
-bool is_occluded(uint object_index)
+bool sphere_project(vec4 center, float radius, float p00, float p11, out vec4 aabb)
 {
-	return false;
+	if (center.z < radius + draw_cull_constants.z_near)
+	{
+		return false;
+	}
+
+	vec2 cx = -center.xz;
+	vec2 vx = vec2(length(cx) - radius * radius, radius);
+	vec2 minx = mat2(vx.x, vx.y, -vx.y, vx.x) * cx;
+	vec2 maxx = mat2(vx.x, -vx.y, vx.y, vx.x) * cx;
+
+	vec2 cy = -center.yz;
+	vec2 vy = vec2(length(cy) - radius * radius, radius);
+	vec2 miny = mat2(vy.x, vy.y, -vy.y, vy.x) * cy;
+	vec2 maxy = mat2(vy.x, -vy.y, vy.y, vy.x) * cy;
+
+	aabb = vec4(
+		minx.x / minx.y * p00,
+		miny.x / miny.y * p11,
+		maxx.x / maxx.y * p00,
+		maxy.x / maxy.y * p11
+	);
+	aabb = aabb.xwzy * vec4(0.5f, -0.5f, 0.5f, -0.5f) + vec4(0.5f);
+
+	return true;
 }
 
-bool is_in_frustum(uint object_index)
+bool is_occluded(uint object_index, vec4 center, float radius)
 {
-	const vec4 sphere_bounds = entity_data.entities[object_index].bounds_pos_radius;
-	const vec4 center = vec4(sphere_bounds.xyz, 1.0f);
-	const float radius = sphere_bounds.w;
+	bool visible = true;
+	if (visible && draw_cull_constants.occlusion_enabled != 0)
+	{
+		vec4 aabb;
+		if (sphere_project(center, radius, draw_cull_constants.p00, draw_cull_constants.p11, aabb))
+		{
+			const float width = (aabb.z - aabb.x) * draw_cull_constants.hzb_width;
+			const float height = (aabb.w - aabb.y) * draw_cull_constants.hzb_height;
+			float level = floor(log2(max(width, height)));
 
+			float depth = textureLod(textures_2D[draw_cull_constants.hzb_texture], (aabb.xy + aabb.zw) * 0.5, level).x;
+			float sphere_depth = draw_cull_constants.z_near / (center.z - radius);
+
+			visible = visible && sphere_depth >= depth;
+		}
+	}
+	return !visible;
+}
+
+bool is_in_frustum(uint object_index, vec4 center, float radius)
+{
 	bool visible = true;
 
 	visible = visible && dot(center, camera_data.frustum_planes[0]) > -radius;
@@ -112,8 +165,13 @@ void main()
 	if (g_id < draw_cull_constants.draw_count)
 	{
 		const uint object_id = object_instance_buffer.instances[g_id].object_id;
-		const bool in_frustum = is_in_frustum(object_id);
-		const bool occluded = is_occluded(object_id);
+
+		const vec4 sphere_bounds = entity_data.entities[object_id].bounds_pos_radius;
+		const vec4 center = vec4(sphere_bounds.xyz, 1.0f);
+		const float radius = sphere_bounds.w;
+
+		const bool in_frustum = is_in_frustum(object_id, center, radius);
+		const bool occluded = is_occluded(object_id, center, radius);
 		if (in_frustum && !occluded)
 		{
 			const uint batch_index = object_instance_buffer.instances[g_id].batch_id;

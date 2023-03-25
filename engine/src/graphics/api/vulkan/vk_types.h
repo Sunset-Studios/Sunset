@@ -243,6 +243,8 @@ inline VkDescriptorType VK_FROM_SUNSET_DESCRIPTOR_TYPE(Sunset::DescriptorType de
 		return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
 	case Sunset::DescriptorType::Image:
 		return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	case Sunset::DescriptorType::StorageImage:
+		return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
 	case Sunset::DescriptorType::StorageBuffer:
 		return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 	default:
@@ -260,6 +262,8 @@ inline Sunset::DescriptorType SUNSET_FROM_VK_DESCRIPTOR_TYPE(VkDescriptorType de
 		return Sunset::DescriptorType::DynamicUniformBuffer;
 	case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
 		return Sunset::DescriptorType::Image;
+	case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+		return Sunset::DescriptorType::StorageImage;
 	case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
 		return Sunset::DescriptorType::StorageBuffer;
 	default:
@@ -608,7 +612,7 @@ inline VkImageAspectFlags VK_FROM_SUNSET_IMAGE_USAGE_ASPECT_FLAGS(Sunset::ImageF
 	{
 		aspect_flags |= VK_IMAGE_ASPECT_DEPTH_BIT;
 	}
-	else if (static_cast<int32_t>(flags & (Sunset::ImageFlags::Depth | Sunset::ImageFlags::DepthStencil)) > 0)
+	else if (static_cast<int32_t>(flags & (Sunset::ImageFlags::Stencil | Sunset::ImageFlags::DepthStencil)) > 0)
 	{
 		aspect_flags |= VK_IMAGE_ASPECT_STENCIL_BIT;
 	}

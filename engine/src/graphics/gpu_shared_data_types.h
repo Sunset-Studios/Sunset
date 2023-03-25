@@ -3,6 +3,7 @@
 #include <minimal.h>
 #include <free_list_array.h>
 #include <core/ecs/entity.h>
+#include <graphics/descriptor_types.h>
 
 // In this context, "shared" structs are structs that can exist in
 // GPU visible buffers at any given time
@@ -33,7 +34,7 @@ namespace Sunset
 
 	struct MaterialData
 	{
-		int32_t textures[MAX_MATERIAL_TEXTURES];
+		BindingTableHandle textures[MAX_MATERIAL_TEXTURES];
 	};
 
 	DECLARE_GPU_SHARED_DATA(EntitySceneData, MIN_ENTITIES);

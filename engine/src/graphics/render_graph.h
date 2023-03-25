@@ -12,11 +12,11 @@
 
 namespace Sunset
 {
-	using RGPassHandle = uint32_t;
-	using RGResourceHandle = uint64_t;
-	using RGResourceIndex = uint32_t;
-	using RGResourceVersion = uint16_t;
-	using RGResourceType = uint16_t;
+	using RGPassHandle = int32_t;
+	using RGResourceHandle = int64_t;
+	using RGResourceIndex = int32_t;
+	using RGResourceVersion = int16_t;
+	using RGResourceType = int16_t;
 
 	inline RGResourceHandle create_graph_resource_handle(RGResourceIndex index, RGResourceType type, RGResourceVersion version)
 	{
@@ -111,6 +111,8 @@ namespace Sunset
 		std::vector<RGResourceHandle> pass_inputs;
 		// Input resources that are bindless and need special handling (auto computed)
 		std::vector<RGResourceHandle> bindless_inputs;
+		// Whether or not to skip automatic pass descriptor setup for this pass (global descriptor setup will still run)
+		bool b_skip_auto_descriptor_setup{ false };
 	};
 
 	struct RGPassCache
@@ -150,7 +152,7 @@ namespace Sunset
 		std::vector<RGResourceHandle> all_resource_handles;
 		std::unordered_map<RGResourceHandle, RGResourceMetadata> resource_metadata;
 		BarrierBatcher barrier_batcher;
-		std::vector<int32_t> all_bindless_resource_indices;
+		std::vector<BindingTableHandle> all_bindless_resource_handles;
 		ExecutionQueue resource_deletion_queue;
 		bool b_global_set_bound{ false };
 	};
@@ -233,8 +235,9 @@ namespace Sunset
 		RenderGraphRegistry registries[MAX_BUFFERED_FRAMES];
 		RenderGraphRegistry* current_registry;
 
-		std::vector<RGPassHandle> nonculled_passes;
 		RGPassCache pass_cache;
+
+		std::vector<RGPassHandle> nonculled_passes;
 
 		std::vector<DescriptorBufferDesc> queued_buffer_global_writes[MAX_BUFFERED_FRAMES];
 	};

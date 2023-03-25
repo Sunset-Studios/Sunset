@@ -74,6 +74,8 @@ namespace Sunset
 
 			void begin_frame();
 			void queue_graph_command(Identity name, std::function<void(class RenderGraph&, RGFrameData&, void*)> command_callback);
+			void register_persistent_image(Identity id, ImageID image);
+			ImageID get_persistent_image(Identity id, uint32_t buffered_frame = 0);
 
 		private:
 			Renderer() = default;
@@ -90,6 +92,7 @@ namespace Sunset
 			MeshTaskQueue mesh_task_queue;
 			RenderGraph render_graph;
 			DrawCullData current_draw_cull_data;
+			std::unordered_map<Identity, ImageID> persistent_image_map;
 	};
 
 	// Handles renderer lifetime calls (render graph begin/submit, renderer draw, etc.)

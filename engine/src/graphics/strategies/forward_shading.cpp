@@ -6,6 +6,7 @@
 #include <graphics/resource/image.h>
 #include <window/window.h>
 #include <core/data_globals.h>
+#include <utility/maths.h>
 #ifndef NDEBUG
 #include <utility/gui/gui_core.h>
 #endif
@@ -57,6 +58,11 @@ namespace Sunset
 			MaterialGlobals::get()->material_data.data_buffer[gfx_context->get_buffered_frame_number()]
 		);
 
+		RGResourceHandle hzb_image_desc = render_graph.register_image(
+			gfx_context,
+			Renderer::get()->get_persistent_image("hi_z", gfx_context->get_buffered_frame_number())
+		);
+
 		// Compute mesh cull pass
 		{
 			render_graph.add_pass(
@@ -74,9 +80,8 @@ namespace Sunset
 			{
 				.pipeline_shaders =
 				{
-					{ PipelineShaderStageType::Compute, "../../shaders/basic.comp.spv" }
-				},
-				.push_constant_data = PushConstantPipelineData::create(&Renderer::get()->get_draw_cull_data(), PipelineShaderStageType::Compute)
+					{ PipelineShaderStageType::Compute, "../../shaders/cull.comp.spv" }
+				}
 			};
 
 			RGResourceHandle entity_data_buffer_desc = render_graph.register_buffer(
@@ -90,11 +95,23 @@ namespace Sunset
 				RenderPassFlags::Compute,
 				{
 					.shader_setup = shader_setup,
-					.inputs = { entity_data_buffer_desc, object_instance_buffer_desc, compacted_object_instance_buffer_desc, draw_indirect_buffer_desc },
+					.inputs = { entity_data_buffer_desc, object_instance_buffer_desc, compacted_object_instance_buffer_desc, draw_indirect_buffer_desc, hzb_image_desc },
 					.outputs = { draw_indirect_buffer_desc }
 				},
 				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
 				{
+					{
+						Image* const hzb_image = CACHE_FETCH(Image, graph.get_physical_resource(hzb_image_desc));
+						DrawCullData& draw_cull_data = Renderer::get()->get_draw_cull_data();
+						draw_cull_data.hzb_width = hzb_image->get_attachment_config().extent.x;
+						draw_cull_data.hzb_height = hzb_image->get_attachment_config().extent.y;
+						draw_cull_data.hzb_texture = (0x0000ffff & frame_data.pass_bindless_resources.handles.back());
+					}
+
+					PushConstantPipelineData pass_data = PushConstantPipelineData::create(&Renderer::get()->get_draw_cull_data(), PipelineShaderStageType::Compute);
+
+					gfx_context->push_constants(command_buffer, frame_data.pass_pipeline_state, pass_data);
+
 					Renderer::get()->get_mesh_task_queue().set_gpu_draw_indirect_buffers(
 						{
 							.draw_indirect_buffer = static_cast<BufferID>(graph.get_physical_resource(draw_indirect_buffer_desc)),
@@ -112,8 +129,8 @@ namespace Sunset
 		}
 
 		// Forward pass
-		RGResourceHandle main_color_image_desc;
 		RGResourceHandle main_depth_image_desc;
+		RGResourceHandle main_color_image_desc;
 		{
 			RGShaderDataSetup shader_setup
 			{
@@ -136,7 +153,7 @@ namespace Sunset
 					.sampler_address_mode = SamplerAddressMode::Repeat,
 					.image_filter = ImageFilter::Linear,
 					.attachment_clear = true,
-					.attachment_stencil_clear = false,
+					.attachment_stencil_clear = false
 				}
 			);
 			main_depth_image_desc = render_graph.create_image(
@@ -145,9 +162,9 @@ namespace Sunset
 					.name = "main_depth",
 					.format = Format::FloatDepth32,
 					.extent = glm::vec3(image_extent.x, image_extent.y, 1.0f),
-					.flags = ImageFlags::DepthStencil | ImageFlags::Image2D,
+					.flags = ImageFlags::DepthStencil | ImageFlags::Sampled | ImageFlags::Image2D,
 					.usage_type = MemoryUsageType::OnlyGPU,
-					.sampler_address_mode = SamplerAddressMode::Repeat,
+					.sampler_address_mode = SamplerAddressMode::EdgeClamp,
 					.image_filter = ImageFilter::Linear,
 					.attachment_clear = true,
 					.attachment_stencil_clear = true,
@@ -177,6 +194,84 @@ namespace Sunset
 			);
 		}
 
+		// HZB generation pass
+		{
+			RGShaderDataSetup shader_setup
+			{
+				.pipeline_shaders =
+				{
+					{ PipelineShaderStageType::Compute, "../../shaders/hzb_reduce.comp.spv" }
+				}
+			};
+
+			render_graph.add_pass(
+				gfx_context,
+				"reduce_hzb",
+				RenderPassFlags::Compute,
+				{
+					.shader_setup = shader_setup,
+					.inputs = { main_depth_image_desc, hzb_image_desc },
+					.outputs = { hzb_image_desc }
+				},
+				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
+				{
+					Image* const depth_image = CACHE_FETCH(Image, graph.get_physical_resource(main_depth_image_desc));
+					Image* const hzb_image = CACHE_FETCH(Image, graph.get_physical_resource(hzb_image_desc));
+
+					depth_image->barrier(
+						gfx_context,
+						command_buffer,
+						AccessFlags::DepthStencilAttachmentWrite,
+						AccessFlags::ShaderRead,
+						ImageLayout::DepthStencilAttachment,
+						ImageLayout::ShaderReadOnly,
+						PipelineStageType::LateFragmentTest,
+						PipelineStageType::ComputeShader
+					);
+
+					const uint32_t num_mips = hzb_image->get_num_image_views();
+					for (uint32_t i = 0; i < num_mips; ++i)
+					{
+						const int32_t src_image_index = frame_data.pass_bindless_resources.handles[i == 0 ? 0 : 1 + (i - 1)];
+						const int32_t dst_image_index = frame_data.pass_bindless_resources.handles[1 + num_mips + i];
+
+						glm::ivec3 image_size = hzb_image->get_attachment_config().extent;
+						const uint32_t mip_width = glm::clamp(image_size.x >> i, 1, image_size.x);
+						const uint32_t mip_height = glm::clamp(image_size.y >> i, 1, image_size.y);
+
+						{
+							DepthReduceData reduce_data
+							{
+								.reduced_image_size = glm::vec2(mip_width, mip_height),
+								.input_depth_index = (0x0000ffff & src_image_index),
+								.output_depth_index = (0x0000ffff & dst_image_index)
+							};
+							PushConstantPipelineData pc_data = PushConstantPipelineData::create(&reduce_data, PipelineShaderStageType::Compute);
+							gfx_context->push_constants(command_buffer, frame_data.pass_pipeline_state, pc_data);
+						}
+
+						gfx_context->dispatch_compute(
+							command_buffer,
+							static_cast<uint32_t>((mip_width + 31) / 32),
+							static_cast<uint32_t>((mip_height + 31) / 32),
+							1
+						);
+
+						hzb_image->barrier(
+							gfx_context,
+							command_buffer,
+							AccessFlags::ShaderWrite,
+							AccessFlags::ShaderRead,
+							i == 0 ? ImageLayout::Undefined : ImageLayout::General,
+							ImageLayout::General,
+							PipelineStageType::ComputeShader,
+							PipelineStageType::ComputeShader
+						);
+					}
+				}
+			);
+		}
+
 		// Full screen present pass
 		{
 			RGShaderDataSetup shader_setup
@@ -200,7 +295,7 @@ namespace Sunset
 				{
 					FullscreenData fullscreen_data
 					{
-						.scene_texture_index = frame_data.pass_bindless_resources.empty() ? -1 : frame_data.pass_bindless_resources.indices[0]
+						.scene_texture_index = frame_data.pass_bindless_resources.empty() ? -1 : static_cast<int32_t>(0x0000ffff & frame_data.pass_bindless_resources.handles[0])
 					};
 
 					PushConstantPipelineData pass_data = PushConstantPipelineData::create(&fullscreen_data, PipelineShaderStageType::Fragment);

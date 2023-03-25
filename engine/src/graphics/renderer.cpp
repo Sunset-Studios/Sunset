@@ -1,6 +1,7 @@
 #include <graphics/renderer.h>
 #include <graphics/resource/buffer.h>
 #include <graphics/resource/mesh.h>
+#include <graphics/resource/image.h>
 #include <graphics/pipeline_state.h>
 #include <graphics/resource_state.h>
 #include <graphics/descriptor.h>
@@ -28,6 +29,34 @@ namespace Sunset
 			{ DescriptorType::StorageBuffer, MAX_DESCRIPTOR_BINDINGS },
 			{ DescriptorType::Image, MAX_DESCRIPTOR_BINDINGS }
 		});
+
+		{
+			const glm::vec2 image_extent = window->get_extent();
+
+			uint32_t image_width_npot = Maths::npot(image_extent.x);
+			uint32_t image_height_npot = Maths::npot(image_extent.y);
+			uint32_t mip_levels = glm::max(std::log2(image_width_npot), std::log2(image_height_npot));
+
+			register_persistent_image(
+				"hi_z",
+				ImageFactory::create(
+					graphics_context.get(),
+					{
+						.name = "hi_z",
+						.format = Format::Float32,
+						.extent = glm::vec3(image_width_npot, image_height_npot, 1.0f),
+						.flags = ImageFlags::Color | ImageFlags::Sampled | ImageFlags::Storage | ImageFlags::TransferDst | ImageFlags::TransferSrc,
+						.usage_type = MemoryUsageType::OnlyGPU,
+						.sampler_address_mode = SamplerAddressMode::EdgeClamp,
+						.image_filter = ImageFilter::Linear,
+						.mip_count = mip_levels,
+						.attachment_clear = true,
+						.attachment_stencil_clear = true,
+						.does_min_reduction = true
+					}
+				)
+			);
+		}
 
 		render_graph.initialize(graphics_context.get());
 	}
@@ -87,5 +116,30 @@ namespace Sunset
 			RenderPassFlags::GraphLocal,
 			command_callback
 		);
+	}
+
+	void Renderer::register_persistent_image(Identity id, ImageID image)
+	{
+		persistent_image_map[id] = image;
+
+		// Register copies as well for buffered accesses
+		for (uint32_t i = 0; i < MAX_BUFFERED_FRAMES; ++i)
+		{
+			Identity new_id{ id.computed_hash + i };
+			Image* const original = CACHE_FETCH(Image, image);
+			AttachmentConfig config = original->get_attachment_config();
+			config.name.computed_hash += i;
+			persistent_image_map[new_id] = ImageFactory::create(graphics_context.get(), config);
+		}
+	}
+
+	Sunset::ImageID Renderer::get_persistent_image(Identity id, uint32_t buffered_frame)
+	{
+		Identity check_id = id.computed_hash + buffered_frame;
+		if (persistent_image_map.find(check_id) != persistent_image_map.end())
+		{
+			return persistent_image_map.at(check_id);
+		}
+		return ImageID(0);
 	}
 }

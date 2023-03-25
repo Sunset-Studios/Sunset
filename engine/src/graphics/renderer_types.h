@@ -36,16 +36,28 @@ namespace Sunset
 
 	struct DrawCullData
 	{
+		float z_near;
+		float z_far;
 		float p00;
 		float p11;
+		float hzb_width;
+		float hzb_height;
 		uint32_t draw_count;
 		uint32_t culling_enabled;
 		uint32_t occlusion_enabled;
 		uint32_t distance_check;
+		int32_t hzb_texture;
 	};
 
 	struct FullscreenData
 	{
 		int32_t scene_texture_index;
+	};
+
+	struct DepthReduceData
+	{
+		glm::vec2 reduced_image_size;
+		int32_t input_depth_index;
+		int32_t output_depth_index;
 	};
 }

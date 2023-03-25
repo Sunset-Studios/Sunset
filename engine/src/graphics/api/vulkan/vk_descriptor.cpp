@@ -24,17 +24,24 @@ namespace Sunset
 
 		std::vector<VkDescriptorBindingFlags> bindless_flags(bindings.size(), VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT);
 		{
+			int32_t last_supported_bindless_binding = -1;
 			for (uint32_t i = 0; i < bindings.size(); ++i)
 			{
 				if (bindings[i].b_supports_bindless)
 				{
-					bindless_flags[i] |= VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT_EXT;
-					b_supports_bindless = true;
+					last_supported_bindless_binding = i;
 				}
 				if (bindings[i].type != DescriptorType::DynamicUniformBuffer)
 				{
 					bindless_flags[i] |= VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT_EXT;
 				}
+			}
+
+			// Only set variable descriptor count on the last bindless binding as this is a current Vulkan spec. limitation
+			if (last_supported_bindless_binding > -1)
+			{
+				bindless_flags[last_supported_bindless_binding] |= VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT_EXT;
+				b_supports_bindless = true;
 			}
 
 			VkDescriptorSetLayoutBindingFlagsCreateInfoEXT extended_info{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO_EXT, nullptr };

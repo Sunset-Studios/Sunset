@@ -22,8 +22,8 @@ namespace Sunset
 
 		inline bool has_binding_slot(uint32_t slot);
 		void add_binding_slot(uint32_t slot, uint32_t count);
-		int32_t get_new(uint32_t slot);
-		void free(uint32_t slot, int32_t index);
+		BindingTableHandle get_new(uint32_t slot);
+		void free(BindingTableHandle handle);
 		void reset(uint32_t slot);
 	};
 
@@ -135,14 +135,14 @@ namespace Sunset
 			return descriptor_set_policy.get();
 		}
 
-		int32_t get_free_bindless_index(uint32_t slot)
+		BindingTableHandle get_free_bindless_index(uint32_t slot)
 		{
 			return binding_table.get_new(slot);
 		}
 
-		void release_bindless_index(uint32_t slot, int32_t index)
+		void release_bindless_index(BindingTableHandle handle)
 		{
-			binding_table.free(slot, index);
+			binding_table.free(handle);
 		}
 
 		void register_bindless_slot(uint32_t slot, uint32_t count)
@@ -294,10 +294,10 @@ namespace Sunset
 	public:
 		static void inject_descriptors(class GraphicsContext* const gfx_context, DescriptorData& out_descriptor_data, const std::vector<DescriptorBuildData>& descriptor_build_datas);
 		static DescriptorSet* new_descriptor_set_with_layout(class GraphicsContext* const gfx_context, DescriptorLayoutID descriptor_layout);
-		static void write_descriptors(class GraphicsContext* const gfx_context, DescriptorSet* descriptor_set, const std::vector<DescriptorWrite>& descriptor_writes);
-		static void write_bindless_descriptors(class GraphicsContext* const gfx_context, const std::vector<DescriptorBindlessWrite>& descriptor_writes, int32_t* out_array_indices);
-		static void free_bindless_image_descriptors(class GraphicsContext* const gfx_context, DescriptorSet* descriptor_set, const std::vector<int32_t> indices);
-		static DescriptorBindlessWrite new_descriptor_image_bindless_write(class DescriptorSet* set, ImageID image);
+		static void write_descriptors(class GraphicsContext* const gfx_context, DescriptorSet* descriptor_set, std::vector<DescriptorWrite>& descriptor_writes);
+		static void write_bindless_descriptors(class GraphicsContext* const gfx_context, const std::vector<DescriptorBindlessWrite>& descriptor_writes, BindingTableHandle* out_binding_table_handles);
+		static void free_bindless_image_descriptors(class GraphicsContext* const gfx_context, DescriptorSet* descriptor_set, const std::vector<BindingTableHandle> indices);
+		static std::vector<DescriptorBindlessWrite> new_descriptor_image_bindless_writes(class DescriptorSet* set, ImageID image);
 	};
 	// END - Descriptor Helpers
 }

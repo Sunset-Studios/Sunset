@@ -100,6 +100,8 @@ namespace Sunset
 
 			DrawCullData new_draw_cull_data
 			{
+				.z_near = camera_control_comp->data.near_plane,
+				.z_far = camera_control_comp->data.far_plane,
 				.p00 = projection[0][0],
 				.p11 = projection[1][1],
 				.culling_enabled = true,

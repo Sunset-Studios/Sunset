@@ -24,8 +24,12 @@ namespace Sunset
 		buffer_barrier.buffer = static_cast<VkBuffer>(buffer->get());
 		buffer_barrier.offset = 0;
 		buffer_barrier.size = buffer->get_size();
+		buffer_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		buffer_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
 		buffer_barriers[execution_id].push_back(buffer_barrier);
+
+		buffer->set_access_flags(destination_access);
 	}
 
 	void VulkanBarrierBatcher::add_image_barrier(class GraphicsContext* const gfx_context, class Image* image, Identity execution_id, AccessFlags destination_access, ImageLayout final_layout)
@@ -38,7 +42,7 @@ namespace Sunset
 		VkImageSubresourceRange range;
 		range.aspectMask = VK_FROM_SUNSET_IMAGE_USAGE_ASPECT_FLAGS(image->get_attachment_config().flags);
 		range.baseMipLevel = 0;
-		range.levelCount = 1;
+		range.levelCount = image->get_attachment_config().mip_count;
 		range.baseArrayLayer = 0;
 		range.layerCount = 1;
 
@@ -51,8 +55,13 @@ namespace Sunset
 		image_barrier.oldLayout = VK_FROM_SUNSET_IMAGE_LAYOUT_FLAGS(image->get_layout());
 		image_barrier.newLayout = VK_FROM_SUNSET_IMAGE_LAYOUT_FLAGS(final_layout);
 		image_barrier.subresourceRange = range;
+		image_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		image_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
 		image_barriers[execution_id].push_back(image_barrier);
+
+		image->set_access_flags(destination_access);
+		image->set_layout(final_layout);
 	}
 
 	void VulkanBarrierBatcher::execute(class GraphicsContext* const gfx_context, void* command_buffer, PipelineStageType stage, Identity execution_id)

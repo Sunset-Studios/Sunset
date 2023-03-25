@@ -142,6 +142,9 @@ namespace Sunset
 				},
 				{
 					.buffer = CACHE_FETCH(Image, default_image)
+				},
+				{
+					.buffer = CACHE_FETCH(Image, default_image)
 				}
 			});
 		}

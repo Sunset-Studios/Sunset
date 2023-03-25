@@ -296,6 +296,44 @@ namespace Sunset
 
 	void RenderGraph::compute_resource_barriers(class GraphicsContext* const gfx_context)
 	{
+		const auto get_access_flags_for_resource_and_pass_type = [=](RGResourceHandle resource, ResourceType resource_type, RenderPassFlags pass_flags, bool b_input_resource)
+		{
+			if (!b_input_resource)
+			{
+				if (resource_type == ResourceType::Image && (pass_flags & RenderPassFlags::Graphics) != RenderPassFlags::None)
+				{
+					const RGResourceIndex resource_index = get_graph_resource_index(resource);
+					RGImageResource* const image_resource = current_registry->image_resources[resource_index];
+					const bool b_is_depth_stencil = (image_resource->config.flags & ImageFlags::DepthStencil) != ImageFlags::None;
+					return b_is_depth_stencil ? AccessFlags::DepthStencilAttachmentWrite : AccessFlags::ColorAttachmentWrite;
+				}
+				else
+				{
+					return AccessFlags::ShaderWrite;
+				}
+			}
+			return AccessFlags::ShaderRead;
+		};
+
+		const auto get_image_layout_for_resource_and_pass_type = [=](RGResourceHandle resource, ResourceType resource_type, RenderPassFlags pass_flags, bool b_input_resource)
+		{
+			if (!b_input_resource)
+			{
+				if (resource_type == ResourceType::Image && (pass_flags & RenderPassFlags::Graphics) != RenderPassFlags::None)
+				{
+					const RGResourceIndex resource_index = get_graph_resource_index(resource);
+					RGImageResource* const image_resource = current_registry->image_resources[resource_index];
+					const bool b_is_depth_stencil = (image_resource->config.flags & ImageFlags::DepthStencil) != ImageFlags::None;
+					return b_is_depth_stencil ? ImageLayout::DepthStencilAttachment : ImageLayout::ColorAttachment;
+				}
+				else
+				{
+					return ImageLayout::General;
+				}
+			}
+			return ImageLayout::ShaderReadOnly;
+		};
+
 		// For each resource we compute the per-pass access masks and image layouts. We can then diff these
 		// when executing passes based on prev -> current in order to determine whether the resource needs
 		// a memory barrier.
@@ -323,6 +361,8 @@ namespace Sunset
 						continue;
 					}
 
+					RGPass* const pass_obj = current_registry->render_passes[pass];
+
 					if (metadata.access_flags.empty())
 					{
 						metadata.access_flags.resize(current_registry->render_passes.size(), AccessFlags::None);
@@ -332,23 +372,9 @@ namespace Sunset
 						metadata.layouts.resize(current_registry->render_passes.size(), ImageLayout::Undefined);
 					}
 
-					if (std::find(metadata.producers.begin(), metadata.producers.end(), pass) != metadata.producers.end())
-					{
-						if (resource_type == ResourceType::Buffer)
-						{
-							metadata.access_flags[pass] = AccessFlags::ShaderRead | AccessFlags::ShaderWrite;
-						}
-						else
-						{
-							metadata.access_flags[pass] = AccessFlags::ColorAttachmentWrite;
-							metadata.layouts[pass] = ImageLayout::ColorAttachment;
-						}
-					}
-					else
-					{
-						metadata.access_flags[pass] = AccessFlags::ShaderRead;
-						metadata.layouts[pass] = ImageLayout::ShaderReadOnly;
-					}
+					const bool b_is_input_for_pass = std::find(metadata.producers.begin(), metadata.producers.end(), pass) == metadata.producers.end();
+					metadata.access_flags[pass] = get_access_flags_for_resource_and_pass_type(resource, resource_type, pass_obj->pass_config.flags, b_is_input_for_pass);
+					metadata.layouts[pass] = get_image_layout_for_resource_and_pass_type(resource, resource_type, pass_obj->pass_config.flags, b_is_input_for_pass);
 				}
 			}
 		}
@@ -421,7 +447,7 @@ namespace Sunset
 		current_registry->all_resource_handles.clear();
 		current_registry->buffer_resources.clear();
 		current_registry->image_resources.clear();
-		current_registry->all_bindless_resource_indices.clear();
+		current_registry->all_bindless_resource_handles.clear();
 		current_registry->render_passes.clear();
 		current_registry->resource_metadata.clear();
 		current_registry->b_global_set_bound = false;
@@ -769,7 +795,6 @@ namespace Sunset
 					new_write.slot = descriptor_bindings[j].slot;
 					new_write.type = descriptor_bindings[j].type;
 					new_write.count = descriptor_bindings[j].count;
-					new_write.set = pass_cache.global_descriptor_set;
 					new_write.buffer_desc = queued_buffer_global_writes[current_buffered_frame][j];
 				}
 
@@ -777,13 +802,12 @@ namespace Sunset
 			}
 
 			// Write bindless pass resources
-			{
+			if (!pass->parameters.b_skip_auto_descriptor_setup) {
 				// Writes the bindless resources into the corresponding global binding tables. The resulting binding indices get passed as a struct as
 				// part of the frame data for this pass, to allow custom handling by internal pass lambdas
 				const size_t num_bindless_inputs = pass->parameters.bindless_inputs.size();
 
-				frame_data.pass_bindless_resources.indices.clear();
-				frame_data.pass_bindless_resources.indices.resize(num_bindless_inputs, -1);
+				frame_data.pass_bindless_resources.handles.clear();
 
 				std::vector<DescriptorBindlessWrite> bindless_writes;
 				bindless_writes.reserve(num_bindless_inputs);
@@ -791,82 +815,89 @@ namespace Sunset
 				for (uint32_t j = 0; j < num_bindless_inputs; ++j)
 				{
 					const RGResourceHandle resource = pass->parameters.bindless_inputs[j];
-					if (static_cast<ResourceType>(get_graph_resource_type(resource)) == ResourceType::Image)
+					const ResourceType resource_type = static_cast<ResourceType>(get_graph_resource_type(resource));
+					if (resource_type == ResourceType::Image)
 					{
-						bindless_writes.push_back(
-							DescriptorHelpers::new_descriptor_image_bindless_write(pass_cache.global_descriptor_set, current_registry->resource_metadata[resource].physical_id)
+						std::vector<DescriptorBindlessWrite> image_writes = DescriptorHelpers::new_descriptor_image_bindless_writes(pass_cache.global_descriptor_set, current_registry->resource_metadata[resource].physical_id);
+						bindless_writes.insert(
+							bindless_writes.end(),
+							image_writes.begin(),
+							image_writes.end()
 						);
 					}
 				}
 
-				DescriptorHelpers::write_bindless_descriptors(gfx_context, bindless_writes, frame_data.pass_bindless_resources.indices.data());
+				frame_data.pass_bindless_resources.handles.resize(bindless_writes.size(), -1);
 
-				current_registry->all_bindless_resource_indices.insert(
-					current_registry->all_bindless_resource_indices.end(),
-					frame_data.pass_bindless_resources.indices.begin(),
-					frame_data.pass_bindless_resources.indices.end()
+				DescriptorHelpers::write_bindless_descriptors(gfx_context, bindless_writes, frame_data.pass_bindless_resources.handles.data());
+
+				current_registry->all_bindless_resource_handles.insert(
+					current_registry->all_bindless_resource_handles.end(),
+					frame_data.pass_bindless_resources.handles.begin(),
+					frame_data.pass_bindless_resources.handles.end()
 				);
 
 				frame_data.global_descriptor_set = pass_cache.global_descriptor_set;
 			}
-		
-			// Update per-pass descriptor set and write regular descriptor resources
-			const uint32_t pass_type_index = static_cast<uint32_t>(DescriptorSetType::Pass);
 
-			if (pass_type_index < pass_descriptor_data.descriptor_layouts.size())
 			{
-				DescriptorSet*& pass_descriptor_set = pass_descriptor_data.descriptor_sets[pass_type_index];
-				DescriptorLayoutID pass_descriptor_layout = pass_descriptor_data.descriptor_layouts[pass_type_index];
+				// Update per-pass descriptor set and write regular descriptor resources
+				const uint32_t pass_type_index = static_cast<uint32_t>(DescriptorSetType::Pass);
 
-				DescriptorLayout* const layout = CACHE_FETCH(DescriptorLayout, pass_descriptor_layout);
-				std::vector<DescriptorBinding>& descriptor_bindings = layout->get_bindings();
-
-				const auto write_descriptors = [&](bool b_persistent_resources)
+				if (pass_type_index < pass_descriptor_data.descriptor_layouts.size())
 				{
-					// Writes regular per-pass descriptor bindings based on passed in inputs that are NOT bindless
-					{
-						std::vector<DescriptorWrite> descriptor_writes;
-						for (uint32_t j = 0; j < descriptor_bindings.size(); ++j)
-						{
-							if (current_registry->resource_metadata[pass->parameters.pass_inputs[j]].b_is_persistent == b_persistent_resources)
-							{
-								DescriptorWrite& new_write = descriptor_writes.emplace_back();
-								new_write.slot = descriptor_bindings[j].slot;
-								new_write.type = descriptor_bindings[j].type;
-								new_write.count = descriptor_bindings[j].count;
-								new_write.set = pass_descriptor_set;
+					DescriptorSet*& pass_descriptor_set = pass_descriptor_data.descriptor_sets[pass_type_index];
+					DescriptorLayoutID pass_descriptor_layout = pass_descriptor_data.descriptor_layouts[pass_type_index];
 
-								if (new_write.type == DescriptorType::Image)
+					DescriptorLayout* const layout = CACHE_FETCH(DescriptorLayout, pass_descriptor_layout);
+					std::vector<DescriptorBinding>& descriptor_bindings = layout->get_bindings();
+
+					const auto write_descriptors = [&](bool b_persistent_resources)
+					{
+						// Writes regular per-pass descriptor bindings based on passed in inputs that are NOT bindless
+						if (!pass->parameters.b_skip_auto_descriptor_setup) {
+							std::vector<DescriptorWrite> descriptor_writes;
+							for (uint32_t j = 0; j < descriptor_bindings.size(); ++j)
+							{
+								if (current_registry->resource_metadata[pass->parameters.pass_inputs[j]].b_is_persistent == b_persistent_resources)
 								{
-									Image* const image = CACHE_FETCH(Image, current_registry->resource_metadata[pass->parameters.pass_inputs[j]].physical_id);
-									new_write.buffer_desc.buffer = image;
-								}
-								else
-								{
-									Buffer* const buffer = CACHE_FETCH(Buffer, current_registry->resource_metadata[pass->parameters.pass_inputs[j]].physical_id);
-									new_write.buffer_desc.buffer = buffer->get();
-									new_write.buffer_desc.buffer_range = buffer->get_size();
-									new_write.buffer_desc.buffer_size = buffer->get_size();
+									DescriptorWrite& new_write = descriptor_writes.emplace_back();
+									new_write.slot = descriptor_bindings[j].slot;
+									new_write.type = descriptor_bindings[j].type;
+									new_write.count = descriptor_bindings[j].count;
+
+									if (new_write.type == DescriptorType::Image || new_write.type == DescriptorType::StorageImage)
+									{
+										Image* const image = CACHE_FETCH(Image, current_registry->resource_metadata[pass->parameters.pass_inputs[j]].physical_id);
+										new_write.buffer_desc.buffer = image;
+									}
+									else
+									{
+										Buffer* const buffer = CACHE_FETCH(Buffer, current_registry->resource_metadata[pass->parameters.pass_inputs[j]].physical_id);
+										new_write.buffer_desc.buffer = buffer->get();
+										new_write.buffer_desc.buffer_range = buffer->get_size();
+										new_write.buffer_desc.buffer_size = buffer->get_size();
+									}
 								}
 							}
+							DescriptorHelpers::write_descriptors(gfx_context, pass_descriptor_set, descriptor_writes);
 						}
-						DescriptorHelpers::write_descriptors(gfx_context, pass_descriptor_set, descriptor_writes);
+					};
+
+					if (pass_descriptor_set == nullptr)
+					{
+						pass_descriptor_set = DescriptorHelpers::new_descriptor_set_with_layout(gfx_context, pass_descriptor_layout);
+						const bool b_write_only_persistent_resources = true;
+						write_descriptors(b_write_only_persistent_resources);
 					}
-				};
 
-				if (pass_descriptor_set == nullptr)
-				{
-					pass_descriptor_set = DescriptorHelpers::new_descriptor_set_with_layout(gfx_context, pass_descriptor_layout);
-					const bool b_write_only_persistent_resources = true;
-					write_descriptors(b_write_only_persistent_resources);
+					{
+						const bool b_write_only_persistent_resources = false;
+						write_descriptors(b_write_only_persistent_resources);
+					}
+
+					frame_data.pass_descriptor_set = pass_descriptor_set;
 				}
-
-				{
-					const bool b_write_only_persistent_resources = false;
-					write_descriptors(b_write_only_persistent_resources);
-				}
-
-				frame_data.pass_descriptor_set = pass_descriptor_set;
 			}
 		}
 
@@ -956,6 +987,6 @@ namespace Sunset
 	{
 		// TODO: Look into aliasing memory for expired resources as opposed to just flat out deleting them (though that should also be done)
 		current_registry->resource_deletion_queue.flush();
-		DescriptorHelpers::free_bindless_image_descriptors(gfx_context, pass_cache.global_descriptor_set, current_registry->all_bindless_resource_indices);
+		DescriptorHelpers::free_bindless_image_descriptors(gfx_context, pass_cache.global_descriptor_set, current_registry->all_bindless_resource_handles);
 	}
 }
