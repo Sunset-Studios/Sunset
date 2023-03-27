@@ -44,7 +44,7 @@ namespace Sunset
 
 				TransformComponent* const transform_comp = scene->assign_component<TransformComponent>(mesh_ent);
 
-				set_position(transform_comp, glm::vec3(5.0f + 50.0f * i, -50.0f, -150.0f));
+				set_position(transform_comp, glm::vec3(5.0f + 100.0f * i, -50.0f, -150.0f + -50.0f * i));
 				set_scale(transform_comp, glm::vec3(1.0f));
 
 				MeshComponent* const mesh_comp = scene->assign_component<MeshComponent>(mesh_ent);

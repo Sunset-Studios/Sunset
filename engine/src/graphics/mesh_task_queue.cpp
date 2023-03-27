@@ -114,6 +114,7 @@ namespace Sunset
 				.destination_color_blend = BlendFactor::Zero,
 				.color_blend_op = BlendOp::Add
 			});
+			state_builder.set_depth_stencil_state(true, false, CompareOperation::LessOrEqual);
 			state_builder.set_shader_stage(PipelineShaderStageType::Vertex, "../../shaders/debug_bounds.vert.spv");
 			state_builder.set_shader_stage(PipelineShaderStageType::Fragment, "../../shaders/debug_bounds.frag.spv");
 

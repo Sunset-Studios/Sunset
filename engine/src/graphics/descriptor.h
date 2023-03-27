@@ -297,7 +297,7 @@ namespace Sunset
 		static void write_descriptors(class GraphicsContext* const gfx_context, DescriptorSet* descriptor_set, std::vector<DescriptorWrite>& descriptor_writes);
 		static void write_bindless_descriptors(class GraphicsContext* const gfx_context, const std::vector<DescriptorBindlessWrite>& descriptor_writes, BindingTableHandle* out_binding_table_handles);
 		static void free_bindless_image_descriptors(class GraphicsContext* const gfx_context, DescriptorSet* descriptor_set, const std::vector<BindingTableHandle> indices);
-		static std::vector<DescriptorBindlessWrite> new_descriptor_image_bindless_writes(class DescriptorSet* set, ImageID image);
+		static std::vector<DescriptorBindlessWrite> new_descriptor_image_bindless_writes(class DescriptorSet* set, ImageID image, bool b_split_image_mips = true);
 	};
 	// END - Descriptor Helpers
 }

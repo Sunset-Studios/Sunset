@@ -818,7 +818,7 @@ namespace Sunset
 					const ResourceType resource_type = static_cast<ResourceType>(get_graph_resource_type(resource));
 					if (resource_type == ResourceType::Image)
 					{
-						std::vector<DescriptorBindlessWrite> image_writes = DescriptorHelpers::new_descriptor_image_bindless_writes(pass_cache.global_descriptor_set, current_registry->resource_metadata[resource].physical_id);
+						std::vector<DescriptorBindlessWrite> image_writes = DescriptorHelpers::new_descriptor_image_bindless_writes(pass_cache.global_descriptor_set, current_registry->resource_metadata[resource].physical_id, pass->parameters.b_split_input_image_mips);
 						bindless_writes.insert(
 							bindless_writes.end(),
 							image_writes.begin(),

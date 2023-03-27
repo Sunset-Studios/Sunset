@@ -173,34 +173,59 @@ namespace Sunset
 		}
 	}
 
-	std::vector<DescriptorBindlessWrite> DescriptorHelpers::new_descriptor_image_bindless_writes(class DescriptorSet* set, ImageID image)
+	std::vector<DescriptorBindlessWrite> DescriptorHelpers::new_descriptor_image_bindless_writes(class DescriptorSet* set, ImageID image, bool b_split_image_mips)
 	{
 		std::vector<DescriptorBindlessWrite> writes;
 
 		Image* const image_obj = CACHE_FETCH(Image, image);
 
-		const uint32_t num_mips = image_obj->get_attachment_config().mip_count;
-		writes.reserve(num_mips);
-		for (uint32_t i = 0; i < num_mips; ++i)
+		if (b_split_image_mips)
+		{
+			const uint32_t num_mips = image_obj->get_attachment_config().mip_count;
+			writes.reserve(num_mips);
+			for (uint32_t i = 0; i < num_mips; ++i)
+			{
+				writes.push_back(
+					{
+						.slot = ImageBindTableSlot,
+						.level = i,
+						.type = DescriptorType::Image,
+						.buffer = CACHE_FETCH(Image, image),
+						.set = set
+					}
+				);
+			}
+			for (uint32_t i = 0; i < num_mips; ++i)
+			{
+				if ((image_obj->get_attachment_config().flags & ImageFlags::Storage) != ImageFlags::None)
+				{
+					writes.push_back(
+						{
+							.slot = StorageImageBindTableSlot,
+							.level = i,
+							.type = DescriptorType::StorageImage,
+							.buffer = CACHE_FETCH(Image, image),
+							.set = set
+						}
+					);
+				}
+			}
+		}
+		else
 		{
 			writes.push_back(
 				{
 					.slot = ImageBindTableSlot,
-					.level = i,
 					.type = DescriptorType::Image,
 					.buffer = CACHE_FETCH(Image, image),
 					.set = set
 				}
 			);
-		}
-		for (uint32_t i = 0; i < num_mips; ++i)
-		{
 			if ((image_obj->get_attachment_config().flags & ImageFlags::Storage) != ImageFlags::None)
 			{
 				writes.push_back(
 					{
 						.slot = StorageImageBindTableSlot,
-						.level = i,
 						.type = DescriptorType::StorageImage,
 						.buffer = CACHE_FETCH(Image, image),
 						.set = set
@@ -249,7 +274,7 @@ namespace Sunset
 
 		assert(binding_table.contains(slot));
 
-		// TODO: Consider keeping fetched handles in an unordered_set so we don't have to do a costly linear search for existing slot indeces,
+		// TODO: Consider keeping fetched handles in an unordered_set so we don't have to do a costly linear search for existing slot indices,
 		// but only if index allocations at any given time start becoming numerous
 		if (std::find(binding_table[slot].bound_indices.begin(), binding_table[slot].bound_indices.end(), index) != binding_table[slot].bound_indices.end())
 		{

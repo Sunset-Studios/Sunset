@@ -113,6 +113,8 @@ namespace Sunset
 		std::vector<RGResourceHandle> bindless_inputs;
 		// Whether or not to skip automatic pass descriptor setup for this pass (global descriptor setup will still run)
 		bool b_skip_auto_descriptor_setup{ false };
+		// Whether or not to split mips from input images into separate descriptor writes (one per mip level). If false, uploads a single image with all the mip levels to GPU.
+		bool b_split_input_image_mips{ false };
 	};
 
 	struct RGPassCache

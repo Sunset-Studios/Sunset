@@ -99,36 +99,18 @@ namespace Sunset
 
 	Bounds calculate_mesh_bounds(Mesh* mesh, const glm::mat4& transform)
 	{
-		std::array<glm::vec3, 8> bounding_verts;
-
-		bounding_verts[0] = mesh->local_bounds.origin + mesh->local_bounds.extents * glm::vec3(1, 1, 1);
-		bounding_verts[1] = mesh->local_bounds.origin + mesh->local_bounds.extents * glm::vec3(1, 1, -1);
-		bounding_verts[2] = mesh->local_bounds.origin + mesh->local_bounds.extents * glm::vec3(1, -1, 1);
-		bounding_verts[3] = mesh->local_bounds.origin + mesh->local_bounds.extents * glm::vec3(1, -1, -1);
-		bounding_verts[4] = mesh->local_bounds.origin + mesh->local_bounds.extents * glm::vec3(-1, 1, 1);
-		bounding_verts[5] = mesh->local_bounds.origin + mesh->local_bounds.extents * glm::vec3(-1, 1, -1);
-		bounding_verts[6] = mesh->local_bounds.origin + mesh->local_bounds.extents * glm::vec3(-1, -1, 1);
-		bounding_verts[7] = mesh->local_bounds.origin + mesh->local_bounds.extents * glm::vec3(-1, -1, -1);
-		
-		glm::vec3 min{ std::numeric_limits<float>::max() };
-		glm::vec3 max{ std::numeric_limits<float>::min() };
-
-		for (uint8_t i = 0; i < 8; ++i)
-		{
-			bounding_verts[i] = transform * glm::vec4(bounding_verts[i], 1.0f);
-			min = glm::min(min, bounding_verts[i]);
-			max = glm::max(max, bounding_verts[i]);
-		}
-
-		float max_scale = 0.0f;
-		max_scale = glm::max(glm::length(glm::vec3(transform[0][0], transform[0][1], transform[0][2])), max_scale);
-		max_scale = glm::max(glm::length(glm::vec3(transform[1][0], transform[1][1], transform[1][2])), max_scale);
-		max_scale = glm::max(glm::length(glm::vec3(transform[2][0], transform[2][1], transform[2][2])), max_scale);
-
 		Bounds new_bounds;
-		new_bounds.extents = (max - min) / 2.0f;
-		new_bounds.origin = min + new_bounds.extents;
-		new_bounds.radius = max_scale * mesh->local_bounds.radius;
+
+		const float x_scale = glm::length(transform[0]);
+		const float y_scale = glm::length(transform[1]);
+		const float z_scale = glm::length(transform[2]);
+
+		float transform_max_scale = glm::max(x_scale, y_scale);
+		transform_max_scale = glm::max(transform_max_scale, z_scale);
+
+		new_bounds.extents = mesh->local_bounds.extents * glm::vec3(x_scale, y_scale, z_scale);
+		new_bounds.origin = transform * glm::vec4(mesh->local_bounds.origin, 1.0f);
+		new_bounds.radius = transform_max_scale * mesh->local_bounds.radius;
 
 		return new_bounds;
 	}

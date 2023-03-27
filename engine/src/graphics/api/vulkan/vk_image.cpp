@@ -76,7 +76,7 @@ namespace Sunset
 			image_view_info.image = image;
 			image_view_info.format = VK_FROM_SUNSET_FORMAT(config.format);
 			image_view_info.subresourceRange.baseMipLevel = i;
-			image_view_info.subresourceRange.levelCount = 1;
+			image_view_info.subresourceRange.levelCount = i == 0 ? config.mip_count : 1;
 			image_view_info.subresourceRange.baseArrayLayer = 0;
 			image_view_info.subresourceRange.layerCount = 1;
 			image_view_info.subresourceRange.aspectMask = VK_FROM_SUNSET_IMAGE_USAGE_ASPECT_FLAGS(config.flags);

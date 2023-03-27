@@ -105,7 +105,7 @@ namespace Sunset
 						DrawCullData& draw_cull_data = Renderer::get()->get_draw_cull_data();
 						draw_cull_data.hzb_width = hzb_image->get_attachment_config().extent.x;
 						draw_cull_data.hzb_height = hzb_image->get_attachment_config().extent.y;
-						draw_cull_data.hzb_texture = (0x0000ffff & frame_data.pass_bindless_resources.handles.back());
+						draw_cull_data.hzb_texture = frame_data.pass_bindless_resources.handles.front();
 					}
 
 					PushConstantPipelineData pass_data = PushConstantPipelineData::create(&Renderer::get()->get_draw_cull_data(), PipelineShaderStageType::Compute);
@@ -211,7 +211,8 @@ namespace Sunset
 				{
 					.shader_setup = shader_setup,
 					.inputs = { main_depth_image_desc, hzb_image_desc },
-					.outputs = { hzb_image_desc }
+					.outputs = { hzb_image_desc },
+					.b_split_input_image_mips = true
 				},
 				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
 				{

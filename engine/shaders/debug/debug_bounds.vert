@@ -72,8 +72,7 @@ void main()
 	    vec4(0.0, 0.0, pos_radius.w, 0.0),
 	    vec4(pos_radius.xyz, 1.0)
 	);
-	mat4 transform_matrix = camera_data.view_proj * model_matrix;
-	gl_Position = transform_matrix * vec4(in_position, 1.0f);
+	gl_Position = camera_data.view_proj * model_matrix * vec4(in_position, 1.0f);
 	out_color = in_color;
 	out_tex_coord = in_tex_coord;
 	out_instance_index = entity_index;

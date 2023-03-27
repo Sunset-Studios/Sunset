@@ -94,51 +94,63 @@ layout (push_constant) uniform constants
 
 bool sphere_project(vec4 center, float radius, float p00, float p11, out vec4 aabb)
 {
-	if (center.z < radius + draw_cull_constants.z_near)
+	center = camera_data.view * center;
+
+	if (-center.z - radius < draw_cull_constants.z_near)
 	{
 		return false;
 	}
 
-	vec2 cx = -center.xz;
-	vec2 vx = vec2(length(cx) - radius * radius, radius);
-	vec2 minx = mat2(vx.x, vx.y, -vx.y, vx.x) * cx;
-	vec2 maxx = mat2(vx.x, -vx.y, vx.y, vx.x) * cx;
+	vec2 cx = vec2(center.x, -center.z);
+	vec2 vx = vec2(sqrt(dot(cx, cx) - radius * radius), radius);
+	vec2 min_x = mat2(vx.x, vx.y, -vx.y, vx.x) * cx;
+	vec2 max_x = mat2(vx.x, -vx.y, vx.y ,vx.x) * cx;
 
-	vec2 cy = -center.yz;
-	vec2 vy = vec2(length(cy) - radius * radius, radius);
-	vec2 miny = mat2(vy.x, vy.y, -vy.y, vy.x) * cy;
-	vec2 maxy = mat2(vy.x, -vy.y, vy.y, vy.x) * cy;
+	vec2 cy = vec2(center.y, -center.z);
+	vec2 vy = vec2(sqrt(dot(cy, cy) - radius * radius), radius);
+	vec2 min_y = mat2(vy.x, vy.y, -vy.y, vy.x) * cy;
+	vec2 max_y = mat2(vy.x, -vy.y, vy.y, vy.x) * cy;
 
-	aabb = vec4(
-		minx.x / minx.y * p00,
-		miny.x / miny.y * p11,
-		maxx.x / maxx.y * p00,
-		maxy.x / maxy.y * p11
-	);
-	aabb = aabb.xwzy * vec4(0.5f, -0.5f, 0.5f, -0.5f) + vec4(0.5f);
+	aabb = vec4(min_x.x / min_x.y * p00, min_y.x / min_y.y * p11, max_x.x / max_x.y * p00, max_y.x / max_y.y * p11);
+	aabb = aabb.xwzy * vec4(0.5f, -0.5f, 0.5f, -0.5f) * vec4(0.5f);
 
 	return true;
 }
 
 bool is_occluded(uint object_index, vec4 center, float radius)
 {
-	bool visible = true;
-	if (visible && draw_cull_constants.occlusion_enabled != 0)
-	{
-		vec4 aabb;
-		if (sphere_project(center, radius, draw_cull_constants.p00, draw_cull_constants.p11, aabb))
-		{
-			const float width = (aabb.z - aabb.x) * draw_cull_constants.hzb_width;
-			const float height = (aabb.w - aabb.y) * draw_cull_constants.hzb_height;
-			float level = floor(log2(max(width, height)));
+	center.y *= -1;
 
-			float depth = textureLod(textures_2D[draw_cull_constants.hzb_texture], (aabb.xy + aabb.zw) * 0.5, level).x;
-			float sphere_depth = draw_cull_constants.z_near / (center.z - radius);
+    bool visible = true;
+    if (visible && draw_cull_constants.occlusion_enabled != 0)
+    {
+        vec4 aabb;
+        if (sphere_project(center, radius, draw_cull_constants.p00, draw_cull_constants.p11, aabb))
+        {
+            const float width = (aabb.z - aabb.x) * draw_cull_constants.hzb_width;
+            const float height = (aabb.w - aabb.y) * draw_cull_constants.hzb_height;
+            float level = floor(log2(max(width, height)));
+            level = clamp(level, 0, 16);
 
-			visible = visible && sphere_depth >= depth;
-		}
-	}
-	return !visible;
+            vec2 uv = (aabb.xy + aabb.zw) * 0.5;
+
+            float depth = textureLod(textures_2D[nonuniformEXT(draw_cull_constants.hzb_texture)], uv, level).r;
+
+            depth = max(depth, textureLod(textures_2D[nonuniformEXT(draw_cull_constants.hzb_texture)], vec2(aabb.x, aabb.y), level).r);
+          	depth = max(depth, textureLod(textures_2D[nonuniformEXT(draw_cull_constants.hzb_texture)], vec2(aabb.z, aabb.w), level).r);
+            depth = max(depth, textureLod(textures_2D[nonuniformEXT(draw_cull_constants.hzb_texture)], vec2(aabb.x, aabb.w), level).r);
+            depth = max(depth, textureLod(textures_2D[nonuniformEXT(draw_cull_constants.hzb_texture)], vec2(aabb.z, aabb.y), level).r);
+
+            const vec3 direction = normalize(inverse(camera_data.view)[3].xyz - center.xyz);
+            const vec4 screen_space_center = camera_data.view_proj * vec4(center.xyz + direction * radius, 1.0f);
+            const float sphere_depth = screen_space_center.z / screen_space_center.w;
+
+            const float depth_bias = 0.01f;
+            visible = visible && sphere_depth - depth_bias <= depth;
+        }
+    }
+
+    return !visible && draw_cull_constants.culling_enabled != 0;
 }
 
 bool is_in_frustum(uint object_index, vec4 center, float radius)

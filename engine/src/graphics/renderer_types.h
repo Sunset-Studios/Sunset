@@ -47,6 +47,7 @@ namespace Sunset
 		uint32_t occlusion_enabled;
 		uint32_t distance_check;
 		int32_t hzb_texture;
+		float padding{ 0 };
 	};
 
 	struct FullscreenData

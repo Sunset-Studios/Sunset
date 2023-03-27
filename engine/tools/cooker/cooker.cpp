@@ -80,8 +80,8 @@ namespace Sunset
 					tinyobj::real_t nz = attrib.normals[3 * index.normal_index + 2];
 
 					// UVs
-					tinyobj::real_t ux = attrib.texcoords[2 * index.texcoord_index + 0];
-					tinyobj::real_t uy = attrib.texcoords[2 * index.texcoord_index + 1];
+					tinyobj::real_t ux = index.texcoord_index >= 0 ? attrib.texcoords[2 * index.texcoord_index + 0] : 0;
+					tinyobj::real_t uy = index.texcoord_index >= 0 ? attrib.texcoords[2 * index.texcoord_index + 1] : 0;
 
 					VertexPNCU32 new_vertex;
 

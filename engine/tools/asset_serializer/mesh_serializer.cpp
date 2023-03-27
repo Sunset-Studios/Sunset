@@ -134,9 +134,9 @@ namespace Sunset
 			max[2] = std::max(max[2], vertices[i].position[2]);
 		}
 
-		bounds.extents[0] = (max[0] - min[0]) / 2.0f;
-		bounds.extents[1] = (max[1] - min[1]) / 2.0f;
-		bounds.extents[2] = (max[2] - min[2]) / 2.0f;
+		bounds.extents[0] = (max[0] - min[0]) * 0.5f;
+		bounds.extents[1] = (max[1] - min[1]) * 0.5f;
+		bounds.extents[2] = (max[2] - min[2]) * 0.5f;
 
 		bounds.origin[0] = bounds.extents[0] + min[0];
 		bounds.origin[1] = bounds.extents[1] + min[1];
@@ -145,13 +145,14 @@ namespace Sunset
 		float radius_squared = 0;
 		for (int i = 0; i < vertex_count; ++i)
 		{
-			float offset[3];
+			float offset[3] =
+			{
+				vertices[i].position[0] - bounds.origin[0],
+				vertices[i].position[1] - bounds.origin[1],
+				vertices[i].position[2] - bounds.origin[2]
+			};
 
-			offset[0] = vertices[i].position[0] - bounds.origin[0];
-			offset[1] = vertices[i].position[1] - bounds.origin[1];
-			offset[2] = vertices[i].position[2] - bounds.origin[2];
-
-			float distance = offset[0] * offset[0] + offset[1] * offset[1] + offset[2] * offset[2];
+			const float distance = offset[0] * offset[0] + offset[1] * offset[1] + offset[2] * offset[2];
 			radius_squared = std::max(radius_squared, distance);
 		}
 
