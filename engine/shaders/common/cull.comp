@@ -106,7 +106,7 @@ bool sphere_project(vec4 center, float radius, float p00, float p11, out vec4 aa
 	vec2 min_x = mat2(vx.x, vx.y, -vx.y, vx.x) * cx;
 	vec2 max_x = mat2(vx.x, -vx.y, vx.y ,vx.x) * cx;
 
-	vec2 cy = vec2(center.y, -center.z);
+	vec2 cy = vec2(-center.y, -center.z);
 	vec2 vy = vec2(sqrt(dot(cy, cy) - radius * radius), radius);
 	vec2 min_y = mat2(vy.x, vy.y, -vy.y, vy.x) * cy;
 	vec2 max_y = mat2(vy.x, -vy.y, vy.y, vy.x) * cy;
@@ -119,8 +119,6 @@ bool sphere_project(vec4 center, float radius, float p00, float p11, out vec4 aa
 
 bool is_occluded(uint object_index, vec4 center, float radius)
 {
-	center.y *= -1;
-
     bool visible = true;
     if (visible && draw_cull_constants.occlusion_enabled != 0)
     {
@@ -133,13 +131,14 @@ bool is_occluded(uint object_index, vec4 center, float radius)
             level = clamp(level, 0, 16);
 
             vec2 uv = (aabb.xy + aabb.zw) * 0.5;
+            uv.y = 1 - uv.y;
 
             float depth = textureLod(textures_2D[nonuniformEXT(draw_cull_constants.hzb_texture)], uv, level).r;
 
-            depth = max(depth, textureLod(textures_2D[nonuniformEXT(draw_cull_constants.hzb_texture)], vec2(aabb.x, aabb.y), level).r);
-          	depth = max(depth, textureLod(textures_2D[nonuniformEXT(draw_cull_constants.hzb_texture)], vec2(aabb.z, aabb.w), level).r);
-            depth = max(depth, textureLod(textures_2D[nonuniformEXT(draw_cull_constants.hzb_texture)], vec2(aabb.x, aabb.w), level).r);
-            depth = max(depth, textureLod(textures_2D[nonuniformEXT(draw_cull_constants.hzb_texture)], vec2(aabb.z, aabb.y), level).r);
+            depth = max(depth, textureLod(textures_2D[nonuniformEXT(draw_cull_constants.hzb_texture)], vec2(aabb.x, 1.0f - aabb.y), level).r);
+          	depth = max(depth, textureLod(textures_2D[nonuniformEXT(draw_cull_constants.hzb_texture)], vec2(aabb.z, 1.0f - aabb.w), level).r);
+            depth = max(depth, textureLod(textures_2D[nonuniformEXT(draw_cull_constants.hzb_texture)], vec2(aabb.x, 1.0f - aabb.w), level).r);
+            depth = max(depth, textureLod(textures_2D[nonuniformEXT(draw_cull_constants.hzb_texture)], vec2(aabb.z, 1.0f - aabb.y), level).r);
 
             const vec3 direction = normalize(inverse(camera_data.view)[3].xyz - center.xyz);
             const vec4 screen_space_center = camera_data.view_proj * vec4(center.xyz + direction * radius, 1.0f);

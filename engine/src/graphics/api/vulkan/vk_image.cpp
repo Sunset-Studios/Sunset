@@ -104,7 +104,7 @@ namespace Sunset
 			{
 				create_info_sampler_reduction.sType = VK_STRUCTURE_TYPE_SAMPLER_REDUCTION_MODE_CREATE_INFO_EXT;
 				create_info_sampler_reduction.pNext = nullptr;
-				create_info_sampler_reduction.reductionMode = VK_SAMPLER_REDUCTION_MODE_MIN;
+				create_info_sampler_reduction.reductionMode = VK_SAMPLER_REDUCTION_MODE_MAX;
 				sampler_create_info.pNext = &create_info_sampler_reduction;
 			}
 
