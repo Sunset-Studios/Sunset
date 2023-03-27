@@ -17,6 +17,7 @@ layout (set = 0, binding = 0) uniform CameraBuffer
 	mat4 view;
 	mat4 proj;
 	mat4 view_proj;
+	mat4 prev_view_proj;
 	mat4 inverse_view_proj;
 	vec4 frustum_planes[6];
 } camera_data;

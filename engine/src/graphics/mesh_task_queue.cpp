@@ -10,7 +10,7 @@
 
 namespace Sunset
 {
-	AutoCVar_Bool cvar_enable_debug_bounds_draw("ren.enable_debug_bounds_draw", "Whether or not to draw mesh object bounds", true);
+	AutoCVar_Bool cvar_enable_debug_bounds_draw("ren.enable_debug_bounds_draw", "Whether or not to draw mesh object bounds", false);
 
 	void MeshTaskQueue::sort_and_batch(class GraphicsContext* const gfx_context)
 	{

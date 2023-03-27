@@ -12,6 +12,7 @@ layout (set = 0, binding = 0) uniform CameraBuffer
 	mat4 view;
 	mat4 proj;
 	mat4 view_proj;
+	mat4 prev_view_proj;
 	mat4 inverse_view_proj;
 	vec4 frustum_planes[6];
 } camera_data;
@@ -141,7 +142,7 @@ bool is_occluded(uint object_index, vec4 center, float radius)
             depth = max(depth, textureLod(textures_2D[nonuniformEXT(draw_cull_constants.hzb_texture)], vec2(aabb.z, 1.0f - aabb.y), level).r);
 
             const vec3 direction = normalize(inverse(camera_data.view)[3].xyz - center.xyz);
-            const vec4 screen_space_center = camera_data.view_proj * vec4(center.xyz + direction * radius, 1.0f);
+            const vec4 screen_space_center = camera_data.prev_view_proj * vec4(center.xyz + direction * radius, 1.0f);
             const float sphere_depth = screen_space_center.z / screen_space_center.w;
 
             const float depth_bias = 0.01f;

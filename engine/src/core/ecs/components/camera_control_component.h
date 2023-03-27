@@ -14,6 +14,7 @@ namespace Sunset
 		glm::mat4 view_matrix;
 		glm::mat4 projection_matrix;
 		glm::mat4 view_projection_matrix;
+		glm::mat4 prev_view_projection_matrix;
 		glm::mat4 inverse_view_projection_matrix;
 		glm::vec4 frustum_planes[6];
 	};

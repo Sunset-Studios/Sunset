@@ -25,6 +25,8 @@ namespace Sunset
 
 			if (camera_control_comp->data.b_dirty)
 			{
+				camera_control_comp->data.gpu_data.prev_view_projection_matrix = camera_control_comp->data.gpu_data.view_projection_matrix;
+
 				camera_control_comp->data.gpu_data.view_matrix = glm::lookAt(
 					camera_control_comp->data.position,
 					camera_control_comp->data.position + camera_control_comp->data.forward,
