@@ -1,4 +1,4 @@
-#include <graphics/strategies/forward_shading.h>
+#include <graphics/strategies/deferred_shading.h>
 #include <graphics/graphics_context.h>
 #include <graphics/renderer.h>
 #include <graphics/resource/buffer.h>
@@ -13,7 +13,7 @@
 
 namespace Sunset
 {
-	void ForwardShadingStrategy::render(GraphicsContext* gfx_context, RenderGraph& render_graph, class Swapchain* swapchain)
+	void DeferredShadingStrategy::render(class GraphicsContext* gfx_context, RenderGraph& render_graph, class Swapchain* swapchain)
 	{
 		MeshTaskQueue& mesh_task_queue = Renderer::get()->get_mesh_task_queue();
 		mesh_task_queue.sort_and_batch(gfx_context);

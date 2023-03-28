@@ -115,8 +115,8 @@ namespace Sunset
 				.color_blend_op = BlendOp::Add
 			});
 			state_builder.set_depth_stencil_state(true, false, CompareOperation::LessOrEqual);
-			state_builder.set_shader_stage(PipelineShaderStageType::Vertex, "../../shaders/debug_bounds.vert.spv");
-			state_builder.set_shader_stage(PipelineShaderStageType::Fragment, "../../shaders/debug_bounds.frag.spv");
+			state_builder.set_shader_stage(PipelineShaderStageType::Vertex, "../../shaders/debug_bounds.vert.sun");
+			state_builder.set_shader_stage(PipelineShaderStageType::Fragment, "../../shaders/debug_bounds.frag.sun");
 
 			{
 				std::vector<DescriptorLayoutID> descriptor_layouts;

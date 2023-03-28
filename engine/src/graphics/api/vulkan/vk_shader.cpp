@@ -1,7 +1,6 @@
 #include <graphics/api/vulkan/vk_shader.h>
 #include <graphics/graphics_context.h>
-
-#include <fstream>
+#include <shader_serializer.h>
 
 namespace Sunset
 {
@@ -9,22 +8,18 @@ namespace Sunset
 	{
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
 
-		std::ifstream file(file_path, std::ios::ate | std::ios::binary);
-
-		if (!file.is_open())
+		SerializedAsset asset;
+		if (!deserialize_asset(file_path, asset))
 		{
+			// TODO: Need some custom logging
 			return;
 		}
 
-		size_t file_size = static_cast<size_t>(file.tellg());
+		SerializedShaderInfo serialized_shader_info = get_serialized_shader_info(&asset);
 
-		std::vector<uint32_t> buffer(file_size / sizeof(uint32_t));
+		std::vector<uint32_t> buffer(serialized_shader_info.shader_buffer_size / sizeof(uint32_t));
 
-		file.seekg(0);
-
-		file.read(reinterpret_cast<char*>(buffer.data()), file_size);
-
-		file.close();
+		unpack_shader(&serialized_shader_info, asset.binary.data(), asset.binary.size(), (char*)buffer.data());
 
 		VkShaderModuleCreateInfo shader_create_info = {};
 		shader_create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;

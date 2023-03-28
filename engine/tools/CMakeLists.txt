@@ -8,6 +8,8 @@ add_library(AssetSerializer STATIC
 	${CMAKE_CURRENT_SOURCE_DIR}/asset_serializer/image_serializer.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/asset_serializer/mesh_serializer.h
 	${CMAKE_CURRENT_SOURCE_DIR}/asset_serializer/mesh_serializer.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/asset_serializer/shader_serializer.h
+	${CMAKE_CURRENT_SOURCE_DIR}/asset_serializer/shader_serializer.cpp
 )
 
 set_property(TARGET AssetSerializer PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:AssetSerializer>")
@@ -34,7 +36,7 @@ target_include_directories(SunsetCooker PUBLIC
 target_link_libraries(SunsetCooker PRIVATE tinyobjloader stb_image json lz4 glm AssetSerializer)
 
 add_custom_target(CookerRun
-	COMMAND SunsetCooker "${CMAKE_SOURCE_DIR}/engine/assets"
+	COMMAND SunsetCooker "${CMAKE_SOURCE_DIR}/engine/assets" "${CMAKE_SOURCE_DIR}/engine/shaders"
 	WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
 	COMMENT "Cooking assets in ${CMAKE_CURRENT_SOURCE_DIR}"
 	SOURCES ${COOKER_SOURCES})

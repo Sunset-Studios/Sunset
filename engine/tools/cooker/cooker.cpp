@@ -1,8 +1,10 @@
 ﻿#include <cooker.h>
 #include <image_serializer.h>
 #include <mesh_serializer.h>
+#include <shader_serializer.h>
 
 #include <iostream>
+#include <fstream>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
@@ -119,6 +121,38 @@ namespace Sunset
 		SerializedAsset asset = pack_mesh(&mesh_info, (char*)vertices.data(), (char*)indices.data());
 
 		serialize_asset(output_path.string().c_str(), asset);
+
+		return true;
+	}
+
+	bool Cooker::cook_shader(const std::filesystem::path& input_path, const std::filesystem::path& output_path)
+	{
+		std::ifstream file(input_path, std::ios::ate | std::ios::binary);
+
+		if (!file.is_open())
+		{
+			return false;
+		}
+
+		size_t file_size = static_cast<size_t>(file.tellg());
+
+		std::vector<char> buffer(file_size);
+
+		file.seekg(0);
+
+		// TODO: Additional processing to parse #includes
+
+		file.read(buffer.data(), file_size);
+
+		file.close();
+
+		SerializedShaderInfo shader_info;
+		shader_info.shader_buffer_size = file_size;
+		shader_info.file_path = input_path.string();
+
+		SerializedAsset new_shader_asset = pack_shader(&shader_info, buffer.data());
+
+		serialize_asset(output_path.string().c_str(), new_shader_asset);
 
 		return true;
 	}
