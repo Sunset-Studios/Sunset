@@ -142,6 +142,8 @@ if(NOT shaderc_POPULATED)
 
   add_subdirectory(${shaderc_SOURCE_DIR} ${shaderc_BINARY_DIR})
 
+  set_target_third_party(add-copyright)
+  set_target_third_party(build-version)
   set_target_third_party(glslc)
   set_target_third_party(glslc_exe)
   set_target_third_party(shaderc)
