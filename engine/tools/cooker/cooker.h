@@ -2,6 +2,10 @@
 
 #include <filesystem>
 
+#ifndef PROJECT_PATH
+#define PROJECT_PATH ""
+#endif
+
 namespace Sunset
 {
 	class Cooker

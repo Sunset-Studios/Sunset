@@ -8,8 +8,8 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
-
 #include <tiny_obj_loader.h>
+#include <shaderc/shaderc.hpp>
 
 namespace Sunset
 {
@@ -127,30 +127,43 @@ namespace Sunset
 
 	bool Cooker::cook_shader(const std::filesystem::path& input_path, const std::filesystem::path& output_path)
 	{
-		std::ifstream file(input_path, std::ios::ate | std::ios::binary);
+		std::string shader_string = read_shader_file(input_path);
 
-		if (!file.is_open())
+		parse_shader_includes(shader_string);
+
+		shaderc_shader_kind shader_kind = shaderc_shader_kind::shaderc_glsl_infer_from_source;
+		if (input_path.extension() == ".vert")
 		{
+			shader_kind = shaderc_shader_kind::shaderc_vertex_shader;
+		}
+		else if (input_path.extension() == ".frag")
+		{
+			shader_kind = shaderc_shader_kind::shaderc_fragment_shader;
+		}
+		else if (input_path.extension() == ".comp")
+		{
+			shader_kind = shaderc_shader_kind::shaderc_compute_shader;
+		}
+
+		shaderc::Compiler compiler;
+		shaderc::CompileOptions compile_options;
+
+		shaderc::SpvCompilationResult result = compiler.CompileGlslToSpv(shader_string, shader_kind, (const char*)input_path.c_str(), compile_options);
+
+		if (result.GetCompilationStatus() != shaderc_compilation_status_success)
+		{
+			// Handle the error
+			std::cerr << "Error compiling shader: " << result.GetErrorMessage() << std::endl;
 			return false;
 		}
 
-		size_t file_size = static_cast<size_t>(file.tellg());
-
-		std::vector<char> buffer(file_size);
-
-		file.seekg(0);
-
-		// TODO: Additional processing to parse #includes
-
-		file.read(buffer.data(), file_size);
-
-		file.close();
+		std::vector<uint32_t> compiled_shader_string(result.begin(), result.end());
 
 		SerializedShaderInfo shader_info;
-		shader_info.shader_buffer_size = file_size;
+		shader_info.shader_buffer_size = compiled_shader_string.size() * sizeof(uint32_t);
 		shader_info.file_path = input_path.string();
 
-		SerializedAsset new_shader_asset = pack_shader(&shader_info, buffer.data());
+		SerializedAsset new_shader_asset = pack_shader(&shader_info, compiled_shader_string.data());
 
 		serialize_asset(output_path.string().c_str(), new_shader_asset);
 

@@ -80,7 +80,7 @@ namespace Sunset
 			{
 				.pipeline_shaders =
 				{
-					{ PipelineShaderStageType::Compute, "../../shaders/cull.comp.sun" }
+					{ PipelineShaderStageType::Compute, "../../shaders/common/cull.comp.sun" }
 				}
 			};
 
@@ -136,8 +136,8 @@ namespace Sunset
 			{
 				.pipeline_shaders =
 				{
-					{ PipelineShaderStageType::Vertex, "../../shaders/default_mesh.vert.sun" },
-					{ PipelineShaderStageType::Fragment, "../../shaders/default_lit.frag.sun"}
+					{ PipelineShaderStageType::Vertex, "../../shaders/forward/default_mesh.vert.sun" },
+					{ PipelineShaderStageType::Fragment, "../../shaders/forward/default_lit.frag.sun"}
 				}
 			};
 
@@ -200,7 +200,7 @@ namespace Sunset
 			{
 				.pipeline_shaders =
 				{
-					{ PipelineShaderStageType::Compute, "../../shaders/hzb_reduce.comp.sun" }
+					{ PipelineShaderStageType::Compute, "../../shaders/common/hzb_reduce.comp.sun" }
 				}
 			};
 
@@ -279,8 +279,8 @@ namespace Sunset
 			{
 				.pipeline_shaders =
 				{
-					{ PipelineShaderStageType::Vertex, "../../shaders/fullscreen.vert.sun" },
-					{ PipelineShaderStageType::Fragment, "../../shaders/fullscreen.frag.sun"}
+					{ PipelineShaderStageType::Vertex, "../../shaders/common/fullscreen.vert.sun" },
+					{ PipelineShaderStageType::Fragment, "../../shaders/common/fullscreen.frag.sun"}
 				}
 			};
 

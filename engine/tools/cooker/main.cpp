@@ -26,11 +26,11 @@ int main(int argc, char* argv[])
 				new_path.replace_extension(".sun");
 				Sunset::Cooker::cook_mesh(p.path(), new_path);
 			}
-			else if (extension == ".spv")
+			else if (extension == ".frag" || extension == ".vert" || extension == ".comp")
 			{
 				std::cout << "Cooking shader: " << p << std::endl;
 				auto new_path = p.path();
-				new_path.replace_extension(".sun");
+				new_path += ".sun";
 				Sunset::Cooker::cook_shader(p.path(), new_path);
 			}
 		}

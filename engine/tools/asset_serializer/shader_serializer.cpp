@@ -1,6 +1,7 @@
 #include <shader_serializer.h>
 
-#include <fstream>
+#include <regex>
+#include <format>
 
 #include <json.hpp>
 #include <lz4.h>
@@ -48,19 +49,70 @@ namespace Sunset
 
 		asset.version = 1;
 
-		int compressed_staging_size = LZ4_compressBound(serialized_shader_info->shader_buffer_size);
+		asset.binary.resize(serialized_shader_info->shader_buffer_size);
+		memcpy(asset.binary.data(), shader_data, serialized_shader_info->shader_buffer_size);
 
-		asset.binary.resize(compressed_staging_size);
-
-		int compressed_buffer_size = LZ4_compress_default((const char*)shader_data, asset.binary.data(), serialized_shader_info->shader_buffer_size, compressed_staging_size);
-
-		asset.binary.resize(compressed_buffer_size);
-
-		shader_metadata["compression"] = SUNSET_COMPRESSION_MODE_TO_STRING(CompressionMode::LZ4);
+		shader_metadata["compression"] = SUNSET_COMPRESSION_MODE_TO_STRING(CompressionMode::None);
 
 		std::string stringified_metadata = shader_metadata.dump();
 		asset.metadata = stringified_metadata;
 
 		return asset;
+	}
+
+	void parse_shader_includes(std::string& shader_code)
+	{
+		std::vector<size_t> include_positions;
+
+		size_t pos = shader_code.find("#include", 0);
+		while (pos != std::string::npos)
+		{
+			include_positions.push_back(pos);
+			pos = shader_code.find("#include", pos + 1);
+		}
+
+		std::regex include_regex("^#include\\s+\"(\\S+)\".*$");
+
+		std::smatch match;
+		for (auto it = include_positions.rbegin(); it != include_positions.rend(); it++)
+		{
+			const size_t start = *it;
+			const size_t end = shader_code.find('\r\n', *it);
+			std::string include_line = shader_code.substr(start, (end - start));
+			if (std::regex_search(include_line, match, include_regex))
+			{
+				std::string include_path = std::format("{}/engine/shaders", PROJECT_PATH);
+				include_path += (match[1].str().front() != '/' ? "/" : "") + match[1].str();
+				std::string include_contents = read_shader_file(include_path);
+				parse_shader_includes(include_contents);
+				shader_code = shader_code.replace(start, (end - start), include_contents);
+			}
+		}
+	}
+
+	std::string read_shader_file(const std::filesystem::path& input_path)
+	{
+		std::ifstream file(input_path, std::ios::ate | std::ios::binary);
+
+		if (!file.is_open())
+		{
+			return std::string();
+		}
+
+		size_t file_size = static_cast<size_t>(file.tellg());
+
+		std::vector<char> buffer(file_size + 1);
+
+		file.seekg(0);
+
+		file.read(buffer.data(), file_size);
+
+		file.close();
+
+		buffer.push_back('\0');
+
+		std::string shader_string(buffer.data());
+
+		return shader_string;
 	}
 }

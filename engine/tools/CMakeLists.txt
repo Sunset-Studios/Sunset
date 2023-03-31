@@ -14,6 +14,8 @@ add_library(AssetSerializer STATIC
 
 set_property(TARGET AssetSerializer PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:AssetSerializer>")
 
+target_compile_definitions(AssetSerializer PRIVATE PROJECT_PATH="${CMAKE_SOURCE_DIR}")
+
 target_include_directories(AssetSerializer PUBLIC
 	"${CMAKE_CURRENT_SOURCE_DIR}/asset_serializer"
 	"${CMAKE_SOURCE_DIR}/engine/src/core")
@@ -29,11 +31,14 @@ add_executable(SunsetCooker ${COOKER_SOURCES})
 
 set_property(TARGET SunsetCooker PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:SunsetCooker>")
 
+target_compile_definitions(SunsetCooker PRIVATE PROJECT_PATH="${CMAKE_SOURCE_DIR}")
+
 target_include_directories(SunsetCooker PUBLIC
+	"${shaderc_SOURCE_DIR}/libshaderc/include"
 	"${CMAKE_CURRENT_SOURCE_DIR}/cooker"
 	"${CMAKE_CURRENT_SOURCE_DIR}/asset_serializer")
 
-target_link_libraries(SunsetCooker PRIVATE tinyobjloader stb_image json lz4 glm AssetSerializer)
+target_link_libraries(SunsetCooker PRIVATE tinyobjloader stb_image json lz4 glm AssetSerializer shaderc)
 
 add_custom_target(CookerRun
 	COMMAND SunsetCooker "${CMAKE_SOURCE_DIR}/engine/assets" "${CMAKE_SOURCE_DIR}/engine/shaders"

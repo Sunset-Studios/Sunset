@@ -5,6 +5,10 @@
 #include <string>
 #include <vector>
 
+#ifndef PROJECT_PATH
+#define PROJECT_PATH ""
+#endif
+
 namespace Sunset
 {
 	enum class CompressionMode : uint16_t

@@ -1,39 +1,8 @@
 #version 460
 
-#extension GL_EXT_nonuniform_qualifier : enable
-
-#define MAX_DESCRIPTOR_BINDINGS 16535
+#include "common/common.inc"
 
 layout (local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
-
-// TODO: Put this global data in a shader include
-layout (set = 0, binding = 0) uniform CameraBuffer
-{
-	mat4 view;
-	mat4 proj;
-	mat4 view_proj;
-	mat4 prev_view_proj;
-	mat4 inverse_view_proj;
-	vec4 frustum_planes[6];
-} camera_data;
-
-// TODO: Put this global data in a shader include
-layout (set = 0, binding = 1) uniform SceneLightingData
-{
-	vec4 fog_color;
-	vec4 fog_distance;
-	vec4 ambient_color;
-	vec4 sunlight_direction;
-	vec4 sunlight_color;
-} scene_lighting_data;
-
-// TODO: Put this global data in a shader include
-layout (set = 0, binding = 2) uniform writeonly image2D storage_2D[MAX_DESCRIPTOR_BINDINGS];
-layout (set = 0, binding = 2) uniform writeonly image3D storage_3D[MAX_DESCRIPTOR_BINDINGS];
-
-// TODO: Put this global data in a shader include
-layout (set = 0, binding = 3) uniform sampler2D textures_2D[];
-layout (set = 0, binding = 3) uniform sampler3D textures_3D[];
 
 layout(push_constant) uniform constants
 {

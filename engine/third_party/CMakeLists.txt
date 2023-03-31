@@ -5,7 +5,12 @@ option( TRACY_ON_DEMAND "" ON)
 option( TRACY_ONLY_LOCALHOST "" ON)
 add_subdirectory(tracy)
 
+set_target_third_party(TracyClient)
+
 add_library(vkbootstrap STATIC)
+
+set_target_third_party(vkbootstrap)
+
 add_library(glm INTERFACE)
 add_library(vma INTERFACE)
 
@@ -13,7 +18,12 @@ add_library(stb_image INTERFACE)
 add_library(json INTERFACE)
 
 add_library(tinyobjloader STATIC)
+
+set_target_third_party(tinyobjloader)
+
 add_library(lz4 STATIC)
+
+set_target_third_party(lz4)
 
 target_sources(vkbootstrap PRIVATE 
     vkbootstrap/VkBootstrap.h
@@ -55,6 +65,8 @@ target_link_libraries(sdl2 INTERFACE SDL2 SDL2main)
 
 add_library(imgui STATIC)
 
+set_target_third_party(imgui)
+
 target_include_directories(imgui PUBLIC imgui)
 
 target_sources(imgui PRIVATE 
@@ -75,6 +87,8 @@ target_include_directories(stb_image INTERFACE stb_image)
 target_include_directories(json INTERFACE json)
 
 add_library(spirv_reflect STATIC)
+
+set_target_third_party(spirv_reflect)
 
 target_include_directories(spirv_reflect PUBLIC spirv)
 
