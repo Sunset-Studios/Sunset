@@ -114,7 +114,7 @@ namespace Sunset
 		return asset;
 	}
 
-	Sunset::MeshBounds calculate_mesh_bounds(VertexPNCU32* vertices, size_t vertex_count)
+	Sunset::MeshBounds calculate_mesh_bounds(VertexPNCUTB32* vertices, size_t vertex_count)
 	{
 		MeshBounds bounds;
 

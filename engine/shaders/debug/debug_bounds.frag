@@ -19,6 +19,7 @@ struct EntitySceneData
 struct MaterialData
 {
 	int textures[MAX_TEXTURES_PER_MATERIAL];
+	float tiling_coeffs[MAX_TEXTURES_PER_MATERIAL];
 };
 
 layout (std430, set = 1, binding = 0) readonly buffer EntitySceneDataBuffer
@@ -26,12 +27,12 @@ layout (std430, set = 1, binding = 0) readonly buffer EntitySceneDataBuffer
 	EntitySceneData entities[];
 } entity_data;
 
-layout (std140, set = 1, binding = 1) readonly buffer MaterialDataBuffer
+layout (std430, set = 1, binding = 1) readonly buffer MaterialDataBuffer
 {
 	MaterialData materials[];
 } material_data;
 
-layout (set = 1, binding = 2) buffer CompactedObjectInstanceBuffer
+layout (std430, set = 1, binding = 2) buffer CompactedObjectInstanceBuffer
 {
 	uint ids[];
 } compacted_object_instance_buffer;

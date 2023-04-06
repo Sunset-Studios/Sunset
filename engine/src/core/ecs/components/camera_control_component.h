@@ -9,7 +9,7 @@
 
 namespace Sunset
 {
-	struct CameraData
+	struct alignas(16) CameraData
 	{
 		glm::mat4 view_matrix;
 		glm::mat4 projection_matrix;
@@ -17,6 +17,7 @@ namespace Sunset
 		glm::mat4 prev_view_projection_matrix;
 		glm::mat4 inverse_view_projection_matrix;
 		glm::vec4 frustum_planes[6];
+		glm::vec4 position;
 	};
 
 	struct CameraTransformData

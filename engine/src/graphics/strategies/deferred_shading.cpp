@@ -136,8 +136,8 @@ namespace Sunset
 			{
 				.pipeline_shaders =
 				{
-					{ PipelineShaderStageType::Vertex, "../../shaders/forward/default_mesh.vert.sun" },
-					{ PipelineShaderStageType::Fragment, "../../shaders/forward/default_lit.frag.sun"}
+					{ PipelineShaderStageType::Vertex, "../../shaders/forward/forward_mesh.vert.sun" },
+					{ PipelineShaderStageType::Fragment, "../../shaders/forward/forward_lit.frag.sun"}
 				}
 			};
 

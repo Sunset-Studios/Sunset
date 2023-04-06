@@ -4,6 +4,7 @@
 #include <core/subsystems/camera_control_processor.h>
 #include <core/subsystems/camera_input_controller.h>
 #include <core/subsystems/scene_lighting_processor.h>
+#include <core/subsystems/light_processor.h>
 #include <core/ecs/components/camera_control_component.h>
 
 #include <window/window.h>
@@ -83,7 +84,7 @@ namespace Sunset
 			set_aspect_ratio(camera_control_comp, (float)window->get_extent().x / (float)window->get_extent().y);
 			set_near_plane(camera_control_comp, 0.1f);
 			set_far_plane(camera_control_comp, 500.0f);
-			set_position(camera_control_comp, glm::vec3(0.0f, 0.0f, 0.0f));
+			set_position(camera_control_comp, glm::vec3(0.0f, 25.0f, 25.0f));
 			set_move_speed(camera_control_comp, 50.0f);
 			set_look_speed(camera_control_comp, 5.0f);
 		}
@@ -96,6 +97,7 @@ namespace Sunset
 		add_subsystem<CameraInputController>();
 		add_subsystem<TransformProcessor>();
 		add_subsystem<StaticMeshProcessor>();
+		add_subsystem<LightProcessor>();
 		add_subsystem<SceneLightingProcessor>();
 	}
 

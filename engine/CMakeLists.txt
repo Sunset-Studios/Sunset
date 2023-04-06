@@ -26,8 +26,6 @@ target_include_directories(Sunset PUBLIC ${INCLUDE_DIRS})
 target_link_libraries(Sunset vkbootstrap vma glm imgui lz4 json spirv_reflect)
 target_link_libraries(Sunset Vulkan::Vulkan sdl2 AssetSerializer Tracy::TracyClient)
 
-add_dependencies(Sunset CookerRun)
-
 add_custom_command(TARGET ${SUNSET_LIB} POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy "C:/SDL2/lib/x64/SDL2.dll" ${ENGINE_DIR}/bin/$<CONFIG>/SDL2.dll
                   )

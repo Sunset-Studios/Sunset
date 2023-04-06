@@ -10,6 +10,24 @@
 
 namespace Sunset
 {
+	Material::Material()
+		: description({})
+	{
+		gpu_data = MaterialGlobals::get()->new_shared_data();
+		gpu_data_buffer_offset = MaterialGlobals::get()->get_shared_data_index(gpu_data);
+		for (uint32_t i = 0; i < MAX_MATERIAL_TEXTURES; ++i)
+		{
+			bound_texture_handles[i] = -1;
+			gpu_data->textures[i] = -1;
+			gpu_data->tiling_coeffs[i] = 1;
+		}
+	}
+
+	Material::~Material()
+	{
+		MaterialGlobals::get()->release_shared_data(gpu_data);
+	}
+
 	void material_load_textures(class GraphicsContext* const gfx_context, MaterialID material)
 	{
 		Material* const material_ptr = CACHE_FETCH(Material, material);
@@ -27,7 +45,7 @@ namespace Sunset
 						.path = material_ptr->description.textures[i],
 						.flags = (ImageFlags::Sampled | ImageFlags::TransferDst),
 						.usage_type = MemoryUsageType::OnlyGPU,
-						.image_filter = ImageFilter::Nearest
+						.image_filter = ImageFilter::Linear
 					}
 				);
 				material_ptr->b_needs_texture_upload = true;
@@ -40,10 +58,10 @@ namespace Sunset
 		Material* const material_ptr = CACHE_FETCH(Material, material);
 		assert(material_ptr != nullptr && "Cannot load material textures for a null material!");
 		
+		const uint32_t current_buffered_frame = gfx_context->get_buffered_frame_number();
+
 		if (material_ptr->b_needs_texture_upload)
 		{
-			const uint32_t current_buffered_frame = gfx_context->get_buffered_frame_number();
-
 			std::vector<DescriptorBindlessWrite> bindless_writes;
 			for (int i = 0; i < material_ptr->textures.size(); ++i)
 			{
@@ -60,8 +78,22 @@ namespace Sunset
 				}
 			}
 
-			DescriptorHelpers::write_bindless_descriptors(gfx_context, bindless_writes, material_ptr->gpu_data->textures);
+			DescriptorHelpers::write_bindless_descriptors(gfx_context, bindless_writes, material_ptr->bound_texture_handles.data());
 
+			for (uint32_t i = 0; i < MAX_MATERIAL_TEXTURES; ++i)
+			{
+				if (material_ptr->bound_texture_handles[i] >= 0)
+				{
+					material_ptr->gpu_data->textures[i] = (int32_t)(0x0000ffff & material_ptr->bound_texture_handles[i]);
+				}
+			}
+
+			material_ptr->b_dirty = true;
+			material_ptr->b_needs_texture_upload = false;
+		}
+
+		if (material_ptr->b_dirty)
+		{
 			// Update mapped SSBO data
 			Buffer* const material_buffer = CACHE_FETCH(Buffer, MaterialGlobals::get()->material_data.data_buffer[current_buffered_frame]);
 			material_buffer->copy_from(
@@ -71,24 +103,18 @@ namespace Sunset
 				sizeof(MaterialData) * material_ptr->gpu_data_buffer_offset
 			);
 
-			material_ptr->b_needs_texture_upload = false;
+			material_ptr->b_dirty = false;
 		}
 	}
 
-	void material_track_gpu_shared_data(class GraphicsContext* const gfx_context, MaterialID material)
+	void material_set_texture_tiling(class GraphicsContext* const gfx_context, MaterialID material, uint32_t texture_index, float texture_tiling)
 	{
 		Material* const material_ptr = CACHE_FETCH(Material, material);
-		assert(material_ptr != nullptr && "Cannot track null material!");
+		assert(material_ptr != nullptr && "Cannot set texture tiling for a null material!");
+		assert(texture_index >= 0 && texture_index < MAX_MATERIAL_TEXTURES && "Invalid material texture index provided.");
 
-		if (material_ptr->gpu_data == nullptr)
-		{
-			material_ptr->gpu_data = MaterialGlobals::get()->new_shared_data();
-			material_ptr->gpu_data_buffer_offset = MaterialGlobals::get()->get_shared_data_index(material_ptr->gpu_data);
-			for (uint32_t i = 0; i < MAX_MATERIAL_TEXTURES; ++i)
-			{
-				material_ptr->gpu_data->textures[i] = -1;
-			}
-		}
+		material_ptr->gpu_data->tiling_coeffs[texture_index] = texture_tiling;
+		material_ptr->b_dirty = true;
 	}
 
 	Sunset::MaterialID MaterialFactory::create(class GraphicsContext* const gfx_context, const MaterialDescription& desc)
@@ -100,7 +126,6 @@ namespace Sunset
 		{
 			CACHE_FETCH(Material, material_id)->description = desc;
 			material_load_textures(gfx_context, material_id);
-			material_track_gpu_shared_data(gfx_context, material_id);
 		}
 		return material_id;
 	}

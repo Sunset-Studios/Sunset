@@ -115,6 +115,57 @@ namespace Sunset
 		return new_bounds;
 	}
 
+	void update_mesh_tangent_bitangents(Mesh* mesh)
+	{
+		for (uint32_t i = 0; i < mesh->indices.size(); i += 3)
+		{
+			// Get the vertices of the triangle
+			Vertex& v1 = mesh->vertices[mesh->indices[i]];
+			Vertex& v2 = mesh->vertices[mesh->indices[i + 1]];
+			Vertex& v3 = mesh->vertices[mesh->indices[i + 2]];
+
+			// Calculate edge and delta vectors
+			const glm::vec3 e1 = v2.position - v1.position;
+			const glm::vec3 e2 = v3.position - v1.position;
+
+			const glm::vec2 delta_uv1 = v2.uv - v1.uv;
+			const glm::vec2 delta_uv2 = v3.uv - v1.uv;
+
+			// Compute the tangent and bitangent vectors
+			const float f = 1.0f / (delta_uv1.x * delta_uv2.y - delta_uv2.x * delta_uv1.y);
+
+			glm::vec3 tangent;
+			tangent.x = f * (delta_uv2.y * e1.x - delta_uv1.y * e2.x);
+			tangent.y = f * (delta_uv2.y * e1.y - delta_uv1.y * e2.y);
+			tangent.z = f * (delta_uv2.y * e1.z - delta_uv1.y * e2.z);
+
+			glm::vec3 bitangent;
+			bitangent.x = f * (-delta_uv2.x * e1.x + delta_uv1.x * e2.x);
+			bitangent.y = f * (-delta_uv2.x * e1.y + delta_uv1.x * e2.y);
+			bitangent.z = f * (-delta_uv2.x * e1.z + delta_uv1.x * e2.z);
+
+			// Accumulate tangents and bitangents for every vertex of the triangle
+			v1.tangent += tangent;
+			v2.tangent += tangent;
+			v3.tangent += tangent;
+
+			v1.bitangent += bitangent;
+			v2.bitangent += bitangent;
+			v3.bitangent += bitangent;
+		}
+
+		for (uint32_t i = 0; i < mesh->vertices.size(); ++i)
+		{
+			Vertex& vertex = mesh->vertices[i];
+
+			vertex.tangent = glm::normalize(vertex.tangent);
+			vertex.bitangent = glm::normalize(vertex.bitangent);
+
+			// Orthogonalize and normalize the tangent vector using the Gram-Schmidt process
+			vertex.tangent = glm::normalize(vertex.tangent - glm::dot(vertex.tangent, vertex.normal) * vertex.normal);
+		}
+	}
+
 	Sunset::Bounds get_mesh_bounds(MeshID mesh)
 	{
 		assert(mesh != 0 && "Cannot fetch bounds on null mesh!");
@@ -131,6 +182,8 @@ namespace Sunset
 		description.attributes.emplace_back(0, 1, Format::Float3x32, offsetof(Vertex, normal));
 		description.attributes.emplace_back(0, 2, Format::Float3x32, offsetof(Vertex, color));
 		description.attributes.emplace_back(0, 3, Format::Float2x32, offsetof(Vertex, uv));
+		description.attributes.emplace_back(0, 4, Format::Float3x32, offsetof(Vertex, tangent));
+		description.attributes.emplace_back(0, 5, Format::Float3x32, offsetof(Vertex, bitangent));
 
 		return description;
 	}
@@ -150,13 +203,25 @@ namespace Sunset
 			mesh->vertices[1].position = { -1.0f, 1.0f, 0.0f };
 			mesh->vertices[2].position = { 0.0f, -1.0f, 0.0f };
 
+			mesh->vertices[0].normal = { 0.0f, 0.0f, 1.0f };
+			mesh->vertices[1].normal = { 0.0f, 0.0f, 1.0f };
+			mesh->vertices[2].normal = { 0.0f, 0.0f, 1.0f };
+
 			mesh->vertices[0].color = { 0.0f, 1.0f, 0.0f };
 			mesh->vertices[1].color = { 0.0f, 1.0f, 0.0f };
 			mesh->vertices[2].color = { 0.0f, 1.0f, 0.0f };
 
 			mesh->indices.insert(mesh->indices.end(), { 0, 1, 2 });
 
+			update_mesh_tangent_bitangents(mesh);
+
 			mesh->name = id;
+
+			{
+				mesh->local_bounds.extents = glm::vec3(1.0f, 1.0f, 0.0f);
+				mesh->local_bounds.origin = glm::vec3(0.0f);
+				mesh->local_bounds.radius = 1.0f;
+			}
 
 			upload_mesh(gfx_context, mesh);
 		}
@@ -180,6 +245,11 @@ namespace Sunset
 			mesh->vertices[2].position = { 1.0f, -1.0f, 0.0f };
 			mesh->vertices[3].position = { 1.0f, 1.0f, 0.0f };
 
+			mesh->vertices[0].normal = { 0.0f, 0.0f, 1.0f };
+			mesh->vertices[1].normal = { 0.0f, 0.0f, 1.0f };
+			mesh->vertices[2].normal = { 0.0f, 0.0f, 1.0f };
+			mesh->vertices[3].normal = { 0.0f, 0.0f, 1.0f };
+
 			mesh->vertices[0].uv = { 0.0f, 1.0f };
 			mesh->vertices[1].uv = { 0.0f, 0.0f };
 			mesh->vertices[2].uv = { 1.0f, 0.0f };
@@ -187,7 +257,15 @@ namespace Sunset
 
 			mesh->indices.insert(mesh->indices.end(), { 0, 1, 2, 0, 2, 3 });
 
+			update_mesh_tangent_bitangents(mesh);
+
 			mesh->name = id;
+
+			{
+				mesh->local_bounds.extents = glm::vec3(1.0f, 1.0f, 0.0f);
+				mesh->local_bounds.origin = glm::vec3(0.0f);
+				mesh->local_bounds.radius = 1.0f;
+			}
 
 			upload_mesh(gfx_context, mesh);
 		}
@@ -232,10 +310,10 @@ namespace Sunset
 					y = xy * sinf(sectorAngle);
 
 					mesh->vertices.emplace_back(
-						glm::vec3(x, y, z),
-						glm::vec3(x * lengthInv, y * lengthInv, z * lengthInv),
-						glm::vec3(1.0f, 1.0f, 1.0f),
-						glm::vec2((float)j / sectorCount, (float)i / stackCount)
+						glm::vec3(x, y, z),										 // position
+						glm::normalize(-glm::vec3(x, y, z)),					 // normal
+						glm::vec3(1.0f, 1.0f, 1.0f),							 // color
+						glm::vec2((float)j / sectorCount, (float)i / stackCount) // uv
 					);
 				}
 			}
@@ -264,7 +342,15 @@ namespace Sunset
 				}
 			}
 
+			update_mesh_tangent_bitangents(mesh);
+
 			mesh->name = id;
+
+			{
+				mesh->local_bounds.extents = glm::vec3(1.0f, 1.0f, 1.0f);
+				mesh->local_bounds.origin = glm::vec3(0.0f);
+				mesh->local_bounds.radius = 1.0f;
+			}
 
 			upload_mesh(gfx_context, mesh);
 		}
@@ -321,6 +407,37 @@ namespace Sunset
 
 					mesh->vertices[i].uv.x = unpacked_vertices[i].uv[0];
 					mesh->vertices[i].uv.y = unpacked_vertices[i].uv[1];
+				}
+			}
+			else if (serialized_mesh_info.format == VertexFormat::PNCUTB32)
+			{
+				VertexPNCUTB32* unpacked_vertices = (VertexPNCUTB32*)vertex_buffer.data();
+				mesh->vertices.resize(vertex_buffer.size() / sizeof(VertexPNCUTB32));
+
+				for (int i = 0; i < mesh->vertices.size(); ++i)
+				{
+					mesh->vertices[i].position.x = unpacked_vertices[i].position[0];
+					mesh->vertices[i].position.y = unpacked_vertices[i].position[1];
+					mesh->vertices[i].position.z = unpacked_vertices[i].position[2];
+
+					mesh->vertices[i].normal.x = unpacked_vertices[i].normal[0];
+					mesh->vertices[i].normal.y = unpacked_vertices[i].normal[1];
+					mesh->vertices[i].normal.z = unpacked_vertices[i].normal[2];
+
+					mesh->vertices[i].color.r = mesh->vertices[i].color[0];
+					mesh->vertices[i].color.g = mesh->vertices[i].color[1];
+					mesh->vertices[i].color.b = mesh->vertices[i].color[2];
+
+					mesh->vertices[i].uv.x = unpacked_vertices[i].uv[0];
+					mesh->vertices[i].uv.y = unpacked_vertices[i].uv[1];
+
+					mesh->vertices[i].tangent.x = unpacked_vertices[i].tangent[0];
+					mesh->vertices[i].tangent.y = unpacked_vertices[i].tangent[1];
+					mesh->vertices[i].tangent.z = unpacked_vertices[i].tangent[2];
+
+					mesh->vertices[i].bitangent.x = unpacked_vertices[i].bitangent[0];
+					mesh->vertices[i].bitangent.y = unpacked_vertices[i].bitangent[1];
+					mesh->vertices[i].bitangent.z = unpacked_vertices[i].bitangent[2];
 				}
 			}
 			else if (serialized_mesh_info.format == VertexFormat::P32N8C8U16)

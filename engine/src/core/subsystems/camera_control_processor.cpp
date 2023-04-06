@@ -43,6 +43,8 @@ namespace Sunset
 				camera_control_comp->data.gpu_data.view_projection_matrix = camera_control_comp->data.gpu_data.projection_matrix * camera_control_comp->data.gpu_data.view_matrix;
 				camera_control_comp->data.gpu_data.inverse_view_projection_matrix = glm::inverse(camera_control_comp->data.gpu_data.view_projection_matrix);
 
+				camera_control_comp->data.gpu_data.position = glm::vec4(camera_control_comp->data.position, 1.0f);
+
 				// Update camera frustum planes
 				{
 					const glm::mat4& mvp = camera_control_comp->data.gpu_data.view_projection_matrix;

@@ -5,7 +5,7 @@
 namespace Sunset
 {
 #ifndef NDEBUG
-	static std::unordered_map<uint32_t, std::string> g_string_table;
+	inline std::unordered_map<uint32_t, std::string> g_string_table;
 #endif
 
 	constexpr uint32_t fnvla_32(char const* s, std::size_t count)

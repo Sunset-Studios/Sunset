@@ -11,6 +11,7 @@ namespace Sunset
 	{
 		Undefined = 0,
 		PNCU32,
+		PNCUTB32,
 		P32N8C8U16
 	};
 
@@ -20,6 +21,16 @@ namespace Sunset
 		float normal[3];
 		float color[3];
 		float uv[2];
+	};
+
+	struct VertexPNCUTB32
+	{
+		float position[3];
+		float normal[3];
+		float color[3];
+		float uv[2];
+		float tangent[3];
+		float bitangent[3];
 	};
 
 	struct VertexP32N8C8U16
@@ -50,7 +61,7 @@ namespace Sunset
 	SerializedMeshInfo get_serialized_mesh_info(struct SerializedAsset* asset);
 	void unpack_mesh(SerializedMeshInfo* serialized_image_info, const char* source_buffer, size_t source_buffer_size, char* destination_vertex_buffer, char* destination_index_buffer);
 	SerializedAsset pack_mesh(SerializedMeshInfo* serialized_image_info, void* vertex_data, void* index_data);
-	MeshBounds calculate_mesh_bounds(VertexPNCU32* vertices, size_t vertex_count);
+	MeshBounds calculate_mesh_bounds(VertexPNCUTB32* vertices, size_t vertex_count);
 
 	inline VertexFormat SUNSET_VERTEX_FORMAT_FROM_STRING(const char* format_str)
 	{

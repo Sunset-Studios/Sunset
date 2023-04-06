@@ -58,8 +58,11 @@ namespace Sunset
 			return false;
 		}
 
-		std::vector<VertexPNCU32> vertices;
+		std::vector<VertexPNCUTB32> vertices;
 		std::vector<uint32_t> indices;
+
+		vertices.reserve(attrib.vertices.size());
+		indices.reserve(attrib.vertices.size() * 2);
 
 		const int32_t face_vertices = 3;
 		for (size_t s = 0; s < shapes.size(); ++s)
@@ -85,7 +88,7 @@ namespace Sunset
 					tinyobj::real_t ux = index.texcoord_index >= 0 ? attrib.texcoords[2 * index.texcoord_index + 0] : 0;
 					tinyobj::real_t uy = index.texcoord_index >= 0 ? attrib.texcoords[2 * index.texcoord_index + 1] : 0;
 
-					VertexPNCU32 new_vertex;
+					VertexPNCUTB32 new_vertex;
 
 					new_vertex.position[0] = vx;
 					new_vertex.position[1] = vy;
@@ -110,9 +113,95 @@ namespace Sunset
 			}
 		}
 
+		for (uint32_t i = 0; i < indices.size(); i += 3)
+		{
+			// Get the vertices of the triangle
+			VertexPNCUTB32& v1 = vertices[indices[i]];
+			VertexPNCUTB32& v2 = vertices[indices[i + 1]];
+			VertexPNCUTB32& v3 = vertices[indices[i + 2]];
+
+			// Calculate edge and delta vectors
+			const float e1_x = v2.position[0] - v1.position[0];
+			const float e1_y = v2.position[1] - v1.position[1];
+			const float e1_z = v2.position[2] - v1.position[2];
+
+			const float e2_x = v3.position[0] - v1.position[0];
+			const float e2_y = v3.position[1] - v1.position[1];
+			const float e2_z = v3.position[2] - v1.position[2];
+
+			const float delta_uv1_x = v2.uv[0] - v1.uv[0];
+			const float delta_uv1_y = v2.uv[1] - v1.uv[1];
+			const float delta_uv1_z = v2.uv[2] - v1.uv[2];
+
+			const float delta_uv2_x = v3.uv[0] - v1.uv[0];
+			const float delta_uv2_y = v3.uv[1] - v1.uv[1];
+			const float delta_uv2_z = v3.uv[2] - v1.uv[2];
+
+			// Compute the tangent and bitangent vectors
+			const float f = 1.0f / (delta_uv1_x * delta_uv2_y - delta_uv2_x * delta_uv1_y);
+
+			glm::vec3 tangent;
+			tangent.x = f * (delta_uv2_y * e1_x - delta_uv1_y * e2_x);
+			tangent.y = f * (delta_uv2_y * e1_y - delta_uv1_y * e2_y);
+			tangent.z = f * (delta_uv2_y * e1_z - delta_uv1_y * e2_z);
+
+			glm::vec3 bitangent;
+			bitangent.x = f * (-delta_uv2_x * e1_x + delta_uv1_x * e2_x);
+			bitangent.y = f * (-delta_uv2_x * e1_y + delta_uv1_x * e2_y);
+			bitangent.z = f * (-delta_uv2_x * e1_z + delta_uv1_x * e2_z);
+
+			// Accumulate tangents and bitangents for every vertex of the triangle
+			v1.tangent[0] += tangent.x;
+			v1.tangent[1] += tangent.y;
+			v1.tangent[2] += tangent.z;
+
+			v2.tangent[0] += tangent.x;
+			v2.tangent[1] += tangent.y;
+			v2.tangent[2] += tangent.z;
+
+			v3.tangent[0] += tangent.x;
+			v3.tangent[1] += tangent.y;
+			v3.tangent[2] += tangent.z;
+
+			v1.bitangent[0] += bitangent.x;
+			v1.bitangent[1] += bitangent.y;
+			v1.bitangent[2] += bitangent.z;
+
+			v2.bitangent[0] += bitangent.x;
+			v2.bitangent[1] += bitangent.y;
+			v2.bitangent[2] += bitangent.z;
+
+			v3.bitangent[0] += bitangent.x;
+			v3.bitangent[1] += bitangent.y;
+			v3.bitangent[2] += bitangent.z;
+		}
+
+		for (uint32_t i = 0; i < vertices.size(); ++i)
+		{
+			VertexPNCUTB32& vertex = vertices[i];
+
+			glm::vec3 tangent(vertex.tangent[0], vertex.tangent[1], vertex.tangent[2]);
+			glm::vec3 bitangent(vertex.bitangent[0], vertex.bitangent[1], vertex.bitangent[2]);
+			glm::vec3 normal(vertex.normal[0], vertex.normal[1], vertex.normal[2]);
+
+			tangent = glm::normalize(tangent);
+			bitangent = glm::normalize(bitangent);
+
+			// Orthogonalize and normalize the tangent vector using the Gram-Schmidt process
+			tangent = glm::normalize(tangent - glm::dot(tangent, normal) * normal);
+
+			vertex.tangent[0] = tangent.x;
+			vertex.tangent[1] = tangent.y;
+			vertex.tangent[2] = tangent.z;
+
+			vertex.bitangent[0] = bitangent.x;
+			vertex.bitangent[1] = bitangent.y;
+			vertex.bitangent[2] = bitangent.z;
+		}
+
 		SerializedMeshInfo mesh_info;
-		mesh_info.format = VertexFormat::PNCU32;
-		mesh_info.vertex_buffer_size = vertices.size() * sizeof(VertexPNCU32);
+		mesh_info.format = VertexFormat::PNCUTB32;
+		mesh_info.vertex_buffer_size = vertices.size() * sizeof(VertexPNCUTB32);
 		mesh_info.index_buffer_size = indices.size() * sizeof(uint32_t);
 		mesh_info.index_size = sizeof(uint32_t);
 		mesh_info.file_path = input_path.string();

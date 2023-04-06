@@ -10,13 +10,15 @@
 
 namespace Sunset
 {
-	struct SceneLightingData
+	struct alignas(16) SceneLightingData
 	{
 		glm::vec4 fog_color;
 		glm::vec4 fog_distance;
 		glm::vec4 ambient_color;
 		glm::vec4 sunlight_direction;
 		glm::vec4 sunlight_color;
+		float num_lights{ 0 };
+		float padding[3];
 	};
 
 	struct SceneData

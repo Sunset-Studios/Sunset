@@ -58,6 +58,11 @@ namespace Sunset
 			MaterialGlobals::get()->material_data.data_buffer[gfx_context->get_buffered_frame_number()]
 		);
 
+		RGResourceHandle light_data_buffer_desc = render_graph.register_buffer(
+			gfx_context,
+			LightGlobals::get()->light_data.data_buffer[gfx_context->get_buffered_frame_number()]
+		);
+
 		RGResourceHandle hzb_image_desc = render_graph.register_image(
 			gfx_context,
 			Renderer::get()->get_persistent_image("hi_z", gfx_context->get_buffered_frame_number())
@@ -95,7 +100,9 @@ namespace Sunset
 				RenderPassFlags::Compute,
 				{
 					.shader_setup = shader_setup,
-					.inputs = { entity_data_buffer_desc, object_instance_buffer_desc, compacted_object_instance_buffer_desc, draw_indirect_buffer_desc, hzb_image_desc },
+					.inputs = { entity_data_buffer_desc, object_instance_buffer_desc, 
+								compacted_object_instance_buffer_desc, draw_indirect_buffer_desc,
+								hzb_image_desc },
 					.outputs = { draw_indirect_buffer_desc }
 				},
 				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
@@ -136,8 +143,8 @@ namespace Sunset
 			{
 				.pipeline_shaders =
 				{
-					{ PipelineShaderStageType::Vertex, "../../shaders/forward/default_mesh.vert.sun" },
-					{ PipelineShaderStageType::Fragment, "../../shaders/forward/default_lit.frag.sun"}
+					{ PipelineShaderStageType::Vertex, "../../shaders/forward/forward_mesh.vert.sun" },
+					{ PipelineShaderStageType::Fragment, "../../shaders/forward/forward_lit.frag.sun"}
 				}
 			};
 
@@ -178,7 +185,8 @@ namespace Sunset
 				{
 					.shader_setup = shader_setup,
 					.inputs = { entity_data_buffer_desc, material_data_buffer_desc,
-								compacted_object_instance_buffer_desc, draw_indirect_buffer_desc },
+								compacted_object_instance_buffer_desc, light_data_buffer_desc,
+								draw_indirect_buffer_desc },
 					.outputs = { main_color_image_desc, main_depth_image_desc }
 				},
 				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
@@ -281,6 +289,13 @@ namespace Sunset
 				{
 					{ PipelineShaderStageType::Vertex, "../../shaders/common/fullscreen.vert.sun" },
 					{ PipelineShaderStageType::Fragment, "../../shaders/common/fullscreen.frag.sun"}
+				},
+				.attachment_blend = PipelineAttachmentBlendState
+				{
+					.b_blend_enabled = true,
+					.source_color_blend = BlendFactor::SourceColor,
+					.destination_color_blend = BlendFactor::Zero,
+					.color_blend_op = BlendOp::Add,
 				}
 			};
 

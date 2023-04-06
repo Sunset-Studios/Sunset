@@ -11,6 +11,8 @@ namespace Sunset
 		glm::vec3 normal;
 		glm::vec3 color;
 		glm::vec2 uv;
+		glm::vec3 tangent;
+		glm::vec3 bitangent;
 
 		static PipelineVertexInputDescription get_description();
 	};
@@ -33,6 +35,7 @@ namespace Sunset
 	void upload_mesh(class GraphicsContext* const gfx_context, Mesh* mesh);
 	void destroy_mesh(class GraphicsContext* const gfx_context, Mesh* mesh);
 	Bounds calculate_mesh_bounds(Mesh* mesh, const glm::mat4& transform);
+	void update_mesh_tangent_bitangents(Mesh* mesh);
 
 	Bounds get_mesh_bounds(MeshID mesh);
 

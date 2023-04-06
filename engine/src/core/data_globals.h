@@ -4,7 +4,8 @@
 #include <singleton.h>
 #include <bit_vector.h>
 #include <entity.h>
-#include <gpu_shared_data_types.h>
+#include <material.h>
+#include <light.h>
 
 namespace Sunset
 {
@@ -29,8 +30,25 @@ namespace Sunset
 
 		MaterialData* new_shared_data();
 		uint32_t get_shared_data_index(MaterialData* data);
+		void release_shared_data(MaterialData* data);
 
 	public:
 		MaterialDataShared material_data;
+	};
+
+	class LightGlobals : public Singleton<LightGlobals>
+	{
+		friend class Singleton;
+
+	public:
+		void initialize() { }
+
+		LightData* new_shared_data();
+		uint32_t get_shared_data_index(LightData* data);
+		void release_shared_data(LightData* data);
+
+	public:
+		LightDataShared light_data;
+		BitVector light_dirty_states{ MAX_LIGHT_COUNT };
 	};
 }

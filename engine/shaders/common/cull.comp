@@ -23,12 +23,12 @@ struct ObjectInstance
 	uint batch_id;
 };
 
-layout (set = 1, binding = 1) readonly buffer ObjectInstanceBuffer
+layout (std430, set = 1, binding = 1) readonly buffer ObjectInstanceBuffer
 {
 	ObjectInstance instances[];
 } object_instance_buffer;
 
-layout (set = 1, binding = 2) buffer CompactedObjectInstanceBuffer
+layout (std430, set = 1, binding = 2) buffer CompactedObjectInstanceBuffer
 {
 	uint ids[];
 } compacted_object_instance_buffer;
@@ -42,7 +42,7 @@ struct DrawCommand
     uint first_instance;
 };
 
-layout (set = 1, binding = 3) buffer DrawIndirectBuffer
+layout (std430, set = 1, binding = 3) buffer DrawIndirectBuffer
 {
 	DrawCommand commands[];
 } draw_indirect_buffer;

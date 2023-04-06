@@ -6,6 +6,8 @@ layout (location = 0) in vec3 in_position;
 layout (location = 1) in vec3 in_normal;
 layout (location = 2) in vec3 in_color;
 layout (location = 3) in vec2 in_tex_coord;
+layout (location = 4) in vec3 in_tangent;
+layout (location = 5) in vec3 in_bitangent;
 
 layout (location = 0) out vec3 out_color;
 layout (location = 1) out vec2 out_tex_coord;
@@ -24,7 +26,7 @@ layout (std430, set = 1, binding = 0) readonly buffer EntitySceneDataBuffer
 	EntitySceneData entities[];
 } entity_data;
 
-layout (set = 1, binding = 2) buffer CompactedObjectInstanceBuffer
+layout (std430, set = 1, binding = 2) buffer CompactedObjectInstanceBuffer
 {
 	uint ids[];
 } compacted_object_instance_buffer;
