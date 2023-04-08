@@ -364,7 +364,10 @@ namespace Sunset
 				}
 			}
 
-			build_unique_bindings_into_layout(previous_set_number);
+			if (previous_set_number != std::numeric_limits<uint32_t>::max())
+			{
+				build_unique_bindings_into_layout(previous_set_number);
+			}
 		}
 
 		return ShaderPipelineLayoutFactory::create(gfx_context, push_constant_data, out_descriptor_layouts);

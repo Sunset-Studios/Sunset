@@ -1,0 +1,61 @@
+#version 460
+
+#include "common/common.inc"
+
+layout (local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
+
+layout (push_constant) uniform constants
+{
+	int input_texture;
+	int output_texture;
+  vec2 input_texture_size;
+  vec2 output_texture_size;
+  float bloom_filter_radius;
+} bloom_blur_constants;
+
+// Adapted from https://learnopengl.com/Guest-Articles/2022/Phys.-Based-Bloom
+// This shader performs downsampling on a texture,
+// as taken from Call Of Duty method, presented at ACM Siggraph 2014.
+// This particular method was customly designed to eliminate
+// "pulsating artifacts and temporal stability issues".
+
+void main()
+{
+  vec2 texture_coord = (vec2(gl_GlobalInvocationID.xy) + vec2(0.5f)) / vec2(bloom_blur_constants.output_texture_size);
+
+  if (gl_GlobalInvocationID.x < bloom_blur_constants.output_texture_size.x && gl_GlobalInvocationID.y < bloom_blur_constants.output_texture_size.y)
+  {
+    // The filter kernel is applied with a radius, specified in texture
+    // coordinates, so that the radius will vary across mip resolutions.
+    const float x = bloom_blur_constants.bloom_filter_radius;
+    const float y = bloom_blur_constants.bloom_filter_radius;
+
+    // Take 9 samples around current texel:
+    // a - b - c
+    // d - e - f
+    // g - h - i
+    // === ('e' is the current texel) ===
+    vec3 a = texture(textures_2D[nonuniformEXT(bloom_blur_constants.input_texture)], vec2(texture_coord.x - x, texture_coord.y + y)).rgb;
+    vec3 b = texture(textures_2D[nonuniformEXT(bloom_blur_constants.input_texture)], vec2(texture_coord.x,     texture_coord.y + y)).rgb;
+    vec3 c = texture(textures_2D[nonuniformEXT(bloom_blur_constants.input_texture)], vec2(texture_coord.x + x, texture_coord.y + y)).rgb;
+
+    vec3 d = texture(textures_2D[nonuniformEXT(bloom_blur_constants.input_texture)], vec2(texture_coord.x - x, texture_coord.y)).rgb;
+    vec3 e = texture(textures_2D[nonuniformEXT(bloom_blur_constants.input_texture)], vec2(texture_coord.x,     texture_coord.y)).rgb;
+    vec3 f = texture(textures_2D[nonuniformEXT(bloom_blur_constants.input_texture)], vec2(texture_coord.x + x, texture_coord.y)).rgb;
+
+    vec3 g = texture(textures_2D[nonuniformEXT(bloom_blur_constants.input_texture)], vec2(texture_coord.x - x, texture_coord.y - y)).rgb;
+    vec3 h = texture(textures_2D[nonuniformEXT(bloom_blur_constants.input_texture)], vec2(texture_coord.x,     texture_coord.y - y)).rgb;
+    vec3 i = texture(textures_2D[nonuniformEXT(bloom_blur_constants.input_texture)], vec2(texture_coord.x + x, texture_coord.y - y)).rgb;
+
+    // Apply weighted distribution, by using a 3x3 tent filter:
+    //  1   | 1 2 1 |
+    // -- * | 2 4 2 |
+    // 16   | 1 2 1 |
+    vec3 upsample_color = e * 4.0;
+    upsample_color += (b + d + f + h) * 2.0;
+    upsample_color += (a + c + g + i);
+    upsample_color *= 1.0 / 16.0;
+
+    imageStore(storage_2D[nonuniformEXT(bloom_blur_constants.output_texture)], ivec2(gl_GlobalInvocationID.xy), vec4(upsample_color, 1.0));
+  }
+}

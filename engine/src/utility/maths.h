@@ -24,5 +24,15 @@ namespace Sunset
 			value |= value >> 16;
 			return ++value;
 		}
+
+		inline uint32_t ppot(uint32_t value)
+		{
+			value |= value >> 1;
+			value |= value >> 2;
+			value |= value >> 4;
+			value |= value >> 8;
+			value |= value >> 16;
+			return value - (value >> 1);
+		}
 	};
 }

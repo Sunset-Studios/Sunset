@@ -61,4 +61,21 @@ namespace Sunset
 		int32_t input_depth_index;
 		int32_t output_depth_index;
 	};
+
+	struct BloomBlurData
+	{
+		int32_t input_texture;
+		int32_t output_texture;
+		glm::vec2 input_texture_size;
+		glm::vec2 output_texture_size;
+		float bloom_filter_radius;
+	};
+
+	struct BloomResolveData
+	{
+		int32_t scene_color_texure;
+		int32_t bloom_brightness_texture;
+		float exposure;
+		float bloom_intensity;
+	};
 }

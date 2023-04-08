@@ -2,12 +2,12 @@
 
 #include <minimal.h>
 
-namespace Sunset
-{
-#ifndef NDEBUG
-	inline std::unordered_map<uint32_t, std::string> g_string_table;
+#ifndef READABLE_STRINGS
+#define READABLE_STRINGS 1
 #endif
 
+namespace Sunset
+{
 	constexpr uint32_t fnvla_32(char const* s, std::size_t count)
 	{
 		return ((count > 0 ? fnvla_32(s, count - 1) : 2166136261u) ^ s[count]) * 16777619u;
@@ -26,6 +26,9 @@ namespace Sunset
 	struct Identity
 	{
 		uint32_t computed_hash;
+#if READABLE_STRINGS
+		std::string string;
+#endif
 
 		constexpr Identity(uint32_t hash = 0) noexcept
 			: computed_hash(hash)
@@ -35,8 +38,8 @@ namespace Sunset
 			: computed_hash(0)
 		{
 			computed_hash = fnvla_32(s, const_strlen(s));
-#ifndef NDEBUG
-			g_string_table[computed_hash] = s;
+#if READABLE_STRINGS
+			string = s;
 #endif
 		}
 
@@ -44,8 +47,8 @@ namespace Sunset
 			: computed_hash(0)
 		{
 			computed_hash = fnvla_32(s, count);
-#ifndef NDEBUG
-			g_string_table[computed_hash] = s;
+#if READABLE_STRINGS
+			string = s;
 #endif
 		}
 
@@ -53,8 +56,8 @@ namespace Sunset
 			: computed_hash(0)
 		{
 			computed_hash = fnvla_32(s.data(), s.size());
-#ifndef NDEBUG
-			g_string_table[computed_hash] = s;
+#if READABLE_STRINGS
+			string = s;
 #endif
 		}
 
@@ -67,8 +70,8 @@ namespace Sunset
 
 		constexpr operator std::string() noexcept
 		{
-#ifndef NDEBUG
-			return g_string_table.find(computed_hash) != g_string_table.end() ? g_string_table[computed_hash] : "";
+#if READABLE_STRINGS
+			return string;
 #else
 			return "";
 #endif

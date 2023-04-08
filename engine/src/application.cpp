@@ -52,7 +52,7 @@ namespace Sunset
 
 				set_light_color(light_comp, glm::vec3(1.0f, 1.0f, 1.0f));
 				set_light_type(light_comp, LightType::Directional);
-				set_light_intensity(light_comp, 1.0f);
+				set_light_intensity(light_comp, 2.0f);
 				set_light_entity_index(light_comp, get_entity_index(light_entity));
 			}
 
@@ -67,10 +67,10 @@ namespace Sunset
 
 				LightComponent* const light_comp = scene->assign_component<LightComponent>(light_entity);
 
-				set_light_color(light_comp, glm::vec3(1.0f, 1.0f, 1.0f));
+				set_light_color(light_comp, glm::vec3(1.0f, 0.2f, 0.2f));
 				set_light_type(light_comp, LightType::Point);
-				set_light_radius(light_comp, 75.0f);
-				set_light_intensity(light_comp, 10.0f);
+				set_light_radius(light_comp, 15.0f);
+				set_light_intensity(light_comp, 1000.0f);
 				set_light_entity_index(light_comp, get_entity_index(light_entity));
 			}
 

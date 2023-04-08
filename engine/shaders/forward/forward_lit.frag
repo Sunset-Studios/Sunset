@@ -10,6 +10,7 @@ layout (location = 4) flat in uint in_instance_index;
 layout (location = 5) in mat3 in_tbn_matrix;
 
 layout (location = 0) out vec4 out_frag_color;
+layout (location = 1) out vec4 out_frag_bright_color;
 
 struct EntitySceneData
 {
@@ -148,6 +149,8 @@ void main()
 		color += calculate_blinn_phong(light_data.lights[i], light_position, normal, view_dir, in_position, albedo, shininess, ambient);
 	}
 
-	vec3 gamma = vec3(1.0f / 2.2f);
-	out_frag_color = vec4(pow(color, gamma), 1.0f);	
+	out_frag_color = vec4(color, 1.0f);
+
+	const float brightness = dot(out_frag_color.rgb, vec3(0.2126f, 0.7152f, 0.0722f));
+	out_frag_bright_color = vec4(int(brightness > 1.0f) * out_frag_color.rgb, 1.0f);
 }

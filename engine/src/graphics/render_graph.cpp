@@ -397,7 +397,7 @@ namespace Sunset
 			return;
 		}
 
-		current_registry->barrier_batcher.begin(gfx_context, PipelineStageType::TopOfPipe);
+		current_registry->barrier_batcher.begin(gfx_context, PipelineStageType::AllCommands);
 
 		// TODO: switch the queue based on the pass type
 		void* cmd_buffer = gfx_context->get_command_queue(DeviceQueueType::Graphics)->begin_one_time_buffer_record(gfx_context);
@@ -542,8 +542,11 @@ namespace Sunset
 
 		push_pass_constants(gfx_context, pass, command_buffer);
 
+		// Terribly weak synchronization here, but render graph barriers are meant to coarsely cover synch cases since we can't know exactly what access and layout states
+		// resources will be in, and therefore we have no guarantees we can use to guard against using incompatible access masks for a given stage. More specific synch should
+		// be handled by the application.
 		PipelineStageType barrier_execution_stage = (pass->pass_config.flags & RenderPassFlags::Compute) != RenderPassFlags::None
-			? PipelineStageType::ComputeShader
+			? PipelineStageType::AllCommands
 			: PipelineStageType::AllGraphics;
 		current_registry->barrier_batcher.execute(gfx_context, command_buffer, barrier_execution_stage, pass->pass_config.name);
 	}
@@ -573,21 +576,21 @@ namespace Sunset
 						}
 					);
 				}
+			}
 
-				// Add a buffer barrier if the requested access flags seem different than the current buffer state
-				if (!current_registry->resource_metadata[resource].access_flags.empty())
+			// Add a buffer barrier if the requested access flags seem different than the current buffer state
+			if (!current_registry->resource_metadata[resource].access_flags.empty())
+			{
+				Buffer* const buffer = CACHE_FETCH(Buffer, current_registry->resource_metadata[resource].physical_id);
+				const AccessFlags access_flags = current_registry->resource_metadata[resource].access_flags[pass->handle];
+				if (buffer->get_access_flags() != access_flags)
 				{
-					Buffer* const buffer = CACHE_FETCH(Buffer, current_registry->resource_metadata[resource].physical_id);
-					const AccessFlags access_flags = current_registry->resource_metadata[resource].access_flags[pass->handle];
-					if (buffer->get_access_flags() != access_flags)
-					{
-						current_registry->barrier_batcher.add_buffer_barrier(
-							gfx_context,
-							buffer,
-							pass->pass_config.name,
-							access_flags
-						);
-					}
+					current_registry->barrier_batcher.add_buffer_barrier(
+						gfx_context,
+						buffer,
+						pass->pass_config.name,
+						access_flags
+					);
 				}
 			}
 		}
@@ -616,23 +619,23 @@ namespace Sunset
 						}
 					);
 				}
+			}
 
-				// Add an image barrier if the requested access flags and image layout seem different than the current image state
-				if (!current_registry->resource_metadata[resource].access_flags.empty() && !current_registry->resource_metadata[resource].layouts.empty())
+			// Add an image barrier if the requested access flags and image layout seem different than the current image state
+			if (!current_registry->resource_metadata[resource].access_flags.empty() && !current_registry->resource_metadata[resource].layouts.empty())
+			{
+				Image* const image = CACHE_FETCH(Image, current_registry->resource_metadata[resource].physical_id);
+				const AccessFlags access_flags = current_registry->resource_metadata[resource].access_flags[pass->handle];
+				const ImageLayout layout = current_registry->resource_metadata[resource].layouts[pass->handle];
+				if (image->get_access_flags() != access_flags || image->get_layout() != layout)
 				{
-					Image* const image = CACHE_FETCH(Image, current_registry->resource_metadata[resource].physical_id);
-					const AccessFlags access_flags = current_registry->resource_metadata[resource].access_flags[pass->handle];
-					const ImageLayout layout = current_registry->resource_metadata[resource].layouts[pass->handle];
-					if (image->get_access_flags() != access_flags || image->get_layout() != layout)
-					{
-						current_registry->barrier_batcher.add_image_barrier(
-							gfx_context,
-							image,
-							pass->pass_config.name,
-							access_flags,
-							layout
-						);
-					}
+					current_registry->barrier_batcher.add_image_barrier(
+						gfx_context,
+						image,
+						pass->pass_config.name,
+						access_flags,
+						layout
+					);
 				}
 			}
 		}
