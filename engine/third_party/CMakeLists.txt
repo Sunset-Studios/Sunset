@@ -51,7 +51,7 @@ target_sources(lz4 PRIVATE
 target_include_directories(lz4 PUBLIC lz4)
 
 add_library(sdl2 INTERFACE)
-set(sdl2_DIR "C:/SDL2" CACHE PATH "Path to SDL2")
+set(sdl2_DIR "${CMAKE_CURRENT_SOURCE_DIR}/sdl2" CACHE PATH "Path to SDL2")
 
 if (WIN32)
 target_include_directories(sdl2 INTERFACE ${sdl2_DIR}/include ${sdl2_image_DIR}/include)
