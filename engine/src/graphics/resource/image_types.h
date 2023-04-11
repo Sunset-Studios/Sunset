@@ -26,7 +26,8 @@ namespace Sunset
 		Identity name;
 		const char* path;
 		Format format;
-		glm::vec3 extent;
+		glm::vec3 extent{ 0.0f };
+		glm::vec3 clear_color{ 0.0f };
 		ImageFlags flags;
 		MemoryUsageType usage_type;
 		SamplerAddressMode sampler_address_mode;

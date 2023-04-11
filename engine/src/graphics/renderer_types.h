@@ -62,6 +62,14 @@ namespace Sunset
 		int32_t output_depth_index;
 	};
 
+	struct LightingPassData
+	{
+		int32_t albedo_texure;
+		int32_t specular_texure;
+		int32_t normal_texure;
+		int32_t position_texure;
+	};
+
 	struct BloomBlurData
 	{
 		int32_t input_texture;

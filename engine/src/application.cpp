@@ -1,7 +1,7 @@
 ﻿#include <application.h>
 #include <window/window.h>
 #include <graphics/renderer.h>
-#include <graphics/strategies/forward_shading.h>
+#include <graphics/strategies/deferred_shading.h>
 #include <input/input_provider.h>
 #include <core/simulation_core.h>
 #include <core/layers/scene.h>
@@ -156,7 +156,7 @@ namespace Sunset
 				window->poll();
 
 				{
-					ScopedRender<ForwardShadingStrategy> scoped_render(Renderer::get());
+					ScopedRender<DeferredShadingStrategy> scoped_render(Renderer::get());
 
 					InputProvider::get()->update();
 

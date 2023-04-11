@@ -184,7 +184,7 @@ namespace Sunset
 				else if ((image_attachment_config.flags & ImageFlags::Color) != ImageFlags::None)
 				{
 					VkClearValue& clear_value = clear_values.emplace_back();
-					clear_value.color = { { 0.9f, 0.9f, 0.9f, 1.0f } };
+					clear_value.color = { { image_attachment_config.clear_color.r, image_attachment_config.clear_color.g, image_attachment_config.clear_color.b, 1.0f } };
 				}
 			}
 		}

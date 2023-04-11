@@ -14,10 +14,10 @@
 
 namespace Sunset
 {
-	AutoCVar_Int cvar_num_bloom_pass_iterations("ren.num_bloom_pass_iterations", "The number of bloom horizontal and vertical blur iterations", 5);
-	AutoCVar_Float cvar_bloom_intensity("ren.bloom_intensity", "The intensity of the applied final bloom", 0.1f);
+	AutoCVar_Int cvar_forward_num_bloom_pass_iterations("ren.forward_num_bloom_pass_iterations", "The number of bloom horizontal and vertical blur iterations", 5);
+	AutoCVar_Float cvar_forward_bloom_intensity("ren.forward_bloom_intensity", "The intensity of the applied final bloom", 0.2f);
 
-	AutoCVar_Float cvar_final_image_exposure("ren.final_image_exposure", "The exposure to apply once HDR color gets resolved down to LDR", 1.0f);
+	AutoCVar_Float cvar_forward_final_image_exposure("ren.forward_final_image_exposure", "The exposure to apply once HDR color gets resolved down to LDR", 1.0f);
 
 	void ForwardShadingStrategy::render(GraphicsContext* gfx_context, RenderGraph& render_graph, class Swapchain* swapchain)
 	{
@@ -144,7 +144,6 @@ namespace Sunset
 		// Forward pass
 		RGResourceHandle main_depth_image_desc;
 		RGResourceHandle main_color_image_desc;
-		RGResourceHandle brightness_capture_image_desc;
 		{
 			RGShaderDataSetup shader_setup
 			{
@@ -160,20 +159,6 @@ namespace Sunset
 				gfx_context,
 				{
 					.name = "main_color",
-					.format = Format::Float4x32,
-					.extent = glm::vec3(image_extent.x, image_extent.y, 1.0f),
-					.flags = ImageFlags::Color | ImageFlags::Image2D | ImageFlags::Sampled,
-					.usage_type = MemoryUsageType::OnlyGPU,
-					.sampler_address_mode = SamplerAddressMode::Repeat,
-					.image_filter = ImageFilter::Linear,
-					.attachment_clear = true,
-					.attachment_stencil_clear = false
-				}
-			);
-			brightness_capture_image_desc = render_graph.create_image(
-				gfx_context,
-				{
-					.name = "brightness_capture",
 					.format = Format::Float4x32,
 					.extent = glm::vec3(image_extent.x, image_extent.y, 1.0f),
 					.flags = ImageFlags::Color | ImageFlags::Image2D | ImageFlags::Sampled,
@@ -208,7 +193,7 @@ namespace Sunset
 					.inputs = { entity_data_buffer_desc, material_data_buffer_desc,
 								compacted_object_instance_buffer_desc, light_data_buffer_desc,
 								draw_indirect_buffer_desc },
-					.outputs = { main_color_image_desc, main_depth_image_desc, brightness_capture_image_desc }
+					.outputs = { main_color_image_desc, main_depth_image_desc }
 				},
 				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
 				{
@@ -350,7 +335,7 @@ namespace Sunset
 				}
 			};
 
-			const uint32_t num_iterations = cvar_num_bloom_pass_iterations.get();
+			const uint32_t num_iterations = cvar_forward_num_bloom_pass_iterations.get();
 
 			const glm::vec2 image_extent = gfx_context->get_window()->get_extent();
 			const float extent_x = Maths::npot(image_extent.x);
@@ -531,8 +516,8 @@ namespace Sunset
 					{
 						.scene_color_texure = 0x0000ffff & color_image_handle,
 						.bloom_brightness_texture = 0x0000ffff & bloom_brightness_color_handle,
-						.exposure = static_cast<float>(cvar_final_image_exposure.get()),
-						.bloom_intensity = static_cast<float>(cvar_bloom_intensity.get())
+						.exposure = static_cast<float>(cvar_forward_final_image_exposure.get()),
+						.bloom_intensity = static_cast<float>(cvar_forward_bloom_intensity.get())
 					};
 
 					PushConstantPipelineData pass_data = PushConstantPipelineData::create(&resolve_data, PipelineShaderStageType::Fragment);
