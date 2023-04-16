@@ -56,6 +56,11 @@ namespace Sunset
 				indirect_draw_data = data;
 			}
 
+			void set_is_deferred_rendering(bool b_is_deferred = true)
+			{
+				b_is_deferred_rendering = b_is_deferred;
+			}
+
 			GPUDrawIndirectBuffers& get_gpu_draw_indirect_buffers()
 			{
 				return indirect_draw_buffers;
@@ -76,6 +81,11 @@ namespace Sunset
 				return indirect_draw_data.indirect_draws.size();
 			}
 
+			bool is_deferred_rendering() const
+			{
+				return b_is_deferred_rendering;
+			}
+
 			void sort_and_batch(class GraphicsContext* const gfx_context);
 			void submit_compute_cull(class GraphicsContext* const gfx_context, void* command_buffer, ExecutionQueue* deletion_queue = nullptr);
 			void submit_draws(class GraphicsContext* const gfx_context, void* command_buffer, RenderPassID render_pass, DescriptorSet* descriptor_set, PipelineStateID pipeline_state, bool b_flush = true);
@@ -92,5 +102,6 @@ namespace Sunset
 			MeshRenderTaskExecutor compute_cull_executor;
 			IndirectDrawData indirect_draw_data;
 			GPUDrawIndirectBuffers indirect_draw_buffers;
+			bool b_is_deferred_rendering{ false };
 	};
 }

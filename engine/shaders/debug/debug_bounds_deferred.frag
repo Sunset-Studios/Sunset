@@ -7,6 +7,9 @@ layout (location = 1) in vec2 in_tex_coord;
 layout (location = 2) flat in uint in_instance_index;
 
 layout (location = 0) out vec4 out_frag_color;
+layout (location = 1) out float out_specular;
+layout (location = 2) out vec4 out_normal;
+layout (location = 3) out vec4 out_position;
 
 struct EntitySceneData
 {
@@ -48,11 +51,6 @@ layout (std430, set = 1, binding = 2) buffer CompactedObjectInstanceBuffer
 {
 	uint ids[];
 } compacted_object_instance_buffer;
-
-layout (std430, set = 1, binding = 3) buffer LightDataBuffer
-{
-	LightData lights[];
-} light_data;
 
 layout (push_constant) uniform constants
 {

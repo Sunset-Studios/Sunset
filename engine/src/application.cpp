@@ -2,6 +2,7 @@
 #include <window/window.h>
 #include <graphics/renderer.h>
 #include <graphics/strategies/deferred_shading.h>
+#include <graphics/strategies/forward_shading.h>
 #include <input/input_provider.h>
 #include <core/simulation_core.h>
 #include <core/layers/scene.h>
@@ -80,8 +81,8 @@ namespace Sunset
 
 				TransformComponent* const transform_comp = scene->assign_component<TransformComponent>(mesh_ent);
 
-				set_rotation(transform_comp, glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
-				set_scale(transform_comp, glm::vec3(100.0f, 100.0f, 0.1f));
+				set_rotation(transform_comp, glm::vec3(glm::radians(90.0f), glm::radians(0.0f), glm::radians(0.0f)));
+				set_scale(transform_comp, glm::vec3(100.0f, 100.0f, 100.0f));
 
 				MeshComponent* const mesh_comp = scene->assign_component<MeshComponent>(mesh_ent);
 
@@ -98,7 +99,6 @@ namespace Sunset
 				);
 				material_set_texture_tiling(Renderer::get()->context(), mesh_material, 0, 5.0f);
 				material_set_texture_tiling(Renderer::get()->context(), mesh_material, 1, 5.0f);
-				material_set_texture_tiling(Renderer::get()->context(), mesh_material, 2, 5.0f);
 
 				set_mesh(mesh_comp, MeshFactory::create_quad(Renderer::get()->context()));
 				set_material(mesh_comp, mesh_material);

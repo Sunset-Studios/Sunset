@@ -140,7 +140,8 @@ void main()
 
 	const vec3 view_dir = normalize(in_position - camera_data.position.xyz);
 
-	vec3 color = vec3(0.0f, 0.0f, 0.0f);	
+	vec3 color = vec3(0.0f, 0.0f, 0.0f);
+	
 	for (int i = 0; i < scene_lighting_data.num_lights; ++i)
 	{
 		LightData light = light_data.lights[i];

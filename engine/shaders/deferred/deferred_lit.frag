@@ -106,7 +106,8 @@ void main()
 	const vec3 normal =
 		lighting_pass_constants.normal_texure == -1
 		? vec3(0.0, 0.0, 0.0)
-		: normalize(texture(textures_2D[nonuniformEXT(lighting_pass_constants.normal_texure)], in_tex_coord).xyz);
+		: texture(textures_2D[nonuniformEXT(lighting_pass_constants.normal_texure)], in_tex_coord).xyz;
+	const float normal_length = length(normal);
 
 	const float shininess =
 		lighting_pass_constants.specular_texure == -1
@@ -119,14 +120,16 @@ void main()
 		: texture(textures_2D[nonuniformEXT(lighting_pass_constants.position_texure)], in_tex_coord).xyz;
 
 	const vec3 view_dir = normalize(position - camera_data.position.xyz);
+	const uint unlit = uint(normal_length <= 0.0);
 
-	vec3 color = vec3(0.0f, 0.0f, 0.0f);
-	
-	for (int i = 0; i < scene_lighting_data.num_lights; ++i)
+	vec3 color = float(unlit) * albedo;
+
+	const uint num_light_iterations = uint((1 - unlit) * scene_lighting_data.num_lights);
+	for (uint i = 0; i < num_light_iterations; ++i)
 	{
 		LightData light = light_data.lights[i];
 		const vec3 light_position = entity_data.entities[light.entity].transform[3].xyz;
-		color += calculate_blinn_phong(light_data.lights[i], light_position, normal, view_dir, position, albedo, shininess, ambient);
+		color += calculate_blinn_phong(light_data.lights[i], light_position, normal / normal_length, view_dir, position, albedo, shininess, ambient);
 	}
 
 	out_frag_color = vec4(color, 1.0f);

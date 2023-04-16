@@ -143,7 +143,7 @@ namespace Sunset
 	{
 		std::vector<DescriptorWrite> writes;
 
-		for (int i = 0; i < descriptor_writes.size(); ++i)
+		for (uint32_t i = 0; i < descriptor_writes.size(); ++i)
 		{
 			const DescriptorBindlessWrite& bindless_write = descriptor_writes[i];
 
@@ -155,7 +155,7 @@ namespace Sunset
 			DescriptorWrite& write = writes.emplace_back();
 			write.slot = bindless_write.slot;
 			write.count = 1;
-			write.array_index = (int32_t)(0x0000ffff & out_binding_table_handles[i]);
+			write.array_index = 0x0000ffff & out_binding_table_handles[i];
 			write.type = bindless_write.type;
 			write.buffer_desc.buffer = bindless_write.buffer;
 			write.buffer_desc.buffer_offset = bindless_write.level;
@@ -269,7 +269,7 @@ namespace Sunset
 
 	void DescriptorBindingTable::free(BindingTableHandle handle)
 	{
-		uint32_t slot = handle >> 32;
+		uint32_t slot = 0x0000ffff & (handle >> 32);
 		uint32_t index = 0x0000ffff & handle;
 
 		assert(binding_table.contains(slot));

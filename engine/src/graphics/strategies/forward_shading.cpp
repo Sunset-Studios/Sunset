@@ -21,8 +21,10 @@ namespace Sunset
 
 	void ForwardShadingStrategy::render(GraphicsContext* gfx_context, RenderGraph& render_graph, class Swapchain* swapchain)
 	{
+		const uint16_t buffered_frame_number = gfx_context->get_buffered_frame_number();
+
 		MeshTaskQueue& mesh_task_queue = Renderer::get()->get_mesh_task_queue();
-		mesh_task_queue.sort_and_batch(gfx_context);
+		mesh_task_queue.sort_and_batch(gfx_context); 
 
 		RGResourceHandle object_instance_buffer_desc = render_graph.create_buffer(
 			gfx_context,
@@ -56,22 +58,22 @@ namespace Sunset
 
 		RGResourceHandle entity_data_buffer_desc = render_graph.register_buffer(
 			gfx_context,
-			EntityGlobals::get()->entity_data.data_buffer[gfx_context->get_buffered_frame_number()]
+			EntityGlobals::get()->entity_data.data_buffer[buffered_frame_number]
 		);
 
 		RGResourceHandle material_data_buffer_desc = render_graph.register_buffer(
 			gfx_context,
-			MaterialGlobals::get()->material_data.data_buffer[gfx_context->get_buffered_frame_number()]
+			MaterialGlobals::get()->material_data.data_buffer[buffered_frame_number]
 		);
 
 		RGResourceHandle light_data_buffer_desc = render_graph.register_buffer(
 			gfx_context,
-			LightGlobals::get()->light_data.data_buffer[gfx_context->get_buffered_frame_number()]
+			LightGlobals::get()->light_data.data_buffer[buffered_frame_number]
 		);
 
 		RGResourceHandle hzb_image_desc = render_graph.register_image(
 			gfx_context,
-			Renderer::get()->get_persistent_image("hi_z", gfx_context->get_buffered_frame_number())
+			Renderer::get()->get_persistent_image("hi_z", buffered_frame_number)
 		);
 
 		// Compute mesh cull pass
@@ -97,7 +99,7 @@ namespace Sunset
 
 			RGResourceHandle entity_data_buffer_desc = render_graph.register_buffer(
 				gfx_context,
-				EntityGlobals::get()->entity_data.data_buffer[gfx_context->get_buffered_frame_number()]
+				EntityGlobals::get()->entity_data.data_buffer[buffered_frame_number]
 			);
 
 			render_graph.add_pass(
@@ -161,6 +163,7 @@ namespace Sunset
 					.name = "main_color",
 					.format = Format::Float4x32,
 					.extent = glm::vec3(image_extent.x, image_extent.y, 1.0f),
+					.clear_color = glm::vec3(0.9f, 0.2f, 0.2f),
 					.flags = ImageFlags::Color | ImageFlags::Image2D | ImageFlags::Sampled,
 					.usage_type = MemoryUsageType::OnlyGPU,
 					.sampler_address_mode = SamplerAddressMode::Repeat,

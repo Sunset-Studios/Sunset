@@ -14,14 +14,17 @@
 
 namespace Sunset
 {
-	AutoCVar_Int cvar_num_bloom_pass_iterations("ren.num_bloom_pass_iterations", "The number of bloom horizontal and vertical blur iterations", 5);
+	AutoCVar_Int cvar_num_bloom_pass_iterations("ren.num_bloom_pass_iterations", "The number of bloom horizontal and vertical blur iterations. (0 to turn bloom off).", 5);
 	AutoCVar_Float cvar_bloom_intensity("ren.bloom_intensity", "The intensity of the applied final bloom", 0.2f);
 
 	AutoCVar_Float cvar_final_image_exposure("ren.final_image_exposure", "The exposure to apply once HDR color gets resolved down to LDR", 1.0f);
 
 	void DeferredShadingStrategy::render(GraphicsContext* gfx_context, RenderGraph& render_graph, class Swapchain* swapchain)
 	{
+		const uint16_t buffered_frame_number = gfx_context->get_buffered_frame_number();
+
 		MeshTaskQueue& mesh_task_queue = Renderer::get()->get_mesh_task_queue();
+		mesh_task_queue.set_is_deferred_rendering(true);
 		mesh_task_queue.sort_and_batch(gfx_context);
 
 		RGResourceHandle object_instance_buffer_desc = render_graph.create_buffer(
@@ -56,22 +59,22 @@ namespace Sunset
 
 		RGResourceHandle entity_data_buffer_desc = render_graph.register_buffer(
 			gfx_context,
-			EntityGlobals::get()->entity_data.data_buffer[gfx_context->get_buffered_frame_number()]
+			EntityGlobals::get()->entity_data.data_buffer[buffered_frame_number]
 		);
 
 		RGResourceHandle material_data_buffer_desc = render_graph.register_buffer(
 			gfx_context,
-			MaterialGlobals::get()->material_data.data_buffer[gfx_context->get_buffered_frame_number()]
+			MaterialGlobals::get()->material_data.data_buffer[buffered_frame_number]
 		);
 
 		RGResourceHandle light_data_buffer_desc = render_graph.register_buffer(
 			gfx_context,
-			LightGlobals::get()->light_data.data_buffer[gfx_context->get_buffered_frame_number()]
+			LightGlobals::get()->light_data.data_buffer[buffered_frame_number]
 		);
 
 		RGResourceHandle hzb_image_desc = render_graph.register_image(
 			gfx_context,
-			Renderer::get()->get_persistent_image("hi_z", gfx_context->get_buffered_frame_number())
+			Renderer::get()->get_persistent_image("hi_z", buffered_frame_number)
 		);
 
 		// Compute mesh cull pass
@@ -97,7 +100,7 @@ namespace Sunset
 
 			RGResourceHandle entity_data_buffer_desc = render_graph.register_buffer(
 				gfx_context,
-				EntityGlobals::get()->entity_data.data_buffer[gfx_context->get_buffered_frame_number()]
+				EntityGlobals::get()->entity_data.data_buffer[buffered_frame_number]
 			);
 
 			render_graph.add_pass(
@@ -199,7 +202,6 @@ namespace Sunset
 					.sampler_address_mode = SamplerAddressMode::EdgeClamp,
 					.image_filter = ImageFilter::Linear,
 					.attachment_clear = true,
-					.attachment_stencil_clear = true,
 				}
 			);
 			main_normal_image_desc = render_graph.create_image(
@@ -213,7 +215,6 @@ namespace Sunset
 					.sampler_address_mode = SamplerAddressMode::EdgeClamp,
 					.image_filter = ImageFilter::Linear,
 					.attachment_clear = true,
-					.attachment_stencil_clear = true,
 				}
 			);
 			main_position_image_desc = render_graph.create_image(
@@ -227,7 +228,6 @@ namespace Sunset
 					.sampler_address_mode = SamplerAddressMode::EdgeClamp,
 					.image_filter = ImageFilter::Linear,
 					.attachment_clear = true,
-					.attachment_stencil_clear = true,
 				}
 			);
 
@@ -358,8 +358,7 @@ namespace Sunset
 					.usage_type = MemoryUsageType::OnlyGPU,
 					.sampler_address_mode = SamplerAddressMode::Repeat,
 					.image_filter = ImageFilter::Linear,
-					.attachment_clear = true,
-					.attachment_stencil_clear = false
+					.attachment_clear = true
 				}
 			);
 
@@ -369,7 +368,8 @@ namespace Sunset
 				RenderPassFlags::Graphics,
 				{
 					.shader_setup = shader_setup,
-					.inputs = { entity_data_buffer_desc, light_data_buffer_desc, main_albedo_image_desc,
+					.inputs = { entity_data_buffer_desc, light_data_buffer_desc,
+								compacted_object_instance_buffer_desc, main_albedo_image_desc,
 								main_specular_image_desc, main_normal_image_desc, main_position_image_desc },
 					.outputs = { scene_color_desc }
 				},
@@ -397,10 +397,13 @@ namespace Sunset
 			);
 		}
 
+		RGResourceHandle final_color_desc = scene_color_desc;
+
 		// Bloom pass
-		RGResourceHandle final_color_desc;
-		RGResourceHandle bloom_blur_image_desc;
-		{
+		const uint32_t num_iterations = cvar_num_bloom_pass_iterations.get();
+		if (num_iterations > 0) {
+			RGResourceHandle bloom_blur_image_desc;
+
 			RGShaderDataSetup bloom_downsample_shader_setup
 			{
 				.pipeline_shaders =
@@ -426,11 +429,9 @@ namespace Sunset
 				}
 			};
 
-			const uint32_t num_iterations = cvar_num_bloom_pass_iterations.get();
-
 			const glm::vec2 image_extent = gfx_context->get_window()->get_extent();
-			const float extent_x = Maths::npot(image_extent.x);
-			const float extent_y = Maths::npot(image_extent.y);
+			const float extent_x = Maths::ppot(image_extent.x);
+			const float extent_y = Maths::ppot(image_extent.y);
 
 			bloom_blur_image_desc = render_graph.create_image(
 				gfx_context,
@@ -580,7 +581,7 @@ namespace Sunset
 							command_buffer,
 							AccessFlags::ShaderWrite,
 							AccessFlags::ShaderRead,
-							i == 0 ? ImageLayout::Undefined : ImageLayout::General,
+							ImageLayout::General,
 							ImageLayout::General,
 							PipelineStageType::ComputeShader,
 							PipelineStageType::ComputeShader
@@ -599,8 +600,7 @@ namespace Sunset
 					.usage_type = MemoryUsageType::OnlyGPU,
 					.sampler_address_mode = SamplerAddressMode::Repeat,
 					.image_filter = ImageFilter::Linear,
-					.attachment_clear = true,
-					.attachment_stencil_clear = false
+					.attachment_clear = true
 				}
 			);
 
@@ -665,7 +665,7 @@ namespace Sunset
 				{
 					FullscreenData fullscreen_data
 					{
-						.scene_texture_index = frame_data.pass_bindless_resources.empty() ? -1 : (0x0000ffff & frame_data.pass_bindless_resources.handles[0])
+						.scene_texture_index = (0x0000ffff & frame_data.pass_bindless_resources.handles[0])
 					};
 
 					PushConstantPipelineData pass_data = PushConstantPipelineData::create(&fullscreen_data, PipelineShaderStageType::Fragment);

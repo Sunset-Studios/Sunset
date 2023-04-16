@@ -31,7 +31,7 @@ namespace Sunset
 	{
 		update_indirect_draw_buffers(gfx_context, command_buffer, deletion_queue);
 
-		gfx_context->dispatch_compute(command_buffer, static_cast<uint32_t>(queue.size() / 256) + 1, 1, 1);
+		gfx_context->dispatch_compute(command_buffer, static_cast<uint32_t>(queue.size() + 255) / 256, 1, 1);
 
 		{
 			Buffer* const draw_indirect_buffer = CACHE_FETCH(Buffer, indirect_draw_buffers.draw_indirect_buffer);
@@ -116,7 +116,7 @@ namespace Sunset
 			});
 			state_builder.set_depth_stencil_state(true, false, CompareOperation::LessOrEqual);
 			state_builder.set_shader_stage(PipelineShaderStageType::Vertex, "../../shaders/debug/debug_bounds.vert.sun");
-			state_builder.set_shader_stage(PipelineShaderStageType::Fragment, "../../shaders/debug/debug_bounds.frag.sun");
+			state_builder.set_shader_stage(PipelineShaderStageType::Fragment, b_is_deferred_rendering ? "../../shaders/debug/debug_bounds_deferred.frag.sun" : "../../shaders/debug/debug_bounds.frag.sun");
 
 			{
 				std::vector<DescriptorLayoutID> descriptor_layouts;

@@ -149,7 +149,8 @@ void main()
 
 		const vec4 sphere_bounds = entity_data.entities[object_id].bounds_pos_radius;
 		const vec4 center = vec4(sphere_bounds.xyz, 1.0f);
-		const float radius = sphere_bounds.w;
+		// artificially inflate bounds to be more conservative with culling and to prevent "z-fighting" style cull between bounds and written depth values
+		const float radius = sphere_bounds.w * 1.1;
 
 		const bool in_frustum = is_in_frustum(object_id, center, radius);
 		const bool occluded = is_occluded(object_id, center, radius);

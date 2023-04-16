@@ -104,8 +104,10 @@ namespace Sunset
 
 	Sunset::RGPassHandle RenderGraph::add_pass(class GraphicsContext* const gfx_context, Identity name, RenderPassFlags pass_type, const RGPassParameters& params, std::function<void(RenderGraph&, RGFrameData&, void*)> execution_callback)
 	{
+		const uint32_t buffered_frame_number = gfx_context->get_buffered_frame_number();
+
 		RGPass* const pass = render_pass_allocator.get_new();
-		pass->pass_config = { .name = name, .flags = pass_type };
+		pass->pass_config = { .name = name.computed_hash + buffered_frame_number, .flags = pass_type };
 		pass->parameters = params;
 		pass->executor = execution_callback;
 
@@ -123,8 +125,10 @@ namespace Sunset
 
 	Sunset::RGPassHandle RenderGraph::add_pass(class GraphicsContext* const gfx_context, Identity name, RenderPassFlags pass_type, std::function<void(RenderGraph&, RGFrameData&, void*)> execution_callback)
 	{
+		const uint32_t buffered_frame_number = gfx_context->get_buffered_frame_number();
+
 		RGPass* const pass = render_pass_allocator.get_new();
-		pass->pass_config = { .name = name, .flags = pass_type };
+		pass->pass_config = { .name = name.computed_hash + buffered_frame_number, .flags = pass_type };
 		pass->executor = execution_callback;
 
 		const uint32_t index = current_registry->render_passes.size();
@@ -805,7 +809,8 @@ namespace Sunset
 			}
 
 			// Write bindless pass resources
-			if (!pass->parameters.b_skip_auto_descriptor_setup) {
+			if (!pass->parameters.b_skip_auto_descriptor_setup)
+			{
 				// Writes the bindless resources into the corresponding global binding tables. The resulting binding indices get passed as a struct as
 				// part of the frame data for this pass, to allow custom handling by internal pass lambdas
 				const size_t num_bindless_inputs = pass->parameters.bindless_inputs.size();
@@ -858,11 +863,13 @@ namespace Sunset
 					const auto write_descriptors = [&](bool b_persistent_resources)
 					{
 						// Writes regular per-pass descriptor bindings based on passed in inputs that are NOT bindless
-						if (!pass->parameters.b_skip_auto_descriptor_setup) {
+						if (!pass->parameters.b_skip_auto_descriptor_setup)
+						{
 							std::vector<DescriptorWrite> descriptor_writes;
 							for (uint32_t j = 0; j < descriptor_bindings.size(); ++j)
 							{
-								if (current_registry->resource_metadata[pass->parameters.pass_inputs[j]].b_is_persistent == b_persistent_resources)
+								const RGResourceHandle corresponding_binding_resource = pass->parameters.pass_inputs[j];
+								if (current_registry->resource_metadata[corresponding_binding_resource].b_is_persistent == b_persistent_resources)
 								{
 									DescriptorWrite& new_write = descriptor_writes.emplace_back();
 									new_write.slot = descriptor_bindings[j].slot;
@@ -871,12 +878,12 @@ namespace Sunset
 
 									if (new_write.type == DescriptorType::Image || new_write.type == DescriptorType::StorageImage)
 									{
-										Image* const image = CACHE_FETCH(Image, current_registry->resource_metadata[pass->parameters.pass_inputs[j]].physical_id);
+										Image* const image = CACHE_FETCH(Image, current_registry->resource_metadata[corresponding_binding_resource].physical_id);
 										new_write.buffer_desc.buffer = image;
 									}
 									else
 									{
-										Buffer* const buffer = CACHE_FETCH(Buffer, current_registry->resource_metadata[pass->parameters.pass_inputs[j]].physical_id);
+										Buffer* const buffer = CACHE_FETCH(Buffer, current_registry->resource_metadata[corresponding_binding_resource].physical_id);
 										new_write.buffer_desc.buffer = buffer->get();
 										new_write.buffer_desc.buffer_range = buffer->get_size();
 										new_write.buffer_desc.buffer_size = buffer->get_size();
@@ -973,7 +980,7 @@ namespace Sunset
 			RGResourceMetadata& resource_meta = current_registry->resource_metadata[input_resource];
 			if (resource_meta.physical_id != 0 && resource_meta.last_user == pass->handle && !resource_meta.b_is_persistent)
 			{
-				// TODO: Aliasing
+				// TODO: Transient resource memory aliasing
 			}
 		}
 		for (RGResourceHandle output_resource : pass->parameters.outputs)
@@ -981,7 +988,7 @@ namespace Sunset
 			RGResourceMetadata& resource_meta = current_registry->resource_metadata[output_resource];
 			if (resource_meta.physical_id != 0 && resource_meta.last_user == pass->handle && !resource_meta.b_is_persistent)
 			{
-				// TODO: Aliasing
+				// TODO: Transient resource memory aliasing
 			}
 		}
 	}
