@@ -123,7 +123,7 @@ namespace Sunset
 		persistent_image_map[id] = image;
 
 		// Register copies as well for buffered accesses
-		for (uint32_t i = 0; i < MAX_BUFFERED_FRAMES; ++i)
+		for (uint32_t i = 1; i < MAX_BUFFERED_FRAMES; ++i)
 		{
 			Identity new_id{ id.computed_hash + i };
 			Image* const original = CACHE_FETCH(Image, image);

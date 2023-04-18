@@ -341,8 +341,8 @@ namespace Sunset
 			const uint32_t num_iterations = cvar_forward_num_bloom_pass_iterations.get();
 
 			const glm::vec2 image_extent = gfx_context->get_window()->get_extent();
-			const float extent_x = Maths::npot(image_extent.x);
-			const float extent_y = Maths::npot(image_extent.y);
+			const float extent_x = Maths::ppot(image_extent.x);
+			const float extent_y = Maths::ppot(image_extent.y);
 
 			bloom_blur_image_desc = render_graph.create_image(
 				gfx_context,
@@ -562,7 +562,7 @@ namespace Sunset
 				{
 					FullscreenData fullscreen_data
 					{
-						.scene_texture_index = frame_data.pass_bindless_resources.empty() ? -1 : (0x0000ffff & frame_data.pass_bindless_resources.handles[0])
+						.scene_texture_index = (0x0000ffff & frame_data.pass_bindless_resources.handles[0])
 					};
 
 					PushConstantPipelineData pass_data = PushConstantPipelineData::create(&fullscreen_data, PipelineShaderStageType::Fragment);

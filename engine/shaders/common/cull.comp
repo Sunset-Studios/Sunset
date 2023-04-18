@@ -62,6 +62,7 @@ layout (push_constant) uniform constants
 	int hzb_texture;
 } draw_cull_constants;
 
+// 2D Polyhedral Bounds of a Clipped, Perspective-Projected 3D Sphere. Michael Mara, Morgan McGuire. 2013
 bool sphere_project(vec4 center, float radius, float p00, float p11, out vec4 aabb)
 {
 	center = camera_data.view * center;
@@ -76,13 +77,13 @@ bool sphere_project(vec4 center, float radius, float p00, float p11, out vec4 aa
 	vec2 min_x = mat2(vx.x, vx.y, -vx.y, vx.x) * cx;
 	vec2 max_x = mat2(vx.x, -vx.y, vx.y ,vx.x) * cx;
 
-	vec2 cy = vec2(-center.y, -center.z);
+	vec2 cy = -center.yz;
 	vec2 vy = vec2(sqrt(dot(cy, cy) - radius * radius), radius);
 	vec2 min_y = mat2(vy.x, vy.y, -vy.y, vy.x) * cy;
 	vec2 max_y = mat2(vy.x, -vy.y, vy.y, vy.x) * cy;
 
 	aabb = vec4(min_x.x / min_x.y * p00, min_y.x / min_y.y * p11, max_x.x / max_x.y * p00, max_y.x / max_y.y * p11);
-	aabb = aabb.xwzy * vec4(0.5f, -0.5f, 0.5f, -0.5f) * vec4(0.5f);
+	aabb = aabb.xwzy * vec4(0.5f, -0.5f, 0.5f, -0.5f) + vec4(0.5f);
 
 	return true;
 }
@@ -98,24 +99,21 @@ bool is_occluded(uint object_index, vec4 center, float radius)
             const float width = (aabb.z - aabb.x) * draw_cull_constants.hzb_width;
             const float height = (aabb.w - aabb.y) * draw_cull_constants.hzb_height;
             float level = floor(log2(max(width, height)));
-            level = clamp(level, 0, 16);
 
             vec2 uv = (aabb.xy + aabb.zw) * 0.5;
-            uv.y = 1 - uv.y;
 
             float depth = textureLod(textures_2D[nonuniformEXT(draw_cull_constants.hzb_texture)], uv, level).r;
 
-            depth = max(depth, textureLod(textures_2D[nonuniformEXT(draw_cull_constants.hzb_texture)], vec2(aabb.x, 1.0f - aabb.y), level).r);
-          	depth = max(depth, textureLod(textures_2D[nonuniformEXT(draw_cull_constants.hzb_texture)], vec2(aabb.z, 1.0f - aabb.w), level).r);
-            depth = max(depth, textureLod(textures_2D[nonuniformEXT(draw_cull_constants.hzb_texture)], vec2(aabb.x, 1.0f - aabb.w), level).r);
-            depth = max(depth, textureLod(textures_2D[nonuniformEXT(draw_cull_constants.hzb_texture)], vec2(aabb.z, 1.0f - aabb.y), level).r);
+            depth = max(depth, textureLod(textures_2D[nonuniformEXT(draw_cull_constants.hzb_texture)], vec2(aabb.x, aabb.y), level).r);
+          	depth = max(depth, textureLod(textures_2D[nonuniformEXT(draw_cull_constants.hzb_texture)], vec2(aabb.z, aabb.w), level).r);
+            depth = max(depth, textureLod(textures_2D[nonuniformEXT(draw_cull_constants.hzb_texture)], vec2(aabb.x, aabb.w), level).r);
+            depth = max(depth, textureLod(textures_2D[nonuniformEXT(draw_cull_constants.hzb_texture)], vec2(aabb.z, aabb.y), level).r);
 
-            const vec3 direction = normalize(inverse(camera_data.view)[3].xyz - center.xyz);
-            const vec4 screen_space_center = camera_data.prev_view_proj * vec4(center.xyz + direction * radius, 1.0f);
+            const vec3 direction = normalize(camera_data.position.xyz - center.xyz);
+            const vec4 screen_space_center = camera_data.view_proj * vec4(center.xyz + direction * radius, 1.0f);
             const float sphere_depth = screen_space_center.z / screen_space_center.w;
 
-            const float depth_bias = 0.01f;
-            visible = visible && sphere_depth - depth_bias <= depth;
+            visible = visible && sphere_depth <= depth;
         }
     }
 
@@ -149,7 +147,9 @@ void main()
 
 		const vec4 sphere_bounds = entity_data.entities[object_id].bounds_pos_radius;
 		const vec4 center = vec4(sphere_bounds.xyz, 1.0f);
-		// artificially inflate bounds to be more conservative with culling and to prevent "z-fighting" style cull between bounds and written depth values
+
+		// artificially inflate bounds to be more conservative with culling and to prevent
+		// "z-fighting" style cull between bounds and written depth values
 		const float radius = sphere_bounds.w * 1.1;
 
 		const bool in_frustum = is_in_frustum(object_id, center, radius);

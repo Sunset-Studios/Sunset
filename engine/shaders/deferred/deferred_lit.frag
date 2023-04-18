@@ -98,26 +98,31 @@ void main()
 {
 	const vec3 ambient = vec3(0.1f, 0.1f, 0.1f);
 
+	vec4 tex_albedo = texture(textures_2D[nonuniformEXT(lighting_pass_constants.albedo_texure)], in_tex_coord);
+	vec4 tex_normal = texture(textures_2D[nonuniformEXT(lighting_pass_constants.normal_texure)], in_tex_coord);
+	float tex_shininess = texture(textures_2D[nonuniformEXT(lighting_pass_constants.specular_texure)], in_tex_coord).r;
+	vec4 tex_position = texture(textures_2D[nonuniformEXT(lighting_pass_constants.position_texure)], in_tex_coord);
+
 	const vec3 albedo = 
 		lighting_pass_constants.albedo_texure == -1
 		? vec3(0.0, 0.0, 0.0)
-		: texture(textures_2D[nonuniformEXT(lighting_pass_constants.albedo_texure)], in_tex_coord).xyz;
+		: tex_albedo.xyz;
 
 	const vec3 normal =
 		lighting_pass_constants.normal_texure == -1
 		? vec3(0.0, 0.0, 0.0)
-		: texture(textures_2D[nonuniformEXT(lighting_pass_constants.normal_texure)], in_tex_coord).xyz;
+		: tex_normal.xyz;
 	const float normal_length = length(normal);
 
 	const float shininess =
 		lighting_pass_constants.specular_texure == -1
 		? 0.0f
-		: texture(textures_2D[nonuniformEXT(lighting_pass_constants.specular_texure)], in_tex_coord).r;
+		: tex_shininess;
 
 	const vec3 position =
 		lighting_pass_constants.position_texure == -1
 		? vec3(0.0, 0.0, 0.0)
-		: texture(textures_2D[nonuniformEXT(lighting_pass_constants.position_texure)], in_tex_coord).xyz;
+		: tex_position.xyz;
 
 	const vec3 view_dir = normalize(position - camera_data.position.xyz);
 	const uint unlit = uint(normal_length <= 0.0);

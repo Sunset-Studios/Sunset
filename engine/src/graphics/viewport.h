@@ -9,7 +9,7 @@ namespace Sunset
 		float width{ 0.0f };
 		float height{ 0.0f };
 		float min_depth{ 0.0f };
-		float max_depth{ 0.0f };
+		float max_depth{ 1.0f };
 
 		bool operator==(const Viewport& other) const
 		{

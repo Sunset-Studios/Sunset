@@ -73,9 +73,9 @@ void main()
 		: texture(textures_2D[nonuniformEXT(roughness_tex_index)], in_tex_coord * material.tiling_coeffs[2]).r;
 
 	const float shininess = pow(2.0f, 10.0f * (1.0f - roughness));
-
+	
 	out_frag_color = vec4(albedo, 1.0f);
 	out_specular = shininess;
-	out_normal = vec4(normal, 0.0f);
+	out_normal = vec4(normal, in_instance_index);
 	out_position = vec4(in_position, 1.0f);
 }

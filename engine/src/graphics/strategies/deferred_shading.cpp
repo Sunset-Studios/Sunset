@@ -15,7 +15,7 @@
 namespace Sunset
 {
 	AutoCVar_Int cvar_num_bloom_pass_iterations("ren.num_bloom_pass_iterations", "The number of bloom horizontal and vertical blur iterations. (0 to turn bloom off).", 5);
-	AutoCVar_Float cvar_bloom_intensity("ren.bloom_intensity", "The intensity of the applied final bloom", 0.2f);
+	AutoCVar_Float cvar_bloom_intensity("ren.bloom_intensity", "The intensity of the applied final bloom", 0.25f);
 
 	AutoCVar_Float cvar_final_image_exposure("ren.final_image_exposure", "The exposure to apply once HDR color gets resolved down to LDR", 1.0f);
 
@@ -121,7 +121,7 @@ namespace Sunset
 						DrawCullData& draw_cull_data = Renderer::get()->get_draw_cull_data();
 						draw_cull_data.hzb_width = hzb_image->get_attachment_config().extent.x;
 						draw_cull_data.hzb_height = hzb_image->get_attachment_config().extent.y;
-						draw_cull_data.hzb_texture = frame_data.pass_bindless_resources.handles.front();
+						draw_cull_data.hzb_texture = 0x0000ffff & frame_data.pass_bindless_resources.handles.front();
 					}
 
 					PushConstantPipelineData pass_data = PushConstantPipelineData::create(&Renderer::get()->get_draw_cull_data(), PipelineShaderStageType::Compute);
