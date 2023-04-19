@@ -34,5 +34,18 @@ namespace Sunset
 			value |= value >> 16;
 			return value - (value >> 1);
 		}
+
+		inline float halton(uint32_t index, uint32_t base)
+		{
+			float result = 0.0f;
+			float f = 1.0f;
+			while (index > 0)
+			{
+				f /= float(base);
+				result += f * float(index % base);
+				index /= base;
+			}
+			return result;
+		}
 	};
 }

@@ -150,7 +150,7 @@ namespace Sunset
 	inline VkPipelineColorBlendAttachmentState VK_FROM_SUNSET_ATTACHMENT_BLEND_STATE(const PipelineAttachmentBlendState& blend_state)
 	{
 		VkPipelineColorBlendAttachmentState vk_blend_state;
-		vk_blend_state.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+		vk_blend_state.colorWriteMask = blend_state.b_disable_write ? 0 : VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 		vk_blend_state.blendEnable = blend_state.b_blend_enabled;
 		vk_blend_state.srcColorBlendFactor = VK_FROM_SUNSET_BLEND_FACTOR(blend_state.source_color_blend);
 		vk_blend_state.dstColorBlendFactor = VK_FROM_SUNSET_BLEND_FACTOR(blend_state.destination_color_blend);

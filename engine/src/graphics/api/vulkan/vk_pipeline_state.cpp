@@ -50,11 +50,20 @@ namespace Sunset
 		VkPipelineMultisampleStateCreateInfo multisample_state = new_multisample_state_create_info(VK_FROM_SUNSET_MULTISAMPLE_COUNT(state_data->multisample_count));
 
 		const uint32_t num_attachments = render_pass->get_num_color_attachments();
+
 		std::vector<VkPipelineColorBlendAttachmentState> color_blend_attachment_states(num_attachments);
-		for (int i = 0; i < num_attachments; ++i)
+		if (num_attachments > 0)
 		{
-			color_blend_attachment_states[i] = VK_FROM_SUNSET_ATTACHMENT_BLEND_STATE(state_data->attachment_blend_state);
+			for (int i = 0; i < num_attachments; ++i)
+			{
+				color_blend_attachment_states[i] = VK_FROM_SUNSET_ATTACHMENT_BLEND_STATE(state_data->attachment_blend_state);
+			}
 		}
+		else
+		{
+			color_blend_attachment_states.push_back(VK_FROM_SUNSET_ATTACHMENT_BLEND_STATE(state_data->attachment_blend_state));
+		}
+
 		VkPipelineColorBlendStateCreateInfo color_blending_state = new_color_blending_state(color_blend_attachment_states);
 
 		VkPipelineDepthStencilStateCreateInfo depth_stencil_state = new_depth_stencil_state(state_data->b_depth_test_enabled, state_data->b_depth_write_enabled, VK_FROM_SUNSET_COMPARE_OP(state_data->compare_op));

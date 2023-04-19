@@ -12,6 +12,7 @@ layout (std140, set = 0, binding = 0) uniform CameraBuffer
 	mat4 inverse_view_proj;
 	vec4 frustum_planes[6];
 	vec4 position;
+	vec4 jitter;
 } camera_data;
 
 layout (std140, set = 0, binding = 1) uniform SceneLightingData

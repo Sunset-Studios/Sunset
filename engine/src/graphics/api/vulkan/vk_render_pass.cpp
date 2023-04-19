@@ -63,7 +63,7 @@ namespace Sunset
 				attachment.storeOp = image_attachment_config.has_store_op ? VK_ATTACHMENT_STORE_OP_STORE : VK_ATTACHMENT_STORE_OP_DONT_CARE;
 				attachment.stencilLoadOp = image_attachment_config.attachment_stencil_clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
 				attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-				attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+				attachment.initialLayout = VK_FROM_SUNSET_IMAGE_LAYOUT_FLAGS(image_attachment->get_layout());
 				attachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
 				if ((image_attachment_config.flags & ImageFlags::DepthStencil) != ImageFlags::None)

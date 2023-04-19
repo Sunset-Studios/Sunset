@@ -97,6 +97,7 @@ namespace Sunset
 		std::optional<PushConstantPipelineData> push_constant_data;
 		std::optional<PipelineRasterizerState> rasterizer_state;
 		std::optional<PipelineAttachmentBlendState> attachment_blend;
+		std::optional<bool> b_depth_write_enabled;
 	};
 
 	struct RGPassParameters

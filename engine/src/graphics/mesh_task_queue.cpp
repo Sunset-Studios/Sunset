@@ -55,7 +55,7 @@ namespace Sunset
 		}
 	}
 
-	void MeshTaskQueue::submit_draws(class GraphicsContext* const gfx_context, void* command_buffer, RenderPassID render_pass, DescriptorSet* descriptor_set, PipelineStateID pipeline_state, bool b_flush /*= true*/)
+	void MeshTaskQueue::submit_draws(class GraphicsContext* const gfx_context, void* command_buffer, RenderPassID render_pass, DescriptorSet* descriptor_set, PipelineStateID pipeline_state, bool b_use_draw_push_constants /*= true*/, bool b_flush /*= true*/)
 	{
 		for (uint32_t i = 0; i < indirect_draw_data.indirect_draws.size(); ++i)
 		{
@@ -70,7 +70,7 @@ namespace Sunset
 				i,
 				CACHE_FETCH(Buffer, indirect_draw_buffers.draw_indirect_buffer),
 				pipeline_state,
-				draw.push_constants
+				b_use_draw_push_constants ? draw.push_constants : PushConstantPipelineData()
 			);
 		}
 
@@ -335,7 +335,7 @@ namespace Sunset
 			cached_resource_state = indirect_draw.resource_state;
 		}
 
-		if (push_constants.data != nullptr)
+		if (push_constants.is_valid())
 		{
 			gfx_context->push_constants(command_buffer, pipeline_state, push_constants);
 		}
@@ -356,7 +356,7 @@ namespace Sunset
 		const PushConstantPipelineData& push_constants,
 		const std::vector<DescriptorLayoutID>& descriptor_layouts)
 	{
-		if (push_constants.data != nullptr)
+		if (push_constants.is_valid())
 		{
 			gfx_context->push_constants(command_buffer, pipeline_state, push_constants);
 		}

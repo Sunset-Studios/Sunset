@@ -214,6 +214,7 @@ namespace Sunset
 
 	struct PipelineAttachmentBlendState
 	{
+		bool b_disable_write{ false };
 		bool b_blend_enabled{ true };
 		BlendFactor source_color_blend{ BlendFactor::One };
 		BlendFactor destination_color_blend{ BlendFactor::Zero };
@@ -224,7 +225,8 @@ namespace Sunset
 
 		bool operator==(const PipelineAttachmentBlendState& other) const
 		{
-			return b_blend_enabled == other.b_blend_enabled
+			return b_disable_write == other.b_disable_write
+				&& b_blend_enabled == other.b_blend_enabled
 				&& source_color_blend == other.source_color_blend
 				&& destination_color_blend == other.destination_color_blend
 				&& color_blend_op == other.color_blend_op
@@ -283,7 +285,8 @@ struct std::hash<Sunset::PipelineAttachmentBlendState>
 {
 	std::size_t operator()(const Sunset::PipelineAttachmentBlendState& bd_data) const
 	{
-		std::size_t hash = Sunset::Maths::cantor_pair_hash(bd_data.b_blend_enabled, static_cast<int32_t>(bd_data.source_color_blend));
+		std::size_t hash = Sunset::Maths::cantor_pair_hash(bd_data.b_blend_enabled, bd_data.b_disable_write);
+		hash = Sunset::Maths::cantor_pair_hash(hash, static_cast<int32_t>(bd_data.source_color_blend));
 		hash = Sunset::Maths::cantor_pair_hash(hash, static_cast<int32_t>(bd_data.destination_color_blend));
 		hash = Sunset::Maths::cantor_pair_hash(hash, static_cast<int32_t>(bd_data.color_blend_op));
 		hash = Sunset::Maths::cantor_pair_hash(hash, static_cast<int32_t>(bd_data.source_alpha_blend));

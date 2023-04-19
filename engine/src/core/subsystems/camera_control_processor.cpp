@@ -3,6 +3,8 @@
 #include <core/layers/scene.h>
 #include <graphics/renderer.h>
 #include <graphics/resource/buffer.h>
+#include <window/window.h>
+#include <utility/cvar.h>
 
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -15,9 +17,12 @@
 
 namespace Sunset
 {
+	AutoCVar_Int cvar_camera_jitter_period("ren.camera_jitter_period", "The maximum jitter period for applying jitter to the camera projection matrix. Corresponds to the number of frames before jitter tends to repeat.", 4);
+
 	void CameraControlProcessor::update(class Scene* scene, double delta_time)
 	{
 		const size_t min_ubo_alignment = Renderer::get()->context()->get_min_ubo_offset_alignment();
+		const Window* window = Renderer::get()->context()->get_window();
 
 		for (EntityID entity : SceneView<CameraControlComponent>(*scene))
 		{
@@ -87,16 +92,29 @@ namespace Sunset
 				}
 
 				camera_control_comp->data.b_dirty = false;
+			}
 
-				for (int i = 0; i < MAX_BUFFERED_FRAMES; ++i)
-				{
-					CACHE_FETCH(Buffer, scene->scene_data.buffer)->copy_from(
-						Renderer::get()->context(),
-						&camera_control_comp->data.gpu_data,
-						sizeof(CameraData),
-						scene->scene_data.cam_data_buffer_start + BufferHelpers::pad_ubo_size(sizeof(CameraData), min_ubo_alignment) * i
-					);
-				}
+			// Apply frame jitter used for motion vectors
+			if (camera_control_comp->data.b_frame_jitter)
+			{
+				camera_control_comp->data.gpu_data.jitter.x = camera_control_comp->data.gpu_data.jitter.z;
+				camera_control_comp->data.gpu_data.jitter.y = camera_control_comp->data.gpu_data.jitter.w;
+
+				const float x_jitter = Maths::halton(camera_control_comp->data.current_jitter_index, 2) * 2.0f - 1.0f;
+				const float y_jitter = Maths::halton(camera_control_comp->data.current_jitter_index, 3) * 2.0f - 1.0f;
+
+				camera_control_comp->data.gpu_data.jitter.z = x_jitter;
+				camera_control_comp->data.gpu_data.jitter.w = y_jitter;
+
+				// TODO: What we really want here is the current viewport size
+				camera_control_comp->data.gpu_data.projection_matrix[2][0] += x_jitter / window->get_extent().x;
+				camera_control_comp->data.gpu_data.projection_matrix[2][1] += y_jitter / window->get_extent().y;
+
+				camera_control_comp->data.current_jitter_index = (camera_control_comp->data.current_jitter_index + 1) % cvar_camera_jitter_period.get();
+			}
+			else
+			{
+				camera_control_comp->data.gpu_data.jitter = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
 			}
 
 			// TODO: Only do this for the active camera
@@ -119,6 +137,16 @@ namespace Sunset
 			{
 				Renderer::get()->set_draw_cull_data(new_draw_cull_data);
 			});
+
+			for (int i = 0; i < MAX_BUFFERED_FRAMES; ++i)
+			{
+				CACHE_FETCH(Buffer, scene->scene_data.buffer)->copy_from(
+					Renderer::get()->context(),
+					&camera_control_comp->data.gpu_data,
+					sizeof(CameraData),
+					scene->scene_data.cam_data_buffer_start + BufferHelpers::pad_ubo_size(sizeof(CameraData), min_ubo_alignment) * i
+				);
+			}
 		}
 	}
 }

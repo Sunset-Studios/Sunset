@@ -77,7 +77,7 @@ namespace Sunset
 			Renderer::get()->get_persistent_image("hi_z", buffered_frame_number)
 		);
 
-		// Compute mesh cull pass
+		// Mesh cull pass
 		{
 			render_graph.add_pass(
 				gfx_context,
@@ -144,9 +144,73 @@ namespace Sunset
 			);
 		}
 
+		// Depth pre-pass
+		RGResourceHandle main_depth_image_desc;
+		{
+			RGShaderDataSetup shader_setup
+			{
+				.pipeline_shaders =
+				{
+					{ PipelineShaderStageType::Vertex, "../../shaders/common/depth_only.vert.sun" }
+				},
+				.attachment_blend = PipelineAttachmentBlendState
+				{
+					.b_disable_write = true
+				}
+			};
+
+			const glm::vec2 image_extent = gfx_context->get_window()->get_extent();
+			main_depth_image_desc = render_graph.create_image(
+				gfx_context,
+				{
+					.name = "main_depth",
+					.format = Format::FloatDepth32,
+					.extent = glm::vec3(image_extent.x, image_extent.y, 1.0f),
+					.flags = ImageFlags::DepthStencil | ImageFlags::Sampled | ImageFlags::Image2D,
+					.usage_type = MemoryUsageType::OnlyGPU,
+					.sampler_address_mode = SamplerAddressMode::EdgeClamp,
+					.image_filter = ImageFilter::Linear,
+					.attachment_clear = true,
+					.attachment_stencil_clear = true,
+				}
+			);
+
+			render_graph.add_pass(
+				gfx_context,
+				"depth_prepass",
+				RenderPassFlags::Graphics,
+				{
+					.shader_setup = shader_setup,
+					.inputs = { entity_data_buffer_desc, compacted_object_instance_buffer_desc, draw_indirect_buffer_desc },
+					.outputs = { main_depth_image_desc }
+				},
+				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
+				{
+					{
+						glm::vec4 dummy_user_data;
+						PushConstantPipelineData pc_data = PushConstantPipelineData::create(&dummy_user_data, PipelineShaderStageType::Vertex);
+						gfx_context->push_constants(command_buffer, frame_data.pass_pipeline_state, pc_data);
+					}
+
+					Renderer::get()->get_mesh_task_queue().submit_draws(
+						gfx_context,
+						command_buffer,
+						frame_data.current_pass,
+						frame_data.global_descriptor_set,
+						frame_data.pass_pipeline_state,
+						false,
+						false
+					);
+
+					// We wrote the depth here so we want a load op in subsequent passes in order to have the rasterizer reject fragments
+					Image* const depth_image = CACHE_FETCH(Image, graph.get_physical_resource(main_depth_image_desc));
+					depth_image->get_attachment_config().attachment_clear = false;
+				}
+			);
+		}
+
 		// G-Buffer pass
 		RGResourceHandle main_albedo_image_desc;
-		RGResourceHandle main_depth_image_desc;
 		RGResourceHandle main_specular_image_desc;
 		RGResourceHandle main_normal_image_desc;
 		RGResourceHandle main_position_image_desc;
@@ -157,7 +221,8 @@ namespace Sunset
 				{
 					{ PipelineShaderStageType::Vertex, "../../shaders/deferred/deferred_mesh.vert.sun" },
 					{ PipelineShaderStageType::Fragment, "../../shaders/deferred/deferred_gbuffer_base.frag.sun"}
-				}
+				},
+				.b_depth_write_enabled = false	// depth is written in pre-pass
 			};
 
 			// Create G-Buffer targets
@@ -175,20 +240,6 @@ namespace Sunset
 					.image_filter = ImageFilter::Linear,
 					.attachment_clear = true,
 					.attachment_stencil_clear = false
-				}
-			);
-			main_depth_image_desc = render_graph.create_image(
-				gfx_context,
-				{
-					.name = "main_depth",
-					.format = Format::FloatDepth32,
-					.extent = glm::vec3(image_extent.x, image_extent.y, 1.0f),
-					.flags = ImageFlags::DepthStencil | ImageFlags::Sampled | ImageFlags::Image2D,
-					.usage_type = MemoryUsageType::OnlyGPU,
-					.sampler_address_mode = SamplerAddressMode::EdgeClamp,
-					.image_filter = ImageFilter::Linear,
-					.attachment_clear = true,
-					.attachment_stencil_clear = true,
 				}
 			);
 			main_specular_image_desc = render_graph.create_image(
@@ -252,6 +303,10 @@ namespace Sunset
 						frame_data.global_descriptor_set,
 						frame_data.pass_pipeline_state
 					);
+
+					// Reset the depth clear for the next frame's pre-pass
+					Image* const depth_image = CACHE_FETCH(Image, graph.get_physical_resource(main_depth_image_desc));
+					depth_image->get_attachment_config().attachment_clear = true;
 				}
 			);
 		}

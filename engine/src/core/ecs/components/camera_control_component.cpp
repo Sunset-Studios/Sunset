@@ -114,4 +114,17 @@ namespace Sunset
 			set_look_speed(camera_comp, new_look_speed);
 		}
 	}
+
+	void set_frame_jitter_enabled(CameraControlComponent* camera_comp, bool b_enabled)
+	{
+		camera_comp->data.b_frame_jitter = b_enabled;
+	}
+
+	void set_frame_jitter_enabled(class Scene* scene, EntityID entity, bool b_enabled)
+	{
+		if (CameraControlComponent* const camera_comp = scene->get_component<CameraControlComponent>(entity))
+		{
+			set_frame_jitter_enabled(camera_comp, b_enabled);
+		}
+	}
 }

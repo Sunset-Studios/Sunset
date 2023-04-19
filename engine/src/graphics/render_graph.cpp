@@ -749,6 +749,11 @@ namespace Sunset
 					state_builder.set_attachment_blend_state(shader_setup.attachment_blend.value());
 				}
 
+				if (shader_setup.b_depth_write_enabled.has_value())
+				{
+					state_builder.set_depth_stencil_state(true, shader_setup.b_depth_write_enabled.value(), CompareOperation::LessOrEqual);
+				}
+
 				if (shader_setup.push_constant_data.has_value())
 				{
 					state_builder.set_push_constants(shader_setup.push_constant_data.value());
