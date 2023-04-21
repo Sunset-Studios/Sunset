@@ -106,8 +106,15 @@ namespace Sunset
 	{
 		const uint32_t buffered_frame_number = gfx_context->get_buffered_frame_number();
 
+		#if READABLE_STRINGS
+		const std::string pass_name_str = name.string + std::to_string(buffered_frame_number);
+		const Identity pass_name = pass_name_str.c_str();
+		#else
+		const Identity pass_name = name.computed_hash + buffered_frame_number;
+		#endif
+
 		RGPass* const pass = render_pass_allocator.get_new();
-		pass->pass_config = { .name = name.computed_hash + buffered_frame_number, .flags = pass_type };
+		pass->pass_config = { .name = pass_name, .flags = pass_type };
 		pass->parameters = params;
 		pass->executor = execution_callback;
 
@@ -127,8 +134,15 @@ namespace Sunset
 	{
 		const uint32_t buffered_frame_number = gfx_context->get_buffered_frame_number();
 
+		#if READABLE_STRINGS
+		const std::string pass_name_str = name.string + std::to_string(buffered_frame_number);
+		const Identity pass_name = pass_name_str.c_str();
+		#else
+		const Identity pass_name = name.computed_hash + buffered_frame_number;
+		#endif
+
 		RGPass* const pass = render_pass_allocator.get_new();
-		pass->pass_config = { .name = name.computed_hash + buffered_frame_number, .flags = pass_type };
+		pass->pass_config = { .name = pass_name, .flags = pass_type };
 		pass->executor = execution_callback;
 
 		const uint32_t index = current_registry->render_passes.size();
@@ -839,6 +853,11 @@ namespace Sunset
 						);
 					}
 				}
+
+				// Guarantees that storage image handles come after regular image handles
+				std::stable_partition(bindless_writes.begin(), bindless_writes.end(),
+					[](const DescriptorBindlessWrite& w) -> bool { return w.type == DescriptorType::Image; }
+				);
 
 				frame_data.pass_bindless_resources.handles.resize(bindless_writes.size(), -1);
 

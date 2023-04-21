@@ -77,6 +77,11 @@ namespace Sunset
 			Renderer::get()->get_persistent_image("hi_z", buffered_frame_number)
 		);
 
+		RGResourceHandle temporal_color_history = render_graph.register_image(
+			gfx_context,
+			Renderer::get()->get_persistent_image("temporal_color_history", buffered_frame_number)
+		);
+
 		// Mesh cull pass
 		{
 			render_graph.add_pass(
@@ -311,6 +316,68 @@ namespace Sunset
 			);
 		}
 
+		// Motion vectors pass
+		RGResourceHandle motion_vectors_image_desc;
+		{
+			RGShaderDataSetup shader_setup
+			{
+				.pipeline_shaders =
+				{
+					{ PipelineShaderStageType::Compute, "../../shaders/common/camera_motion_vectors.comp.sun" }
+				}
+			};
+
+			const glm::vec2 image_extent = gfx_context->get_window()->get_extent();
+			motion_vectors_image_desc = render_graph.create_image(
+				gfx_context,
+				{
+					.name = "motion_vectors",
+					.format = Format::Float2x16,
+					.extent = glm::vec3(image_extent.x, image_extent.y, 1.0f),
+					.flags = ImageFlags::Color | ImageFlags::Sampled | ImageFlags::Storage | ImageFlags::Image2D,
+					.usage_type = MemoryUsageType::OnlyGPU,
+					.sampler_address_mode = SamplerAddressMode::EdgeClamp,
+					.image_filter = ImageFilter::Linear,
+					.attachment_clear = true
+				}
+			);
+
+			render_graph.add_pass(
+				gfx_context,
+				"compute_motion_vectors",
+				RenderPassFlags::Compute,
+				{
+					.shader_setup = shader_setup,
+					.inputs = { main_depth_image_desc, motion_vectors_image_desc },
+					.outputs = { motion_vectors_image_desc },
+					.b_split_input_image_mips = true
+				},
+				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
+				{
+					const BindingTableHandle depth_image_index = frame_data.pass_bindless_resources.handles[0];
+					const BindingTableHandle motion_vectors_image_index = frame_data.pass_bindless_resources.handles[2];
+
+					{
+						MotionVectorsData motion_vectors_data
+						{
+							.input_depth_index = (0x0000ffff & depth_image_index),
+							.output_motion_vectors_index = (0x0000ffff & motion_vectors_image_index),
+							.resolution = image_extent
+						};
+						PushConstantPipelineData pc_data = PushConstantPipelineData::create(&motion_vectors_data, PipelineShaderStageType::Compute);
+						gfx_context->push_constants(command_buffer, frame_data.pass_pipeline_state, pc_data);
+					}
+
+					gfx_context->dispatch_compute(
+						command_buffer,
+						static_cast<uint32_t>((image_extent.x + 15) / 16),
+						static_cast<uint32_t>((image_extent.y + 15) / 16),
+						1
+					);
+				}
+			);
+		}
+
 		// HZB generation pass
 		{
 			RGShaderDataSetup shader_setup
@@ -409,7 +476,7 @@ namespace Sunset
 					.name = "scene_color",
 					.format = Format::Float4x32,
 					.extent = glm::vec3(image_extent.x, image_extent.y, 1.0f),
-					.flags = ImageFlags::Color | ImageFlags::Image2D | ImageFlags::Sampled,
+					.flags = ImageFlags::Color | ImageFlags::Image2D | ImageFlags::Sampled | ImageFlags::Storage,
 					.usage_type = MemoryUsageType::OnlyGPU,
 					.sampler_address_mode = SamplerAddressMode::Repeat,
 					.image_filter = ImageFilter::Linear,
@@ -448,6 +515,63 @@ namespace Sunset
 					gfx_context->push_constants(command_buffer, frame_data.pass_pipeline_state, pass_data);
 
 					Renderer::get()->draw_fullscreen_quad(command_buffer);
+				}
+			);
+		}
+
+		// TAA pass
+		{
+			RGShaderDataSetup shader_setup
+			{
+				.pipeline_shaders =
+				{
+					{ PipelineShaderStageType::Compute, "../../shaders/effects/taa.comp.sun" }
+				}
+			};
+
+			const glm::vec2 image_extent = gfx_context->get_window()->get_extent();
+			const uint32_t current_frame_number = gfx_context->get_frame_number();
+
+			render_graph.add_pass(
+				gfx_context,
+				"temporal_aa",
+				RenderPassFlags::Compute,
+				{
+					.shader_setup = shader_setup,
+					.inputs = { scene_color_desc, temporal_color_history, motion_vectors_image_desc, main_depth_image_desc },
+					.outputs = { scene_color_desc, temporal_color_history }
+				},
+				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
+				{
+					const BindingTableHandle scene_color_index = frame_data.pass_bindless_resources.handles[0];
+					const BindingTableHandle history_color_index = frame_data.pass_bindless_resources.handles[1];
+					const BindingTableHandle motion_vectors_index = frame_data.pass_bindless_resources.handles[2];
+					const BindingTableHandle depth_index = frame_data.pass_bindless_resources.handles[3];
+					const BindingTableHandle out_scene_color_index = frame_data.pass_bindless_resources.handles[4];
+					const BindingTableHandle out_history_color_index = frame_data.pass_bindless_resources.handles[5];
+
+					{
+						TAAData temporal_aa_data
+						{
+							.input_scene_color = (0x0000ffff & scene_color_index),
+							.input_color_history = (0x0000ffff & history_color_index),
+							.input_motion_vectors = (0x0000ffff & motion_vectors_index),
+							.input_depth = (0x0000ffff & depth_index),
+							.output_scene_color = (0x0000ffff & out_scene_color_index),
+							.output_color_history = (0x0000ffff & out_history_color_index),
+							.blend_weight = current_frame_number > MAX_BUFFERED_FRAMES ? 0.2f : 0.0f, // Only blend history color after the first few frames
+							.resolution = image_extent
+						};
+						PushConstantPipelineData pc_data = PushConstantPipelineData::create(&temporal_aa_data, PipelineShaderStageType::Compute);
+						gfx_context->push_constants(command_buffer, frame_data.pass_pipeline_state, pc_data);
+					}
+
+					gfx_context->dispatch_compute(
+						command_buffer,
+						static_cast<uint32_t>((image_extent.x + 15) / 16),
+						static_cast<uint32_t>((image_extent.y + 15) / 16),
+						1
+					);
 				}
 			);
 		}
@@ -537,7 +661,7 @@ namespace Sunset
 						const uint32_t dst_index = i;
 
 						const BindingTableHandle src_image_index = frame_data.pass_bindless_resources.handles[i == 0 ? 0 : 1 + src_index];
-						const BindingTableHandle dst_image_index = frame_data.pass_bindless_resources.handles[1 + num_mips + dst_index];
+						const BindingTableHandle dst_image_index = frame_data.pass_bindless_resources.handles[2 + num_mips + dst_index];
 
 						glm::ivec3 image_size = downsample_image->get_attachment_config().extent;
 

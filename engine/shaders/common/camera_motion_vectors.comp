@@ -1,0 +1,36 @@
+#version 460
+
+#include "common/common.inc"
+
+layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+layout (push_constant) uniform constants
+{
+	int depth_texture;
+	int motion_vector_texture;
+	vec2 resolution;
+} motion_vector_constants;
+
+void main()
+{
+	ivec2 texel_pos = ivec2(gl_GlobalInvocationID.xy);
+
+	// Read and use depth to reconstruct NDC position
+	const float raw_depth = texelFetch(textures_2D[nonuniformEXT(motion_vector_constants.depth_texture)], texel_pos, 0).r;
+	const vec2 screen_uv = nearest_uv(texel_pos, motion_vector_constants.resolution);
+	vec4 current_ndc_pos = to_ndc(screen_uv, raw_depth);
+
+	// Reconstruct world position and previous NDC position
+	const vec3 pixel_world_pos = to_world_pos(screen_uv, raw_depth, camera_data.inverse_view_proj);
+	vec4 prev_ndc_pos = camera_data.prev_view_proj * vec4(pixel_world_pos, 1.0f);
+	prev_ndc_pos.xyz /= prev_ndc_pos.w;
+
+	// Calculate jittering difference
+	vec2 jitter_difference = clamp(camera_data.jitter.zw - camera_data.jitter.xy, vec2(-1.0f), vec2(1.0f)) * 0.5f;
+
+	// Pixel velocity is given by NDC (x, y) difference, taking into account jitter
+	vec2 velocity = current_ndc_pos.xy - prev_ndc_pos.xy;
+	velocity -= jitter_difference;
+
+	imageStore(storage_2D[nonuniformEXT(motion_vector_constants.motion_vector_texture)], texel_pos, vec4(velocity, 0.0f, 0.0f));
+}

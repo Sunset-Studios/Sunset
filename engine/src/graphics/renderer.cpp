@@ -30,9 +30,8 @@ namespace Sunset
 			{ DescriptorType::Image, MAX_DESCRIPTOR_BINDINGS }
 		});
 
+		const glm::vec2 image_extent = window->get_extent();
 		{
-			const glm::vec2 image_extent = window->get_extent();
-
 			uint32_t image_width_npot = Maths::npot(image_extent.x);
 			uint32_t image_height_npot = Maths::npot(image_extent.y);
 			uint32_t mip_levels = glm::max(std::log2(image_width_npot), std::log2(image_height_npot));
@@ -53,6 +52,24 @@ namespace Sunset
 						.attachment_clear = true,
 						.attachment_stencil_clear = true,
 						.does_min_reduction = true
+					}
+				)
+			);
+		}
+		{
+			register_persistent_image(
+				"temporal_color_history",
+				ImageFactory::create(
+					graphics_context.get(),
+					{
+						.name = "temporal_color_history",
+						.format = Format::Float4x32,
+						.extent = glm::vec3(image_extent.x, image_extent.y, 1.0f),
+						.flags = ImageFlags::Color | ImageFlags::Sampled | ImageFlags::Storage,
+						.usage_type = MemoryUsageType::OnlyGPU,
+						.sampler_address_mode = SamplerAddressMode::EdgeClamp,
+						.image_filter = ImageFilter::Linear,
+						.attachment_clear = true,
 					}
 				)
 			);

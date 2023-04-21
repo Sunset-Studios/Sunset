@@ -50,6 +50,13 @@ namespace Sunset
 		float padding{ 0 };
 	};
 
+	struct MotionVectorsData
+	{
+		int32_t input_depth_index;
+		int32_t output_motion_vectors_index;
+		glm::vec2 resolution;
+	};
+
 	struct FullscreenData
 	{
 		int32_t scene_texture_index;
@@ -68,6 +75,19 @@ namespace Sunset
 		int32_t specular_texure;
 		int32_t normal_texure;
 		int32_t position_texure;
+	};
+
+	struct TAAData
+	{
+		int32_t input_scene_color;
+		int32_t input_color_history;
+		int32_t input_motion_vectors;
+		int32_t input_depth;
+		int32_t output_scene_color;
+		int32_t output_color_history;
+		float blend_weight;
+		float padding;
+		glm::vec2 resolution;
 	};
 
 	struct BloomBlurData

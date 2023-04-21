@@ -16,7 +16,7 @@ namespace Sunset
 
 	enum class DescriptorType : int16_t
 	{
-		UniformBuffer,
+		UniformBuffer = 0,
 		Image,
 		StorageImage,
 		DynamicUniformBuffer,

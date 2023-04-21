@@ -23,6 +23,7 @@ namespace Sunset
 	{
 		const size_t min_ubo_alignment = Renderer::get()->context()->get_min_ubo_offset_alignment();
 		const Window* window = Renderer::get()->context()->get_window();
+		const uint32_t current_frame_number = Renderer::get()->context()->get_frame_number();
 
 		for (EntityID entity : SceneView<CameraControlComponent>(*scene))
 		{
@@ -30,7 +31,10 @@ namespace Sunset
 
 			if (camera_control_comp->data.b_dirty)
 			{
-				camera_control_comp->data.gpu_data.prev_view_projection_matrix = camera_control_comp->data.gpu_data.view_projection_matrix;
+				if (current_frame_number > MAX_BUFFERED_FRAMES)
+				{
+					camera_control_comp->data.gpu_data.prev_view_projection_matrix = camera_control_comp->data.gpu_data.view_projection_matrix;
+				}
 
 				camera_control_comp->data.gpu_data.view_matrix = glm::lookAt(
 					camera_control_comp->data.position,
@@ -91,6 +95,11 @@ namespace Sunset
 					}
 				}
 
+				if (current_frame_number <= MAX_BUFFERED_FRAMES)
+				{
+					camera_control_comp->data.gpu_data.prev_view_projection_matrix = camera_control_comp->data.gpu_data.view_projection_matrix;
+				}
+
 				camera_control_comp->data.b_dirty = false;
 			}
 
@@ -103,12 +112,12 @@ namespace Sunset
 				const float x_jitter = Maths::halton(camera_control_comp->data.current_jitter_index, 2) * 2.0f - 1.0f;
 				const float y_jitter = Maths::halton(camera_control_comp->data.current_jitter_index, 3) * 2.0f - 1.0f;
 
-				camera_control_comp->data.gpu_data.jitter.z = x_jitter;
-				camera_control_comp->data.gpu_data.jitter.w = y_jitter;
+				camera_control_comp->data.gpu_data.jitter.z = x_jitter / window->get_extent().x;
+				camera_control_comp->data.gpu_data.jitter.w = y_jitter / window->get_extent().y;
 
 				// TODO: What we really want here is the current viewport size
-				camera_control_comp->data.gpu_data.projection_matrix[2][0] += x_jitter / window->get_extent().x;
-				camera_control_comp->data.gpu_data.projection_matrix[2][1] += y_jitter / window->get_extent().y;
+				camera_control_comp->data.gpu_data.projection_matrix[2][0] += camera_control_comp->data.gpu_data.jitter.z;
+				camera_control_comp->data.gpu_data.projection_matrix[2][1] += camera_control_comp->data.gpu_data.jitter.w;
 
 				camera_control_comp->data.current_jitter_index = (camera_control_comp->data.current_jitter_index + 1) % cvar_camera_jitter_period.get();
 			}
