@@ -200,6 +200,12 @@ namespace Sunset
 			const RGPassParameters& params,
 			std::function<void(RenderGraph&, RGFrameData&, void*)> execution_callback);
 
+		void add_pass_resource_barrier(
+			RGResourceHandle resource,
+			RGPassHandle pass,
+			AccessFlags dst_access,
+			ImageLayout dst_layout = ImageLayout::Undefined);
+
 		void submit(class GraphicsContext* const gfx_context, class Swapchain* const swapchain);
 
 		void queue_global_descriptor_writes(class GraphicsContext* const gfx_context, uint32_t buffered_frame, const std::initializer_list<DescriptorBufferDesc>& buffers);

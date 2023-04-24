@@ -85,9 +85,10 @@ namespace Sunset
 		int32_t input_depth;
 		int32_t output_scene_color;
 		int32_t output_color_history;
-		float blend_weight;
-		float padding;
+		int32_t inverse_luminance_filter_enabled;
+		int32_t luminance_difference_filter_enabled;
 		glm::vec2 resolution;
+		glm::vec2 padding;
 	};
 
 	struct BloomBlurData

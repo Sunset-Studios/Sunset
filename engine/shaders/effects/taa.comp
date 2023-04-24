@@ -15,9 +15,10 @@ layout (push_constant) uniform constants
 	int depth_texture;
 	int out_scene_color_texture;
 	int out_history_color_texture;
-	float blend_weight;
-	float padding;
+	int inverse_luminance_filter_enabled;
+	int luminance_difference_filter_enabled;
 	vec2 resolution;
+	vec2 padding;
 } temporal_aa_constants;
 
 void closest_fragment_3x3(ivec2 pixel_pos, out ivec2 closest_pos, out float closest_depth)
@@ -69,8 +70,8 @@ void main()
 {
 	ivec2 texel_pos = ivec2(gl_GlobalInvocationID.xy);
 
-	// Find the closest fragment in a 3x3 texel area based on depth, and use that to sample our motion vector
-	// in order to reproject
+	// Find the closest fragment in a 3x3 texel area based on depth, and use that to sample our motion vector image
+	// in order to reproject and sample our history color
 	float closest_depth = 1.0f;
 	ivec2 closest_pos = ivec2(0, 0);
 	closest_fragment_3x3(texel_pos, closest_pos, closest_depth);
@@ -99,7 +100,7 @@ void main()
 
 			vec3 current_sample = texelFetch(textures_2D[nonuniformEXT(temporal_aa_constants.scene_color_texture)], pixel_position, 0).rgb;
 
-			float subsample_distance = length(vec2(float(x), float(y)));
+			float subsample_distance = length(vec2(x * 1.0f, y * 1.0f));
 			float subsample_weight = catmull_rom_filter(subsample_distance * 2.0f);
 
 			current_sample_total += current_sample * subsample_weight;
@@ -137,11 +138,12 @@ void main()
 	// Temporal filtering
 	{
 		vec3 temporal_weight = clamp(abs(neighborhood_max - neighborhood_min) / current_sample, vec3(0), vec3(1));
-		history_weight = clamp(mix(vec3(0.25f), vec3(0.85f), temporal_weight), vec3(0), vec3(1));
+		history_weight = clamp(mix(vec3(0.25f), vec3(0.95f), temporal_weight), vec3(0), vec3(1));
 		current_weight = 1.0f - history_weight;
 	}
 
 	// Inverse luminance filtering
+	if (temporal_aa_constants.inverse_luminance_filter_enabled > 0)
 	{
 		vec3 compressed_source = current_sample / (max(max(current_sample.r, current_sample.g), current_sample.b) + 1.0f);
 		vec3 compressed_history = history_color / (max(max(history_color.r, history_color.g), history_color.b) + 1.0f);
@@ -149,6 +151,7 @@ void main()
 		float luminance_history = luminance(compressed_history);
 
 		// Luminance difference filtering
+		if (temporal_aa_constants.luminance_difference_filter_enabled > 0)
 		{
 			float unbiased_diff = abs(luminance_source - luminance_history) / max(luminance_source, max(luminance_history, 0.2f));
 			float unbiased_weight = 1.0f - unbiased_diff;

@@ -125,7 +125,7 @@ namespace Sunset
 					}
 				);
 
-				set_mesh(mesh_comp, MeshFactory::create_sphere(Renderer::get()->context(), glm::ivec2(16.0f, 16.0f), 1.0f));
+				set_mesh(mesh_comp, MeshFactory::create_sphere(Renderer::get()->context(), glm::ivec2(32.0f, 32.0f), 1.0f));
 				set_material(mesh_comp, mesh_material);
 			}
 

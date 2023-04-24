@@ -155,6 +155,33 @@ namespace Sunset
 		return index;
 	}
 
+	void RenderGraph::add_pass_resource_barrier(RGResourceHandle resource, RGPassHandle pass, AccessFlags dst_access, ImageLayout dst_layout /*= ImageLayout::Undefined*/)
+	{
+		if (auto it = current_registry->resource_metadata.find(resource); it != current_registry->resource_metadata.end())
+		{
+			RGResourceMetadata& metadata = (*it).second;
+
+			const ResourceType resource_type = static_cast<ResourceType>(get_graph_resource_type(resource));
+
+			if (RGPass* const pass_obj = current_registry->render_passes[pass])
+			{
+				const size_t num_passes = current_registry->render_passes.size();
+
+				if (metadata.access_flags.size() < num_passes)
+				{
+					metadata.access_flags.resize(current_registry->render_passes.size(), AccessFlags::None);
+				}
+				if (metadata.layouts.size() < num_passes)
+				{
+					metadata.layouts.resize(current_registry->render_passes.size(), ImageLayout::Undefined);
+				}
+
+				metadata.access_flags[pass] = dst_access;
+				metadata.layouts[pass] = dst_layout;
+			}
+		}
+	}
+
 	void RenderGraph::update_reference_counts(RGPass* pass)
 	{
 		pass->reference_count += pass->parameters.outputs.size();
@@ -316,13 +343,15 @@ namespace Sunset
 	{
 		const auto get_access_flags_for_resource_and_pass_type = [=](RGResourceHandle resource, ResourceType resource_type, RenderPassFlags pass_flags, bool b_input_resource)
 		{
-			if (!b_input_resource)
+			const RGResourceIndex resource_index = get_graph_resource_index(resource);
+			RGImageResource* const image_resource = current_registry->image_resources[resource_index];
+			const bool b_is_depth_stencil = (image_resource->config.flags & ImageFlags::DepthStencil) != ImageFlags::None;
+			const bool b_is_depth_stencil_load = b_is_depth_stencil && !image_resource->config.attachment_clear;
+
+			if (!b_input_resource && !b_is_depth_stencil_load)
 			{
 				if (resource_type == ResourceType::Image && (pass_flags & RenderPassFlags::Graphics) != RenderPassFlags::None)
 				{
-					const RGResourceIndex resource_index = get_graph_resource_index(resource);
-					RGImageResource* const image_resource = current_registry->image_resources[resource_index];
-					const bool b_is_depth_stencil = (image_resource->config.flags & ImageFlags::DepthStencil) != ImageFlags::None;
 					return b_is_depth_stencil ? AccessFlags::DepthStencilAttachmentWrite : AccessFlags::ColorAttachmentWrite;
 				}
 				else
@@ -335,13 +364,15 @@ namespace Sunset
 
 		const auto get_image_layout_for_resource_and_pass_type = [=](RGResourceHandle resource, ResourceType resource_type, RenderPassFlags pass_flags, bool b_input_resource)
 		{
-			if (!b_input_resource)
+			const RGResourceIndex resource_index = get_graph_resource_index(resource);
+			RGImageResource* const image_resource = current_registry->image_resources[resource_index];
+			const bool b_is_depth_stencil = (image_resource->config.flags & ImageFlags::DepthStencil) != ImageFlags::None;
+			const bool b_is_depth_stencil_load = b_is_depth_stencil && !image_resource->config.attachment_clear;
+
+			if (!b_input_resource && !b_is_depth_stencil_load)
 			{
 				if (resource_type == ResourceType::Image && (pass_flags & RenderPassFlags::Graphics) != RenderPassFlags::None)
 				{
-					const RGResourceIndex resource_index = get_graph_resource_index(resource);
-					RGImageResource* const image_resource = current_registry->image_resources[resource_index];
-					const bool b_is_depth_stencil = (image_resource->config.flags & ImageFlags::DepthStencil) != ImageFlags::None;
 					return b_is_depth_stencil ? ImageLayout::DepthStencilAttachment : ImageLayout::ColorAttachment;
 				}
 				else
@@ -352,6 +383,7 @@ namespace Sunset
 			return ImageLayout::ShaderReadOnly;
 		};
 
+		const size_t num_passes = current_registry->render_passes.size();
 		// For each resource we compute the per-pass access masks and image layouts. We can then diff these
 		// when executing passes based on prev -> current in order to determine whether the resource needs
 		// a memory barrier.
@@ -381,18 +413,22 @@ namespace Sunset
 
 					RGPass* const pass_obj = current_registry->render_passes[pass];
 
-					if (metadata.access_flags.empty())
+					if (metadata.access_flags.size() < num_passes)
 					{
 						metadata.access_flags.resize(current_registry->render_passes.size(), AccessFlags::None);
 					}
-					if (metadata.layouts.empty())
+					if (metadata.layouts.size() < num_passes)
 					{
 						metadata.layouts.resize(current_registry->render_passes.size(), ImageLayout::Undefined);
 					}
 
-					const bool b_is_input_for_pass = std::find(metadata.producers.begin(), metadata.producers.end(), pass) == metadata.producers.end();
-					metadata.access_flags[pass] = get_access_flags_for_resource_and_pass_type(resource, resource_type, pass_obj->pass_config.flags, b_is_input_for_pass);
-					metadata.layouts[pass] = get_image_layout_for_resource_and_pass_type(resource, resource_type, pass_obj->pass_config.flags, b_is_input_for_pass);
+					// Do not touch access/layout metadata that has already been set as this has most likely been done manually via a call to add_pass_resource_barrier
+					if (metadata.access_flags[pass] == AccessFlags::None && metadata.layouts[pass] == ImageLayout::Undefined)
+					{
+						const bool b_is_input_for_pass = std::find(metadata.producers.begin(), metadata.producers.end(), pass) == metadata.producers.end();
+						metadata.access_flags[pass] = get_access_flags_for_resource_and_pass_type(resource, resource_type, pass_obj->pass_config.flags, b_is_input_for_pass);
+						metadata.layouts[pass] = get_image_layout_for_resource_and_pass_type(resource, resource_type, pass_obj->pass_config.flags, b_is_input_for_pass);
+					}
 				}
 			}
 		}
@@ -579,10 +615,7 @@ namespace Sunset
 			// We check for an empty ID first because registered external resources would have already had this field populated
 			if (current_registry->resource_metadata[resource].physical_id == 0)
 			{
-				if (!current_registry->resource_metadata[resource].b_is_persistent)
-				{
-					buffer_resource->config.name.computed_hash += gfx_context->get_buffered_frame_number();
-				}
+				buffer_resource->config.name.computed_hash += gfx_context->get_buffered_frame_number();
 
 				current_registry->resource_metadata[resource].physical_id = BufferFactory::create(gfx_context, buffer_resource->config, false);
 
@@ -622,10 +655,7 @@ namespace Sunset
 			{
 				current_registry->resource_metadata[resource].b_is_persistent = b_is_persistent;
 
-				if (!current_registry->resource_metadata[resource].b_is_persistent)
-				{
-					image_resource->config.name.computed_hash += gfx_context->get_buffered_frame_number();
-				}
+				image_resource->config.name.computed_hash += gfx_context->get_buffered_frame_number();
 
 				current_registry->resource_metadata[resource].physical_id = ImageFactory::create(gfx_context, image_resource->config, b_is_persistent);
 

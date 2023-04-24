@@ -2,6 +2,7 @@
 
 #define MAX_DESCRIPTOR_BINDINGS 16535
 #define MAX_TEXTURES_PER_MATERIAL 16
+#define PI 3.14159265358f
 
 layout (std140, set = 0, binding = 0) uniform CameraBuffer
 {
@@ -41,7 +42,7 @@ float cubic_filter(in float x, in float b, in float c)
 	{
 		y = (12.0f - 9.0f * b - 6.0f * c) * x3 + (-18.0f + 12.0f * b + 6.0f * c) * x2 + (6.0f - 2.0f * b);
 	}
-	else
+	else if (x <= 2)
 	{
 		y = (-b - 6.0f * c) * x3 + (6.0f * b + 30.0f * c) * x2 + (-12.0f * b - 48.0f * c) * x + (8.0f * b + 24.0f * c);
 	}
@@ -53,9 +54,24 @@ float catmull_rom_filter(float value)
 	return cubic_filter(value, 0.0f, 0.5f);
 }
 
+float mitchell_filter(float value)
+{
+    return cubic_filter(value, 1 / 3.0f, 1 / 3.0f);
+}
+
+float blackman_harris_filter(float value)
+{
+    float x = 1.0f - value;
+    const float a0 = 0.35875f;
+    const float a1 = 0.48829f;
+    const float a2 = 0.14128f;
+    const float a3 = 0.01168f;
+    return clamp(a0 - a1 * cos(PI * x) + a2 * cos(2 * PI * x) - a3 * cos(3 * PI * x), 0.0f, 1.0f);
+}
+
 float luminance(vec3 color)
 {
-    return dot(color, vec3(0.2126, 0.7152, 0.0722));
+    return dot(color, vec3(0.2126f, 0.7152f, 0.0722f));
 }
 
 vec2 nearest_uv(ivec2 pixel, vec2 texture_size)
