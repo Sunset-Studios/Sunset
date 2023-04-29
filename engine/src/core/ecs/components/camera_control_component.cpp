@@ -6,7 +6,6 @@ namespace Sunset
 	void set_fov(CameraControlComponent* camera_comp, float new_fov)
 	{
 		camera_comp->data.fov = new_fov;
-		camera_comp->data.b_dirty = true;
 	}
 
 	void set_camera_fov(class Scene* scene, EntityID entity, float new_fov)
@@ -20,7 +19,6 @@ namespace Sunset
 	void set_aspect_ratio(CameraControlComponent* camera_comp, float new_aspect_ratio)
 	{
 		camera_comp->data.aspect_ratio = new_aspect_ratio;
-		camera_comp->data.b_dirty = true;
 	}
 
 	void set_camera_aspect_ratio(class Scene* scene, EntityID entity, CameraControlComponent* camera_comp, float new_aspect_ratio)
@@ -34,7 +32,6 @@ namespace Sunset
 	void set_near_plane(CameraControlComponent* camera_comp, float new_near_plane)
 	{
 		camera_comp->data.near_plane = new_near_plane;
-		camera_comp->data.b_dirty = true;
 	}
 
 	void set_camera_near_plane(class Scene* scene, EntityID entity, CameraControlComponent* camera_comp, float new_near_plane)
@@ -48,7 +45,6 @@ namespace Sunset
 	void set_far_plane(CameraControlComponent* camera_comp, float new_far_plane)
 	{
 		camera_comp->data.far_plane = new_far_plane;
-		camera_comp->data.b_dirty = true;
 	}
 
 	void set_camera_far_plane(class Scene* scene, EntityID entity, CameraControlComponent* camera_comp, float new_far_plane)
@@ -63,7 +59,6 @@ namespace Sunset
 	{
 		camera_comp->data.prev_position = camera_comp->data.position;
 		camera_comp->data.position = new_position;
-		camera_comp->data.b_dirty = true;
 	}
 
 	void set_camera_position(class Scene* scene, EntityID entity, CameraControlComponent* camera_comp, const glm::vec3& new_position)
@@ -78,7 +73,6 @@ namespace Sunset
 	{
 		camera_comp->data.prev_forward = camera_comp->data.forward;
 		camera_comp->data.forward = new_forward;
-		camera_comp->data.b_dirty = true;
 	}
 
 	void set_camera_forward(class Scene* scene, EntityID entity, const glm::vec3& new_forward)

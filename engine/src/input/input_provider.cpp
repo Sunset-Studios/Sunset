@@ -33,12 +33,12 @@ namespace Sunset
 		}
 	}
 
-	void InputProvider::update()
+	void InputProvider::update(class Window* window)
 	{
 		if (!contexts.empty())
 		{
 			InputContext* context = contexts.back();
-			processor->update(context);
+			processor->update(context, window);
 
 			current_dirty_states.clear();
 			current_dirty_states.reserve(context->input_states.size());

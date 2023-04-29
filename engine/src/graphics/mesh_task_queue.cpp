@@ -323,7 +323,7 @@ namespace Sunset
 
 		if (descriptor_set != nullptr)
 		{
-			material_upload_textures(gfx_context, cached_material, descriptor_set);
+			material_update(gfx_context, cached_material, descriptor_set);
 		}
 
 		// TODO: Given that most of our resources will go through descriptors, this resource state will likely get deprecated.

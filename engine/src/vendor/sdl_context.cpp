@@ -1,7 +1,10 @@
 #include <vendor/sdl_context.h>
 #include <input/input_context.h>
+#include <window/window.h>
 
 #include <SDL_vulkan.h>
+
+#include <iostream>
 
 namespace Sunset
 {
@@ -135,7 +138,7 @@ namespace Sunset
 		lazy_SDL_init();
 	}
 
-	void InputProcessorSDL::update(InputContext* context)
+	void InputProcessorSDL::update(InputContext* context, Window* window)
 	{
 		// Update our underlying key-mapped bitset and axis values
 		if (sdl_event.type == SDL_KEYDOWN)
@@ -174,8 +177,8 @@ namespace Sunset
 
 		if (sdl_event.type == SDL_MOUSEMOTION)
 		{
-			ranges_array[static_cast<int16_t>(InputRange::M_x)] = static_cast<float>(sdl_event.motion.xrel);
-			ranges_array[static_cast<int16_t>(InputRange::M_y)] = static_cast<float>(sdl_event.motion.yrel);
+			ranges_array[static_cast<int16_t>(InputRange::M_x)] = static_cast<float>(sdl_event.motion.xrel) / window->get_extent().x;
+			ranges_array[static_cast<int16_t>(InputRange::M_y)] = static_cast<float>(sdl_event.motion.yrel) / window->get_extent().y;
 		}
 
 		// Use the now updated bitset to update the passed in input context

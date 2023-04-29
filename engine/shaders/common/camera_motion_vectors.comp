@@ -26,7 +26,7 @@ void main()
 	prev_ndc_pos.xyz /= prev_ndc_pos.w;
 
 	// Calculate jittering difference
-	vec2 jitter_difference = clamp(camera_data.jitter.zw - camera_data.jitter.xy, vec2(-1.0f), vec2(1.0f)) * 0.5f;
+	vec2 jitter_difference = (camera_data.jitter.zw - camera_data.jitter.xy) * 0.5f;
 
 	// Pixel velocity is given by NDC (x, y) difference, taking into account jitter
 	vec2 velocity = current_ndc_pos.xy - prev_ndc_pos.xy;

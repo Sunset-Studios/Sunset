@@ -34,7 +34,6 @@ namespace Sunset
 		glm::vec3 prev_forward{ 0.0f, 0.0f, -1.0f };
 		glm::vec3 forward{ 0.0f, 0.0f, -1.0f };
 		CameraData gpu_data;
-		bool b_dirty{ false };
 		bool b_frame_jitter{ true };
 		uint32_t current_jitter_index{ 0 };
 	};

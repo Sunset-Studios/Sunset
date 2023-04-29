@@ -16,9 +16,9 @@ namespace Sunset
 			input_policy.initialize();
 		}
 
-		void update(class InputContext* context)
+		void update(class InputContext* context, class Window* window)
 		{
-			input_policy.update(context);
+			input_policy.update(context, window);
 		}
 
 	private:
@@ -33,7 +33,7 @@ namespace Sunset
 		void initialize()
 		{ }
 
-		void update(class InputContext* context)
+		void update(class InputContext* context, class Window* window)
 		{ }
 	};
 

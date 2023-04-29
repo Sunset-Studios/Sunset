@@ -72,7 +72,8 @@ namespace Sunset
 	struct LightingPassData
 	{
 		int32_t albedo_texure;
-		int32_t specular_texure;
+		int32_t smra_texure;
+		int32_t cc_texture;
 		int32_t normal_texure;
 		int32_t position_texure;
 	};

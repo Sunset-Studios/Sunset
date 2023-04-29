@@ -86,15 +86,15 @@ namespace Sunset
 			set_far_plane(camera_control_comp, 1000.0f);
 			set_position(camera_control_comp, glm::vec3(0.0f, 25.0f, 25.0f));
 			set_move_speed(camera_control_comp, 50.0f);
-			set_look_speed(camera_control_comp, 5.0f);
+			set_look_speed(camera_control_comp, 100.0f);
 		}
 	}
 
 	void Scene::setup_subsystems()
 	{
 		// TODO: Potentially look for a more extensible way to add arbitrary external subsystems
-		add_subsystem<CameraControlProcessor>();
 		add_subsystem<CameraInputController>();
+		add_subsystem<CameraControlProcessor>();
 		add_subsystem<TransformProcessor>();
 		add_subsystem<StaticMeshProcessor>();
 		add_subsystem<LightProcessor>();

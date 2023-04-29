@@ -13,11 +13,23 @@ namespace Sunset
 
 	struct MaterialDescription
 	{
+		glm::vec3 color{ 1.0f, 1.0f, 1.0f };
+		float uniform_roughness{ 1.0f };
+		float uniform_metallic{ 0.0f };
+		float uniform_reflectance{ 0.0f };
+		float uniform_clearcoat{ 0.0f };
+		float uniform_clearcoat_roughness{ 1.0f };
 		ImagePathList textures;
 	};
 
 	struct MaterialData
 	{
+		glm::vec3 color{ 1.0f, 1.0f, 1.0f };
+		float uniform_roughness{ 1.0f };
+		float uniform_metallic{ 0.0f };
+		float uniform_reflectance{ 0.0f };
+		float uniform_clearcoat{ 0.0f };
+		float uniform_clearcoat_roughness{ 1.0f };
 		int32_t textures[MAX_MATERIAL_TEXTURES];
 		float tiling_coeffs[MAX_MATERIAL_TEXTURES];
 	};
@@ -41,8 +53,17 @@ namespace Sunset
 	};
 
 	void material_load_textures(class GraphicsContext* const gfx_context, MaterialID material);
-	void material_upload_textures(class GraphicsContext* const gfx_context, MaterialID material, class DescriptorSet* descriptor_set);
+	void material_set_gpu_params(class GraphicsContext* const gfx_context, MaterialID material);
+	void material_update(class GraphicsContext* const gfx_context, MaterialID material, class DescriptorSet* descriptor_set);
 	void material_set_texture_tiling(class GraphicsContext* const gfx_context, MaterialID material, uint32_t texture_index, float texture_tiling);
+	void material_set_color(class GraphicsContext* const gfx_context, MaterialID material, glm::vec3 color);
+	void material_set_uniform_roughness(class GraphicsContext* const gfx_context, MaterialID material, float roughness);
+	void material_set_uniform_metallic(class GraphicsContext* const gfx_context, MaterialID material, float metallic);
+	void material_set_uniform_reflectance(class GraphicsContext* const gfx_context, MaterialID material, float reflectance);
+	void material_set_uniform_clearcoat(class GraphicsContext* const gfx_context, MaterialID material, float clearcoat);
+	void material_set_uniform_clearcoat_roughness(class GraphicsContext* const gfx_context, MaterialID material, float clearcoat_roughness);
+
+
 
 	class MaterialFactory
 	{
@@ -72,7 +93,18 @@ struct std::hash<Sunset::MaterialDescription>
 			}
 		}
 
-		return textures_seed;
+		std::size_t final_hash = Sunset::Maths::cantor_pair_hash(static_cast<int32_t>(textures_seed), static_cast<int32_t>(mat.uniform_roughness));
+
+		final_hash = Sunset::Maths::cantor_pair_hash(final_hash, static_cast<int32_t>(mat.color.r));
+		final_hash = Sunset::Maths::cantor_pair_hash(final_hash, static_cast<int32_t>(mat.color.g));
+		final_hash = Sunset::Maths::cantor_pair_hash(final_hash, static_cast<int32_t>(mat.color.b));
+
+		final_hash = Sunset::Maths::cantor_pair_hash(final_hash, static_cast<int32_t>(mat.uniform_metallic));
+		final_hash = Sunset::Maths::cantor_pair_hash(final_hash, static_cast<int32_t>(mat.uniform_reflectance));
+		final_hash = Sunset::Maths::cantor_pair_hash(final_hash, static_cast<int32_t>(mat.uniform_clearcoat));
+		final_hash = Sunset::Maths::cantor_pair_hash(final_hash, static_cast<int32_t>(mat.uniform_clearcoat_roughness));
+
+		return final_hash;
 	}
 };
 

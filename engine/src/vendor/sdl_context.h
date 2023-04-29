@@ -56,7 +56,7 @@ namespace Sunset
 			InputProcessorSDL() = default;
 
 			void initialize();
-			void update(class InputContext* context);
+			void update(class InputContext* context, class Window* window);
 
 		protected:
 			std::bitset<NUM_AVAILABLE_KEYS> key_bitmap;

@@ -14,13 +14,13 @@
 
 namespace Sunset
 {
-	AutoCVar_Int cvar_num_bloom_pass_iterations("ren.bloom.num_pass_iterations", "The number of bloom horizontal and vertical blur iterations. (0 to turn bloom off).", 5);
-	AutoCVar_Float cvar_bloom_intensity("ren.bloom.intensity", "The intensity of the applied final bloom", 0.25f);
+	AutoCVar_Int cvar_num_bloom_pass_iterations("ren.bloom.num_pass_iterations", "The number of bloom horizontal and vertical blur iterations. (0 to turn bloom off).", 6);
+	AutoCVar_Float cvar_bloom_intensity("ren.bloom.intensity", "The intensity of the applied final bloom", 0.2f);
 
-	AutoCVar_Int cvar_taa_inverse_luminance_filter("ren.taa.inverse_luminance_filter_enabled", "Whether to do inverse luminance filtering during the history color resolve", 0);
-	AutoCVar_Int cvar_taa_luminance_diff_filter("ren.taa.luminance_diff_enabled", "Whether to do luminance difference filtering during the history color resolve", 0);
+	AutoCVar_Int cvar_taa_inverse_luminance_filter("ren.taa.inverse_luminance_filter_enabled", "Whether to do inverse luminance filtering during the history color resolve", 1);
+	AutoCVar_Int cvar_taa_luminance_diff_filter("ren.taa.luminance_diff_enabled", "Whether to do luminance difference filtering during the history color resolve", 1);
 
-	AutoCVar_Float cvar_final_image_exposure("ren.final_image_exposure", "The exposure to apply once HDR color gets resolved down to LDR", 1.0f);
+	AutoCVar_Float cvar_final_image_exposure("ren.final_image_exposure", "The exposure to apply once HDR color gets resolved down to LDR", 2.0f);
 
 	void DeferredShadingStrategy::render(GraphicsContext* gfx_context, RenderGraph& render_graph, class Swapchain* swapchain)
 	{
@@ -155,7 +155,8 @@ namespace Sunset
 		// G-Buffer pass
 		RGResourceHandle main_albedo_image_desc;
 		RGResourceHandle main_depth_image_desc;
-		RGResourceHandle main_specular_image_desc;
+		RGResourceHandle main_smra_image_desc;
+		RGResourceHandle main_cc_image_desc;
 		RGResourceHandle main_normal_image_desc;
 		RGResourceHandle main_position_image_desc;
 		{
@@ -199,11 +200,24 @@ namespace Sunset
 					.attachment_stencil_clear = true
 				}
 			);
-			main_specular_image_desc = render_graph.create_image(
+			main_smra_image_desc = render_graph.create_image(
 				gfx_context,
 				{
-					.name = "main_specular",
-					.format = Format::Float16,
+					.name = "main_smra",
+					.format = Format::Float4x32,
+					.extent = glm::vec3(image_extent.x, image_extent.y, 1.0f),
+					.flags = ImageFlags::Color | ImageFlags::Sampled | ImageFlags::Image2D,
+					.usage_type = MemoryUsageType::OnlyGPU,
+					.sampler_address_mode = SamplerAddressMode::EdgeClamp,
+					.image_filter = ImageFilter::Linear,
+					.attachment_clear = true,
+				}
+			);
+			main_cc_image_desc = render_graph.create_image(
+				gfx_context,
+				{
+					.name = "main_cc",
+					.format = Format::Float2x32,
 					.extent = glm::vec3(image_extent.x, image_extent.y, 1.0f),
 					.flags = ImageFlags::Color | ImageFlags::Sampled | ImageFlags::Image2D,
 					.usage_type = MemoryUsageType::OnlyGPU,
@@ -248,7 +262,7 @@ namespace Sunset
 					.inputs = { entity_data_buffer_desc, material_data_buffer_desc,
 								compacted_object_instance_buffer_desc,
 								draw_indirect_buffer_desc },
-					.outputs = { main_albedo_image_desc, main_depth_image_desc, main_specular_image_desc,
+					.outputs = { main_albedo_image_desc, main_depth_image_desc, main_smra_image_desc, main_cc_image_desc,
 								 main_normal_image_desc, main_position_image_desc }
 				},
 				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
@@ -413,7 +427,7 @@ namespace Sunset
 				.pipeline_shaders =
 				{
 					{ PipelineShaderStageType::Vertex, "../../shaders/common/fullscreen.vert.sun" },
-					{ PipelineShaderStageType::Fragment, "../../shaders/deferred/deferred_lit.frag.sun"}
+					{ PipelineShaderStageType::Fragment, "../../shaders/deferred/deferred_lit_standard.frag.sun"}
 				}
 			};
 
@@ -440,20 +454,22 @@ namespace Sunset
 					.shader_setup = shader_setup,
 					.inputs = { entity_data_buffer_desc, light_data_buffer_desc,
 								compacted_object_instance_buffer_desc, main_albedo_image_desc,
-								main_specular_image_desc, main_normal_image_desc, main_position_image_desc },
+								main_smra_image_desc, main_cc_image_desc, main_normal_image_desc, main_position_image_desc },
 					.outputs = { scene_color_desc }
 				},
 				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
 				{
 					const BindingTableHandle albedo_image_handle = frame_data.pass_bindless_resources.handles[0];
-					const BindingTableHandle specular_image_handle = frame_data.pass_bindless_resources.handles[1];
-					const BindingTableHandle normal_image_handle = frame_data.pass_bindless_resources.handles[2];
-					const BindingTableHandle position_image_handle = frame_data.pass_bindless_resources.handles[3];
+					const BindingTableHandle smra_image_handle = frame_data.pass_bindless_resources.handles[1];
+					const BindingTableHandle cc_image_handle = frame_data.pass_bindless_resources.handles[2];
+					const BindingTableHandle normal_image_handle = frame_data.pass_bindless_resources.handles[3];
+					const BindingTableHandle position_image_handle = frame_data.pass_bindless_resources.handles[4];
 
 					LightingPassData lighting_data
 					{
 						.albedo_texure = 0x0000ffff & albedo_image_handle,
-						.specular_texure = 0x0000ffff & specular_image_handle,
+						.smra_texure = 0x0000ffff & smra_image_handle,
+						.cc_texture = 0x0000ffff & cc_image_handle,
 						.normal_texure = 0x0000ffff & normal_image_handle,
 						.position_texure = 0x0000ffff & position_image_handle
 					};
@@ -463,6 +479,64 @@ namespace Sunset
 					gfx_context->push_constants(command_buffer, frame_data.pass_pipeline_state, pass_data);
 
 					Renderer::get()->draw_fullscreen_quad(command_buffer);
+				}
+			);
+		}
+
+		// TAA pass
+		{
+			RGShaderDataSetup shader_setup
+			{
+				.pipeline_shaders =
+				{
+					{ PipelineShaderStageType::Compute, "../../shaders/effects/taa.comp.sun" }
+				}
+			};
+
+			const glm::vec2 image_extent = gfx_context->get_window()->get_extent();
+			const uint32_t current_frame_number = gfx_context->get_frame_number();
+
+			render_graph.add_pass(
+				gfx_context,
+				"temporal_aa",
+				RenderPassFlags::Compute,
+				{
+					.shader_setup = shader_setup,
+					.inputs = { scene_color_desc, temporal_color_history, motion_vectors_image_desc, main_depth_image_desc },
+					.outputs = { scene_color_desc, temporal_color_history }
+				},
+				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
+				{
+					const BindingTableHandle scene_color_index = frame_data.pass_bindless_resources.handles[0];
+					const BindingTableHandle history_color_index = frame_data.pass_bindless_resources.handles[1];
+					const BindingTableHandle motion_vectors_index = frame_data.pass_bindless_resources.handles[2];
+					const BindingTableHandle depth_index = frame_data.pass_bindless_resources.handles[3];
+					const BindingTableHandle out_scene_color_index = frame_data.pass_bindless_resources.handles[4];
+					const BindingTableHandle out_history_color_index = frame_data.pass_bindless_resources.handles[5];
+
+					{
+						TAAData temporal_aa_data
+						{
+							.input_scene_color = (0x0000ffff & scene_color_index),
+							.input_color_history = (0x0000ffff & history_color_index),
+							.input_motion_vectors = (0x0000ffff & motion_vectors_index),
+							.input_depth = (0x0000ffff & depth_index),
+							.output_scene_color = (0x0000ffff & out_scene_color_index),
+							.output_color_history = (0x0000ffff & out_history_color_index),
+							.inverse_luminance_filter_enabled = cvar_taa_inverse_luminance_filter.get(),
+							.luminance_difference_filter_enabled = cvar_taa_luminance_diff_filter.get(),
+							.resolution = image_extent
+						};
+						PushConstantPipelineData pc_data = PushConstantPipelineData::create(&temporal_aa_data, PipelineShaderStageType::Compute);
+						gfx_context->push_constants(command_buffer, frame_data.pass_pipeline_state, pc_data);
+					}
+
+					gfx_context->dispatch_compute(
+						command_buffer,
+						static_cast<uint32_t>((image_extent.x + 15) / 16),
+						static_cast<uint32_t>((image_extent.y + 15) / 16),
+						1
+					);
 				}
 			);
 		}
@@ -701,64 +775,6 @@ namespace Sunset
 					gfx_context->push_constants(command_buffer, frame_data.pass_pipeline_state, pass_data);
 
 					Renderer::get()->draw_fullscreen_quad(command_buffer);
-				}
-			);
-		}
-
-		// TAA pass
-		{
-			RGShaderDataSetup shader_setup
-			{
-				.pipeline_shaders =
-				{
-					{ PipelineShaderStageType::Compute, "../../shaders/effects/taa.comp.sun" }
-				}
-			};
-
-			const glm::vec2 image_extent = gfx_context->get_window()->get_extent();
-			const uint32_t current_frame_number = gfx_context->get_frame_number();
-
-			render_graph.add_pass(
-				gfx_context,
-				"temporal_aa",
-				RenderPassFlags::Compute,
-				{
-					.shader_setup = shader_setup,
-					.inputs = { final_color_desc, temporal_color_history, motion_vectors_image_desc, main_depth_image_desc },
-					.outputs = { final_color_desc, temporal_color_history }
-				},
-				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
-				{
-					const BindingTableHandle scene_color_index = frame_data.pass_bindless_resources.handles[0];
-					const BindingTableHandle history_color_index = frame_data.pass_bindless_resources.handles[1];
-					const BindingTableHandle motion_vectors_index = frame_data.pass_bindless_resources.handles[2];
-					const BindingTableHandle depth_index = frame_data.pass_bindless_resources.handles[3];
-					const BindingTableHandle out_scene_color_index = frame_data.pass_bindless_resources.handles[4];
-					const BindingTableHandle out_history_color_index = frame_data.pass_bindless_resources.handles[5];
-
-					{
-						TAAData temporal_aa_data
-						{
-							.input_scene_color = (0x0000ffff & scene_color_index),
-							.input_color_history = (0x0000ffff & history_color_index),
-							.input_motion_vectors = (0x0000ffff & motion_vectors_index),
-							.input_depth = (0x0000ffff & depth_index),
-							.output_scene_color = (0x0000ffff & out_scene_color_index),
-							.output_color_history = (0x0000ffff & out_history_color_index),
-							.inverse_luminance_filter_enabled = cvar_taa_inverse_luminance_filter.get(),
-							.luminance_difference_filter_enabled = cvar_taa_luminance_diff_filter.get(),
-							.resolution = image_extent
-						};
-						PushConstantPipelineData pc_data = PushConstantPipelineData::create(&temporal_aa_data, PipelineShaderStageType::Compute);
-						gfx_context->push_constants(command_buffer, frame_data.pass_pipeline_state, pc_data);
-					}
-
-					gfx_context->dispatch_compute(
-						command_buffer,
-						static_cast<uint32_t>((image_extent.x + 15) / 16),
-						static_cast<uint32_t>((image_extent.y + 15) / 16),
-						1
-					);
 				}
 			);
 		}

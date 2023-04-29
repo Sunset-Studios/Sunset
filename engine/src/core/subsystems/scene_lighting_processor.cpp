@@ -2,16 +2,19 @@
 #include <core/layers/scene.h>
 #include <graphics/resource/buffer.h>
 #include <graphics/renderer.h>
+#include <graphics/light.h>
 
 namespace Sunset
 {
+	void SceneLightingProcessor::initialize(class Scene* scene)
+	{
+		scene->scene_data.lighting.lighting_mode = static_cast<uint32_t>(LightingModel::Standard);
+	}
+
 	void SceneLightingProcessor::update(class Scene* scene, double delta_time)
 	{
 		const size_t min_ubo_alignment = Renderer::get()->context()->get_min_ubo_offset_alignment();
-		const uint16_t buffered_frame = Renderer::get()->context()->get_buffered_frame_number();
-		const float framed = Renderer::get()->context()->get_frame_number() / 120.0f;
-
-		scene->scene_data.lighting.ambient_color = { glm::sin(framed), 0.0f, glm::cos(framed), 1.0f };
+		const uint32_t buffered_frame = Renderer::get()->context()->get_buffered_frame_number();
 
 		CACHE_FETCH(Buffer, scene->scene_data.buffer)->copy_from(
 			Renderer::get()->context(),

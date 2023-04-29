@@ -10,9 +10,10 @@ layout (location = 4) flat in uint in_instance_index;
 layout (location = 5) in mat3 in_tbn_matrix;
 
 layout (location = 0) out vec4 out_frag_color;
-layout (location = 1) out float out_specular;
-layout (location = 2) out vec4 out_normal;
-layout (location = 3) out vec4 out_position;
+layout (location = 1) out vec4 out_smra;
+layout (location = 2) out vec2 out_cc;
+layout (location = 3) out vec4 out_normal;
+layout (location = 4) out vec4 out_position;
 
 struct EntitySceneData
 {
@@ -24,6 +25,12 @@ struct EntitySceneData
 
 struct MaterialData
 {
+	vec3 color;
+	float uniform_roughness;
+	float uniform_metallic;
+	float uniform_reflectance;
+	float uniform_clearcoat;
+	float uniform_clearcoat_roughness;
 	int textures[MAX_TEXTURES_PER_MATERIAL];
 	float tiling_coeffs[MAX_TEXTURES_PER_MATERIAL];
 };
@@ -56,26 +63,43 @@ void main()
 	const int albedo_tex_index = material.textures[0];
 	const int normal_tex_index = material.textures[1];
 	const int roughness_tex_index = material.textures[2];
+	const int metallic_tex_index = material.textures[3];
+	const int ao_tex_index = material.textures[4];
 
 	const vec3 albedo = 
 		albedo_tex_index == -1
-		? vec3(0.0, 0.0, 0.0)
+		? material.color
 		: texture(textures_2D[nonuniformEXT(albedo_tex_index)], in_tex_coord * material.tiling_coeffs[0]).xyz;
 
-	vec3 normal =
+	const vec3 normal =
 		normal_tex_index == -1
 		? in_normal
-		: in_tbn_matrix * normalize(texture(textures_2D[nonuniformEXT(normal_tex_index)], in_tex_coord * material.tiling_coeffs[1]).xyz * 2.0f - 1.0f);
+		: (gl_FrontFacing ? in_tbn_matrix : -in_tbn_matrix) * normalize(texture(textures_2D[nonuniformEXT(normal_tex_index)], in_tex_coord * material.tiling_coeffs[1]).xyz * 2.0f - 1.0f);
 
 	const float roughness =
 		roughness_tex_index == -1
-		? 0.0f
+		? material.uniform_roughness
 		: texture(textures_2D[nonuniformEXT(roughness_tex_index)], in_tex_coord * material.tiling_coeffs[2]).r;
 
-	const float shininess = pow(2.0f, 10.0f * (1.0f - roughness));
-	
+	const float metallic =
+		metallic_tex_index == -1
+		? material.uniform_metallic
+		: texture(textures_2D[nonuniformEXT(metallic_tex_index)], in_tex_coord * material.tiling_coeffs[3]).r + 0.1f;
+
+	const float ao =
+		ao_tex_index == -1
+		? 0.0f
+		: texture(textures_2D[nonuniformEXT(ao_tex_index)], in_tex_coord * material.tiling_coeffs[4]).r;
+
+	const float specular = material.uniform_reflectance > 0.0f ? material.uniform_reflectance : pow(2.0f, 10.0f * (1.0f - roughness));
+
 	out_frag_color = vec4(albedo, 1.0f);
-	out_specular = shininess;
+	out_smra.r = specular;
+	out_smra.g = metallic;
+	out_smra.b = roughness;
+	out_smra.a = ao;
+	out_cc.r = material.uniform_clearcoat;
+	out_cc.g = material.uniform_clearcoat_roughness;
 	out_normal = vec4(normal, in_instance_index);
 	out_position = vec4(in_position, 1.0f);
 }

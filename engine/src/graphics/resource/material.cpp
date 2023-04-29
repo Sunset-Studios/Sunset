@@ -53,7 +53,20 @@ namespace Sunset
 		}
 	}
 
-	void material_upload_textures(class GraphicsContext* const gfx_context, MaterialID material, class DescriptorSet* descriptor_set)
+	void material_set_gpu_params(class GraphicsContext* const gfx_context, MaterialID material)
+	{
+		Material* const material_ptr = CACHE_FETCH(Material, material);
+		assert(material_ptr != nullptr && "Cannot set texture tiling for a null material!");
+
+		material_set_color(gfx_context, material, material_ptr->description.color);
+		material_set_uniform_roughness(gfx_context, material, material_ptr->description.uniform_roughness);
+		material_set_uniform_metallic(gfx_context, material, material_ptr->description.uniform_metallic);
+		material_set_uniform_reflectance(gfx_context, material, material_ptr->description.uniform_reflectance);
+		material_set_uniform_clearcoat(gfx_context, material, material_ptr->description.uniform_clearcoat);
+		material_set_uniform_clearcoat_roughness(gfx_context, material, material_ptr->description.uniform_clearcoat_roughness);
+	}
+
+	void material_update(class GraphicsContext* const gfx_context, MaterialID material, class DescriptorSet* descriptor_set)
 	{
 		Material* const material_ptr = CACHE_FETCH(Material, material);
 		assert(material_ptr != nullptr && "Cannot load material textures for a null material!");
@@ -117,6 +130,60 @@ namespace Sunset
 		material_ptr->b_dirty = true;
 	}
 
+	void material_set_color(class GraphicsContext* const gfx_context, MaterialID material, glm::vec3 color)
+	{
+		Material* const material_ptr = CACHE_FETCH(Material, material);
+		assert(material_ptr != nullptr && "Cannot set texture tiling for a null material!");
+
+		material_ptr->gpu_data->color = color;
+		material_ptr->b_dirty = true;
+	}
+
+	void material_set_uniform_roughness(class GraphicsContext* const gfx_context, MaterialID material, float roughness)
+	{
+		Material* const material_ptr = CACHE_FETCH(Material, material);
+		assert(material_ptr != nullptr && "Cannot set texture tiling for a null material!");
+
+		material_ptr->gpu_data->uniform_roughness = roughness;
+		material_ptr->b_dirty = true;
+	}
+
+	void material_set_uniform_metallic(class GraphicsContext* const gfx_context, MaterialID material, float metallic)
+	{
+		Material* const material_ptr = CACHE_FETCH(Material, material);
+		assert(material_ptr != nullptr && "Cannot set texture tiling for a null material!");
+
+		material_ptr->gpu_data->uniform_metallic = metallic; 
+		material_ptr->b_dirty = true;
+	}
+
+	void material_set_uniform_reflectance(class GraphicsContext* const gfx_context, MaterialID material, float reflectance)
+	{
+		Material* const material_ptr = CACHE_FETCH(Material, material);
+		assert(material_ptr != nullptr && "Cannot set texture tiling for a null material!");
+
+		material_ptr->gpu_data->uniform_reflectance = reflectance; 
+		material_ptr->b_dirty = true;
+	}
+
+	void material_set_uniform_clearcoat(class GraphicsContext* const gfx_context, MaterialID material, float clearcoat)
+	{
+		Material* const material_ptr = CACHE_FETCH(Material, material);
+		assert(material_ptr != nullptr && "Cannot set texture tiling for a null material!");
+
+		material_ptr->gpu_data->uniform_clearcoat = clearcoat; 
+		material_ptr->b_dirty = true;
+	}
+
+	void material_set_uniform_clearcoat_roughness(class GraphicsContext* const gfx_context, MaterialID material, float clearcoat_roughness)
+	{
+		Material* const material_ptr = CACHE_FETCH(Material, material);
+		assert(material_ptr != nullptr && "Cannot set texture tiling for a null material!");
+
+		material_ptr->gpu_data->uniform_clearcoat_roughness = clearcoat_roughness; 
+		material_ptr->b_dirty = true;
+	}
+
 	Sunset::MaterialID MaterialFactory::create(class GraphicsContext* const gfx_context, const MaterialDescription& desc)
 	{
 		Identity cache_id{ static_cast<uint32_t>(std::hash<MaterialDescription>{}(desc)) };
@@ -126,6 +193,7 @@ namespace Sunset
 		{
 			CACHE_FETCH(Material, material_id)->description = desc;
 			material_load_textures(gfx_context, material_id);
+			material_set_gpu_params(gfx_context, material_id);
 		}
 		return material_id;
 	}

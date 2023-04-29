@@ -9,6 +9,37 @@ namespace Sunset
 	{
 		if (CameraControlComponent* const camera_control_comp = scene->get_component<CameraControlComponent>(scene->active_camera))
 		{
+			if (InputProvider::get()->get_state(InputKey::B_mouse_left))
+			{
+				float x = InputProvider::get()->get_range(InputRange::M_x);
+				float y = InputProvider::get()->get_range(InputRange::M_y);
+				if (x != 0.0f || y != 0.0f)
+				{
+					float& pitch = camera_control_comp->data.pitch;
+					float& yaw = camera_control_comp->data.yaw;
+
+					x *= camera_control_comp->input.look_speed;
+					y *= camera_control_comp->input.look_speed;
+
+					yaw += x;
+					pitch = glm::clamp(pitch + y, -89.0f, 89.0f);
+
+					const float pitch_rads = glm::radians(pitch);
+					const float yaw_rads = glm::radians(yaw);
+
+					glm::vec3 new_forward(
+						glm::cos(yaw_rads) * glm::cos(pitch_rads),
+						glm::sin(pitch_rads),
+						glm::sin(yaw_rads) * glm::cos(pitch_rads)
+					);
+
+					new_forward = glm::normalize(new_forward);
+					new_forward = glm::mix(camera_control_comp->data.prev_forward, new_forward, 0.75f);
+
+					set_forward(camera_control_comp, new_forward);
+				}
+			}
+
 			glm::vec3 camera_pos(camera_control_comp->data.position);
 			glm::vec3 prev_camera_pos(camera_pos);
 			if (InputProvider::get()->get_state(InputKey::K_w))
@@ -29,36 +60,9 @@ namespace Sunset
 				camera_pos += camera_control_comp->input.move_speed * glm::normalize(glm::cross(camera_control_comp->data.forward, WORLD_UP)) * static_cast<float>(delta_time);
 			}
 
-			if (InputProvider::get()->get_state(InputKey::B_mouse_left))
-			{
-				float x = InputProvider::get()->get_range(InputRange::M_x);
-				float y = InputProvider::get()->get_range(InputRange::M_y);
-				if (x != 0.0f || y != 0.0f)
-				{
-					float& pitch = camera_control_comp->data.pitch;
-					float& yaw = camera_control_comp->data.yaw;
-
-					x *= camera_control_comp->input.look_speed * delta_time;
-					y *= camera_control_comp->input.look_speed * delta_time;
-
-					yaw += x;
-					pitch = glm::clamp(pitch + y, -89.0f, 89.0f);
-
-					glm::vec3 new_forward(
-						glm::cos(glm::radians(yaw)) * glm::cos(glm::radians(pitch)),
-						glm::sin(glm::radians(pitch)),
-						glm::sin(glm::radians(yaw)) * glm::cos(glm::radians(pitch))
-					);
-
-					new_forward = glm::mix(new_forward, camera_control_comp->data.prev_forward, 0.5f);
-
-					set_forward(camera_control_comp, glm::normalize(new_forward));
-				}
-			}
-
 			if (camera_pos != prev_camera_pos)
 			{
-				camera_pos = glm::mix(camera_pos, camera_control_comp->data.prev_position, 0.5f);
+				camera_pos = glm::mix(camera_control_comp->data.prev_position, camera_pos, 0.75f);
 				set_position(camera_control_comp, camera_pos);
 			}
 		}

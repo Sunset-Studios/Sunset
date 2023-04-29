@@ -16,7 +16,7 @@ namespace Sunset
 
 		public:
 			void initialize();
-			void update();
+			void update(class Window* window);
 
 			void push_context(class InputContext* context);
 			class InputContext* pop_context();

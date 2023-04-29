@@ -18,7 +18,8 @@ namespace Sunset
 		glm::vec4 sunlight_direction;
 		glm::vec4 sunlight_color;
 		float num_lights{ 0 };
-		float padding[3];
+		uint32_t lighting_mode{ 0 };
+		float padding[2];
 	};
 
 	struct SceneData

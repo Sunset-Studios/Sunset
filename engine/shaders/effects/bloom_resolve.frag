@@ -1,6 +1,7 @@
 #version 460
 
 #include "common/common.inc"
+#include "common/postprocess_common.inc"
 
 layout (location = 0) in vec3 in_color;
 layout (location = 1) in vec2 in_tex_coord;
@@ -33,8 +34,7 @@ void main()
 		color = mix(color, bloom_color, bloom_resolve_constants.bloom_intensity);
 	}
 
-	color = vec3(1.0f) - exp(-color * bloom_resolve_constants.exposure);
-	color = pow(color, vec3(1.0f / gamma));
+	color = reinhard_tonemapping(color, bloom_resolve_constants.exposure);
 
 	out_frag_color = vec4(color, 1.0f);
 }

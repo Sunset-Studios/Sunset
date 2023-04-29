@@ -47,13 +47,13 @@ namespace Sunset
 
 				TransformComponent* const transform_comp = scene->assign_component<TransformComponent>(light_entity);
 
-				set_position(transform_comp, glm::vec3(-10.0f, 10.0f, 0.0f));
+				set_position(transform_comp, glm::vec3(10.0f, 10.0f, 0.0f));
 
 				LightComponent* const light_comp = scene->assign_component<LightComponent>(light_entity);
 
 				set_light_color(light_comp, glm::vec3(1.0f, 1.0f, 1.0f));
 				set_light_type(light_comp, LightType::Directional);
-				set_light_intensity(light_comp, 2.0f);
+				set_light_intensity(light_comp, 4.0f);
 				set_light_entity_index(light_comp, get_entity_index(light_entity));
 			}
 
@@ -64,14 +64,13 @@ namespace Sunset
 				TransformComponent* const transform_comp = scene->assign_component<TransformComponent>(light_entity);
 
 				set_position(transform_comp, glm::vec3(25.0f, 10.0f, -50.0f));
-				set_rotation(transform_comp, glm::vec3(0.0f, 45.0f, 0.0f));
 
 				LightComponent* const light_comp = scene->assign_component<LightComponent>(light_entity);
 
 				set_light_color(light_comp, glm::vec3(1.0f, 0.2f, 0.2f));
 				set_light_type(light_comp, LightType::Point);
 				set_light_radius(light_comp, 15.0f);
-				set_light_intensity(light_comp, 1000.0f);
+				set_light_intensity(light_comp, 10000.0f);
 				set_light_entity_index(light_comp, get_entity_index(light_entity));
 			}
 
@@ -91,14 +90,19 @@ namespace Sunset
 					{
 						.textures =
 						{
-							"../../assets/hardwood_albedo.sun",	 // albedo
-							"../../assets/hardwood_normal.sun",  // normal
-							"../../assets/default_black.sun"     // roughness
+							"../../assets/tile_albedo.sun",
+							"../../assets/tile_normal.sun",
+							"../../assets/tile_roughness.sun",
+							"../../assets/tile_metallic.sun",
+							"../../assets/tile_ao.sun"
 						}
 					}
 				);
-				material_set_texture_tiling(Renderer::get()->context(), mesh_material, 0, 5.0f);
-				material_set_texture_tiling(Renderer::get()->context(), mesh_material, 1, 5.0f);
+				material_set_texture_tiling(Renderer::get()->context(), mesh_material, 0, 2.0f);
+				material_set_texture_tiling(Renderer::get()->context(), mesh_material, 1, 2.0f);
+				material_set_texture_tiling(Renderer::get()->context(), mesh_material, 2, 2.0f);
+				material_set_texture_tiling(Renderer::get()->context(), mesh_material, 3, 2.0f);
+				material_set_texture_tiling(Renderer::get()->context(), mesh_material, 4, 2.0f);
 
 				set_mesh(mesh_comp, MeshFactory::create_quad(Renderer::get()->context()));
 				set_material(mesh_comp, mesh_material);
@@ -118,10 +122,11 @@ namespace Sunset
 				MaterialID mesh_material = MaterialFactory::create(
 					Renderer::get()->context(),
 					{
-						.textures =
-						{
-							"../../assets/default_white.sun",	 // albedo
-						}
+						.color = glm::vec3(1.0f, 0.2, 0.2f),
+						.uniform_roughness = 0.8f,
+						.uniform_metallic = 1.0f,
+						.uniform_clearcoat = 1.0f,
+						.uniform_clearcoat_roughness = 0.0f,
 					}
 				);
 
@@ -158,7 +163,7 @@ namespace Sunset
 				{
 					ScopedRender<DeferredShadingStrategy> scoped_render(Renderer::get());
 
-					InputProvider::get()->update();
+					InputProvider::get()->update(window);
 
 					SimulationCore::get()->update();
 				}

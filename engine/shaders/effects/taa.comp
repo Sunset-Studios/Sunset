@@ -116,6 +116,11 @@ void main()
 
 	vec3 current_sample = current_sample_total / current_sample_weight;
 
+	if (any(lessThan(reprojected_uv, vec2(0.0f))) || any(greaterThan(reprojected_uv, vec2(1.0f))))
+	{
+        return;
+    }
+
 	// History constraint
 	{
 		// Calculate color aabb using moments 1 and 2 to do history clipping
@@ -138,7 +143,7 @@ void main()
 	// Temporal filtering
 	{
 		vec3 temporal_weight = clamp(abs(neighborhood_max - neighborhood_min) / current_sample, vec3(0), vec3(1));
-		history_weight = clamp(mix(vec3(0.25f), vec3(0.95f), temporal_weight), vec3(0), vec3(1));
+		history_weight = clamp(mix(vec3(0.1f), vec3(0.5f), temporal_weight), vec3(0), vec3(1));
 		current_weight = 1.0f - history_weight;
 	}
 

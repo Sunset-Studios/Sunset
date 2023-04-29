@@ -7,6 +7,12 @@ namespace Sunset
 {
 	constexpr uint32_t MAX_LIGHT_COUNT = 1000;
 
+	enum class LightingModel : uint32_t
+	{
+		BlinnPhong = 0,
+		Standard = 1
+	};
+
 	enum class LightType : uint32_t
 	{
 		Directional = 0,
