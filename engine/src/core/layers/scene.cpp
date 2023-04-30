@@ -151,4 +151,64 @@ namespace Sunset
 			});
 		}
 	}
+
+	void set_scene_fog_color(class Scene* scene, glm::vec4 fog_color)
+	{
+		assert(scene != nullptr && "Cannot set fog color on null scene!");
+		scene->scene_data.lighting.fog_color = fog_color;
+	}
+
+	void set_scene_fog_distance(class Scene* scene, float fog_distance)
+	{
+		assert(scene != nullptr && "Cannot set fog distance on null scene!");
+		scene->scene_data.lighting.fog_distance = fog_distance;
+	}
+
+	void set_scene_sunlight_direction(class Scene* scene, glm::vec4 sunlight_direction)
+	{
+		assert(scene != nullptr && "Cannot set sunlight direction on null scene!");
+		scene->scene_data.lighting.sunlight_direction = sunlight_direction;
+	}
+
+	void set_scene_sunlight_color(class Scene* scene, glm::vec4 sunlight_color)
+	{
+		assert(scene != nullptr && "Cannot set sunlight color on null scene!");
+		scene->scene_data.lighting.sunlight_color = sunlight_color;
+	}
+
+	void set_scene_sunlight_intensity(class Scene* scene, float sunlight_intensity)
+	{
+		assert(scene != nullptr && "Cannot set sunlight intensity on null scene!");
+		scene->scene_data.lighting.sunlight_intensity = sunlight_intensity;
+	}
+
+	void set_scene_sunlight_angular_radius(class Scene* scene, float angular_radius)
+	{
+		assert(scene != nullptr && "Cannot set sunlight angular radius on null scene!");
+		scene->scene_data.lighting.sunlight_angular_radius = angular_radius;
+	}
+
+	void set_scene_atmospheric_turbidity(class Scene* scene, float turbidity)
+	{
+		assert(scene != nullptr && "Cannot set atmospheric turbidity on null scene!");
+		scene->scene_data.lighting.atmospheric_turbidity = turbidity;
+	}
+
+	void set_scene_atmospheric_rayleigh(class Scene* scene, float rayleigh)
+	{
+		assert(scene != nullptr && "Cannot set atmospheric rayleigh on null scene!");
+		scene->scene_data.lighting.atmospheric_rayleigh = rayleigh;
+	}
+
+	void set_scene_mie_coefficient(class Scene* scene, float coeff)
+	{
+		assert(scene != nullptr && "Cannot set mie coefficient on null scene!");
+		scene->scene_data.lighting.mie_coefficient = coeff;
+	}
+
+	void set_scene_mie_directional_g(class Scene* scene, float g)
+	{
+		assert(scene != nullptr && "Cannot set mie directional G on null scene!");
+		scene->scene_data.lighting.mie_directional_g = g;
+	}
 }

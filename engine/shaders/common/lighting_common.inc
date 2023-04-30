@@ -8,6 +8,7 @@ struct LightData
 	uint type;
 	int entity;
 	float intensity;
+	bool b_use_sun_direction;	
 };
 
 vec3 calculate_blinn_phong(
@@ -25,7 +26,7 @@ vec3 calculate_blinn_phong(
 
 	if (light.type == 0) // Directional
 	{
-		light_dir = normalize(-position);
+		light_dir = normalize(light.b_use_sun_direction ? -scene_lighting_data.sunlight_direction.xyz : -position);
 	}
 	else if (light.type == 1) // Point
 	{
@@ -85,7 +86,7 @@ vec3 calculate_brdf(
 
 	if (light.type == 0) // Directional
 	{
-		light_dir = normalize(-position);
+		light_dir = normalize(light.b_use_sun_direction ? -scene_lighting_data.sunlight_direction.xyz : -position);
 	}
 	else if (light.type == 1) // Point
 	{

@@ -8,7 +8,6 @@ namespace Sunset
 {
 	void SceneLightingProcessor::initialize(class Scene* scene)
 	{
-		scene->scene_data.lighting.lighting_mode = static_cast<uint32_t>(LightingModel::Standard);
 	}
 
 	void SceneLightingProcessor::update(class Scene* scene, double delta_time)

@@ -23,14 +23,15 @@ namespace Sunset
 
 	struct alignas(16) LightData
 	{
-		glm::vec4 color;       // r,g,b,a - a=1.0 for active, a=0.0 for inactive
-		glm::vec4 direction;   // Direction vector for where the light points (directional and spot). x, y, z, w - w=inner_angle
-		float radius;          // Light radius for point
-		float outer_angle;     // Outer angle for spot lights (in radians)
-		glm::vec2 area_size;   // Width and height for area lights
-		LightType type;        // Light type
-		uint32_t entity_index; // Index of object entity
-		float intensity;       // Intensity of the light
+		glm::vec4 color;         // r,g,b,a - a=1.0 for active, a=0.0 for inactive
+		glm::vec4 direction;     // Direction vector for where the light points (directional and spot). x, y, z, w - w=inner_angle
+		float radius;            // Light radius for point
+		float outer_angle;       // Outer angle for spot lights (in radians)
+		glm::vec2 area_size;     // Width and height for area lights
+		LightType type;          // Light type
+		uint32_t entity_index;   // Index of object entity
+		float intensity;         // Intensity of the light
+		bool b_use_sun_directon; // Whether to use the skydome sun direction as opposed to the internal light direction (only for directional lights)
 	};
 
 	DECLARE_GPU_SHARED_DATA(LightData, MAX_LIGHT_COUNT);

@@ -36,6 +36,7 @@ namespace Sunset
 			}
 
 			void draw_fullscreen_quad(void* command_buffer);
+			void draw_unit_sphere(void* command_buffer);
 
 			GraphicsContext* context() const
 			{

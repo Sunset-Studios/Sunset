@@ -41,13 +41,19 @@ namespace Sunset
 		{
 			std::unique_ptr<Scene> scene = std::make_unique<Scene>();
 
+			set_scene_sunlight_intensity(scene.get(), 1.0f);
+			set_scene_sunlight_angular_radius(scene.get(), 0.9999566769f);
+			set_scene_sunlight_direction(scene.get(), glm::vec4(1.0f, 1.0f, 1.0f, 0.0f));
+			set_scene_atmospheric_turbidity(scene.get(), 2.542f);
+			set_scene_atmospheric_rayleigh(scene.get(), 1.0f);
+			set_scene_mie_coefficient(scene.get(), 0.005f);
+			set_scene_mie_directional_g(scene.get(), 0.8f);
+
 			// Add light 1
 			{
 				EntityID light_entity = scene->make_entity();
 
 				TransformComponent* const transform_comp = scene->assign_component<TransformComponent>(light_entity);
-
-				set_position(transform_comp, glm::vec3(10.0f, 10.0f, 0.0f));
 
 				LightComponent* const light_comp = scene->assign_component<LightComponent>(light_entity);
 
@@ -55,6 +61,7 @@ namespace Sunset
 				set_light_type(light_comp, LightType::Directional);
 				set_light_intensity(light_comp, 4.0f);
 				set_light_entity_index(light_comp, get_entity_index(light_entity));
+				set_light_should_use_sun_direction(light_comp, true);
 			}
 
 			// Add light 2

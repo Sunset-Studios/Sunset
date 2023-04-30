@@ -13,13 +13,16 @@ namespace Sunset
 	struct alignas(16) SceneLightingData
 	{
 		glm::vec4 fog_color;
-		glm::vec4 fog_distance;
-		glm::vec4 ambient_color;
 		glm::vec4 sunlight_direction;
 		glm::vec4 sunlight_color;
+		float fog_distance;
+		float sunlight_intensity;
+		float sunlight_angular_radius;
+		float atmospheric_turbidity;
+		float atmospheric_rayleigh;
+		float mie_coefficient;
+		float mie_directional_g;
 		float num_lights{ 0 };
-		uint32_t lighting_mode{ 0 };
-		float padding[2];
 	};
 
 	struct SceneData
@@ -29,6 +32,17 @@ namespace Sunset
 		uint32_t lighting_data_buffer_start{ 0 };
 		BufferID buffer{ 0 };
 	};
+
+	void set_scene_fog_color(class Scene* scene, glm::vec4 fog_color);
+	void set_scene_fog_distance(class Scene* scene, float fog_distance);
+	void set_scene_sunlight_direction(class Scene* scene, glm::vec4 sunlight_direction);
+	void set_scene_sunlight_color(class Scene* scene, glm::vec4 sunlight_color);
+	void set_scene_sunlight_intensity(class Scene* scene, float sunlight_intensity);
+	void set_scene_sunlight_angular_radius(class Scene* scene, float angular_radius);
+	void set_scene_atmospheric_turbidity(class Scene* scene, float turbidity);
+	void set_scene_atmospheric_rayleigh(class Scene* scene, float rayleigh);
+	void set_scene_mie_coefficient(class Scene* scene, float coeff);
+	void set_scene_mie_directional_g(class Scene* scene, float g);
 
 	class Scene : public SimulationLayer
 	{

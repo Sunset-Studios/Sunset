@@ -3,6 +3,7 @@
 #define MAX_DESCRIPTOR_BINDINGS 16535
 #define MAX_TEXTURES_PER_MATERIAL 16
 #define PI 3.14159265358f
+#define UP vec3(0.0, 1.0, 0.0)
 
 layout (std140, set = 0, binding = 0) uniform CameraBuffer
 {
@@ -19,12 +20,16 @@ layout (std140, set = 0, binding = 0) uniform CameraBuffer
 layout (std140, set = 0, binding = 1) uniform SceneLightingData
 {
 	vec4 fog_color;
-	vec4 fog_distance;
-	vec4 ambient_color;
 	vec4 sunlight_direction;
 	vec4 sunlight_color;
+	float fog_distance;
+	float sunlight_intensity;
+	float sunlight_angular_radius;
+	float atmospheric_turbidity;
+	float atmospheric_rayleigh;
+	float mie_coefficient;
+	float mie_directional_g;
 	float num_lights;
-	float padding[3];
 } scene_lighting_data;
 
 layout (set = 0, binding = 2) uniform writeonly image2D storage_2D[MAX_DESCRIPTOR_BINDINGS];

@@ -120,6 +120,27 @@ namespace Sunset
 			0);
 	}
 
+	void Renderer::draw_unit_sphere(void* command_buffer)
+	{
+		static MeshID unit_sphere_id = MeshFactory::create_sphere(graphics_context.get(), glm::ivec2(32, 32), 1.0f);
+		Mesh* const unit_sphere = CACHE_FETCH(Mesh, unit_sphere_id);
+
+		static ResourceStateID unit_sphere_resource_state = ResourceStateBuilder::create()
+			.set_vertex_buffer(unit_sphere->vertex_buffer)
+			.set_index_buffer(unit_sphere->index_buffer)
+			.set_vertex_count(unit_sphere->vertices.size())
+			.set_index_count(unit_sphere->indices.size())
+			.finish();
+
+		CACHE_FETCH(ResourceState, unit_sphere_resource_state)->bind(graphics_context.get(), command_buffer);
+
+		graphics_context->draw_indexed(
+			command_buffer,
+			static_cast<uint32_t>(CACHE_FETCH(ResourceState, unit_sphere_resource_state)->state_data.index_count),
+			1,
+			0);
+	}
+
 	void Renderer::begin_frame()
 	{
 		render_graph.begin(graphics_context.get());

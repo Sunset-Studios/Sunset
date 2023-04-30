@@ -35,6 +35,7 @@ layout (push_constant) uniform constants
 	int cc_texture;
 	int normal_texure;
 	int position_texure;
+	int sky_texture;
 } lighting_pass_constants;
 
 void main()
@@ -66,6 +67,11 @@ void main()
 		? vec4(0.0, 0.0, 0.0, 1.0)
 		: texture(textures_2D[nonuniformEXT(lighting_pass_constants.position_texure)], in_tex_coord);
 
+	vec4 tex_sky = 
+		lighting_pass_constants.sky_texture == -1
+		? tex_albedo
+		: texture(textures_2D[nonuniformEXT(lighting_pass_constants.sky_texture)], in_tex_coord);
+
 	const vec3 albedo = tex_albedo.rgb;
 	const vec3 normal = tex_normal.xyz;
 	const float normal_length = length(normal);
@@ -81,7 +87,7 @@ void main()
 
 	const float unlit = float(normal_length <= 0.0);
 
-	vec3 color = unlit * albedo * 0.1f;
+	vec3 color = unlit * tex_sky.rgb;
 
 	const uint num_light_iterations = uint((1 - unlit) * scene_lighting_data.num_lights);
 	for (uint i = 0; i < num_light_iterations; ++i)

@@ -152,6 +152,49 @@ namespace Sunset
 			);
 		}
 
+		// Skydome pass
+		RGResourceHandle sky_image_desc;
+		{
+			RGShaderDataSetup shader_setup
+			{
+				.pipeline_shaders =
+				{
+					{ PipelineShaderStageType::Vertex, "../../shaders/common/skydome.vert.sun" },
+					{ PipelineShaderStageType::Fragment, "../../shaders/common/skydome.frag.sun"}
+				},
+				.b_depth_write_enabled = false
+			};
+
+			const glm::vec2 image_extent = gfx_context->get_window()->get_extent();
+			sky_image_desc = render_graph.create_image(
+				gfx_context,
+				{
+					.name = "sky_color",
+					.format = Format::Float4x32,
+					.extent = glm::vec3(image_extent.x, image_extent.y, 1.0f),
+					.flags = ImageFlags::Color | ImageFlags::Image2D | ImageFlags::Sampled,
+					.usage_type = MemoryUsageType::OnlyGPU,
+					.sampler_address_mode = SamplerAddressMode::Repeat,
+					.image_filter = ImageFilter::Linear,
+					.attachment_clear = true
+				}
+			);
+
+			render_graph.add_pass(
+				gfx_context,
+				"skydome_pass",
+				RenderPassFlags::Graphics,
+				{
+					.shader_setup = shader_setup,
+					.outputs = { sky_image_desc }
+				},
+				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
+				{
+					Renderer::get()->draw_unit_sphere(command_buffer);
+				}
+			);
+		}
+
 		// G-Buffer pass
 		RGResourceHandle main_albedo_image_desc;
 		RGResourceHandle main_depth_image_desc;
@@ -454,7 +497,7 @@ namespace Sunset
 					.shader_setup = shader_setup,
 					.inputs = { entity_data_buffer_desc, light_data_buffer_desc,
 								compacted_object_instance_buffer_desc, main_albedo_image_desc,
-								main_smra_image_desc, main_cc_image_desc, main_normal_image_desc, main_position_image_desc },
+								main_smra_image_desc, main_cc_image_desc, main_normal_image_desc, main_position_image_desc, sky_image_desc },
 					.outputs = { scene_color_desc }
 				},
 				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
@@ -464,6 +507,7 @@ namespace Sunset
 					const BindingTableHandle cc_image_handle = frame_data.pass_bindless_resources.handles[2];
 					const BindingTableHandle normal_image_handle = frame_data.pass_bindless_resources.handles[3];
 					const BindingTableHandle position_image_handle = frame_data.pass_bindless_resources.handles[4];
+					const BindingTableHandle sky_image_handle = frame_data.pass_bindless_resources.handles[5];
 
 					LightingPassData lighting_data
 					{
@@ -471,7 +515,8 @@ namespace Sunset
 						.smra_texure = 0x0000ffff & smra_image_handle,
 						.cc_texture = 0x0000ffff & cc_image_handle,
 						.normal_texure = 0x0000ffff & normal_image_handle,
-						.position_texure = 0x0000ffff & position_image_handle
+						.position_texure = 0x0000ffff & position_image_handle,
+						.sky_texure = 0x0000ffff & sky_image_handle
 					};
 
 					PushConstantPipelineData pass_data = PushConstantPipelineData::create(&lighting_data, PipelineShaderStageType::Fragment);
@@ -574,8 +619,8 @@ namespace Sunset
 			};
 
 			const glm::vec2 image_extent = gfx_context->get_window()->get_extent();
-			const float extent_x = Maths::ppot(image_extent.x);
-			const float extent_y = Maths::ppot(image_extent.y);
+			const float extent_x = Maths::npot(image_extent.x);
+			const float extent_y = Maths::npot(image_extent.y);
 
 			bloom_blur_image_desc = render_graph.create_image(
 				gfx_context,

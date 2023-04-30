@@ -141,4 +141,18 @@ namespace Sunset
 			set_light_entity_index(light_comp, index);
 		}
 	}
+
+	void set_light_should_use_sun_direction(LightComponent* light_comp, bool use_sun_dir)
+	{
+		light_comp->light->b_use_sun_directon = use_sun_dir;
+		LightGlobals::get()->light_dirty_states.set(light_comp->light_data_buffer_offset);
+	}
+
+	void set_light_should_use_sun_direction(class Scene* scene, EntityID entity, bool use_sun_dir)
+	{
+		if (LightComponent* const light_comp = scene->get_component<LightComponent>(entity))
+		{
+			set_light_should_use_sun_direction(light_comp, use_sun_dir);
+		}
+	}
 }

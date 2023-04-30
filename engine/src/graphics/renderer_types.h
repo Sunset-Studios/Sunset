@@ -76,6 +76,7 @@ namespace Sunset
 		int32_t cc_texture;
 		int32_t normal_texure;
 		int32_t position_texure;
+		int32_t sky_texure;
 	};
 
 	struct TAAData
