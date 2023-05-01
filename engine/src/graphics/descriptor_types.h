@@ -7,6 +7,8 @@
 
 namespace Sunset
 {
+	constexpr uint32_t MAX_DESCRIPTOR_BINDINGS = 16536;
+
 	constexpr uint32_t StorageImageBindTableSlot = 2;
 	constexpr uint32_t ImageBindTableSlot = 3;
 

@@ -2,8 +2,8 @@
 #include <graphics/command_queue.h>
 #include <graphics/resource/buffer.h>
 #include <graphics/pipeline_state.h>
-#include <graphics/descriptor.h>
 #include <graphics/resource/image.h>
+#include <graphics/descriptor.h>
 #include <core/common.h>
 #include <window/window.h>
 
@@ -161,12 +161,12 @@ namespace Sunset
 
 	void VulkanContext::push_descriptor_writes(const std::vector<DescriptorWrite>& descriptor_writes)
 	{
-		std::vector<VkDescriptorBufferInfo> vk_buffer_infos;
-		std::vector<VkDescriptorImageInfo> vk_image_infos;
 		std::vector<VkWriteDescriptorSet> vk_writes;
 
-		vk_buffer_infos.reserve(descriptor_writes.size() * MAX_DESCRIPTOR_BINDINGS);
-		vk_image_infos.reserve(descriptor_writes.size() * MAX_DESCRIPTOR_BINDINGS);
+		vk_writes.reserve(descriptor_writes.size());
+
+		state.vk_descriptor_buffer_infos_buffer.reset();
+		state.vk_descriptor_image_infos_buffer.reset();
 
 		for (const DescriptorWrite& write : descriptor_writes)
 		{
@@ -174,44 +174,44 @@ namespace Sunset
 			{
 				Image* const image = static_cast<Image*>(write.buffer_desc.buffer);
 
-				uint32_t image_infos_write_start = vk_image_infos.size();
+				uint32_t image_infos_write_start = state.vk_descriptor_image_infos_buffer.size();
 				for (int i = 0; i < write.count; ++i)
 				{
-					VkDescriptorImageInfo& image_info = vk_image_infos.emplace_back();
-					image_info.sampler = static_cast<VkSampler>(image->get_sampler());
-					image_info.imageView = static_cast<VkImageView>(image->get_image_view(write.buffer_desc.buffer_offset));
-					image_info.imageLayout = write.type == DescriptorType::StorageImage ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+					VkDescriptorImageInfo* image_info = state.vk_descriptor_image_infos_buffer.get_new();
+					image_info->sampler = static_cast<VkSampler>(image->get_sampler());
+					image_info->imageView = static_cast<VkImageView>(image->get_image_view(write.buffer_desc.buffer_offset));
+					image_info->imageLayout = write.type == DescriptorType::StorageImage ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 				}
-				auto data_it = vk_image_infos.begin() + image_infos_write_start;
+				VkDescriptorImageInfo* data_it = state.vk_descriptor_image_infos_buffer.data() + image_infos_write_start;
 
 				VkWriteDescriptorSet& new_vk_write = vk_writes.emplace_back();
 				new_vk_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 				new_vk_write.pNext = nullptr;
 				new_vk_write.descriptorCount = write.count;
 				new_vk_write.descriptorType = VK_FROM_SUNSET_DESCRIPTOR_TYPE(write.type);
-				new_vk_write.pImageInfo = &(*data_it);
+				new_vk_write.pImageInfo = data_it;
 				new_vk_write.dstBinding = write.slot;
 				new_vk_write.dstSet = static_cast<VkDescriptorSet>(write.set->get());
 				new_vk_write.dstArrayElement = write.array_index;
 			}
 			else
 			{
-				uint32_t buffer_infos_write_start = vk_buffer_infos.size();
+				uint32_t buffer_infos_write_start = state.vk_descriptor_buffer_infos_buffer.size();
 				for (uint32_t i = 0; i < write.count; ++i)
 				{
-					VkDescriptorBufferInfo& buffer_info = vk_buffer_infos.emplace_back();
-					buffer_info.buffer = static_cast<VkBuffer>(write.buffer_desc.buffer);
-					buffer_info.offset = write.type == DescriptorType::DynamicUniformBuffer ? 0 : write.buffer_desc.buffer_offset;
-					buffer_info.range = write.buffer_desc.buffer_range;
+					VkDescriptorBufferInfo* buffer_info = state.vk_descriptor_buffer_infos_buffer.get_new();
+					buffer_info->buffer = static_cast<VkBuffer>(write.buffer_desc.buffer);
+					buffer_info->offset = write.type == DescriptorType::DynamicUniformBuffer ? 0 : write.buffer_desc.buffer_offset;
+					buffer_info->range = write.buffer_desc.buffer_range;
 				}
-				auto data_it = vk_buffer_infos.begin() + buffer_infos_write_start;
+				VkDescriptorBufferInfo* data_it = state.vk_descriptor_buffer_infos_buffer.data() + buffer_infos_write_start;
 
 				VkWriteDescriptorSet& new_vk_write = vk_writes.emplace_back();
 				new_vk_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 				new_vk_write.pNext = nullptr;
 				new_vk_write.descriptorCount = write.count;
 				new_vk_write.descriptorType = VK_FROM_SUNSET_DESCRIPTOR_TYPE(write.type);
-				new_vk_write.pBufferInfo = &(*data_it);
+				new_vk_write.pBufferInfo = data_it;
 				new_vk_write.dstBinding = write.slot;
 				new_vk_write.dstSet = static_cast<VkDescriptorSet>(write.set->get());
 				new_vk_write.dstArrayElement = write.array_index;

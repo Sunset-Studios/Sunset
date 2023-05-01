@@ -6,8 +6,6 @@
 
 namespace Sunset
 {
-	constexpr uint32_t MAX_DESCRIPTOR_BINDINGS = 16536;
-
 	// Binding table is mostly used for bindless descriptor sets, so that we have a simple interface
 	// for pooling array descriptors.
 	struct DescriptorBindingTable

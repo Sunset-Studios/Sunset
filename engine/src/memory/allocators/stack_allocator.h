@@ -24,11 +24,21 @@ namespace Sunset
 			current_frame_index = 0;
 		}
 
+		size_t size() const
+		{
+			return current_frame_index;
+		}
+
 		T* get_new()
 		{
 			assert(current_frame_index < max_items_in_pool && "There are no more elements in the pool to allocate from! Try increasing the frame allocator size.");
 			T* obj = &items[current_frame_index++];
 			return obj;
+		}
+
+		T* data()
+		{
+			return items.data();
 		}
 
 	protected:

@@ -3,7 +3,9 @@
 #include <utility/execution_queue.h>
 #include <graphics/pipeline_types.h>
 #include <graphics/pipeline_types.h>
+#include <graphics/descriptor_types.h>
 #include <graphics/command_queue_types.h>
+#include <memory/allocators/stack_allocator.h>
 
 #include <vk_types.h>
 #include <vk_sync.h>
@@ -34,6 +36,8 @@ namespace Sunset
 			class CommandQueue* queues[static_cast<int16_t>(DeviceQueueType::Num)];
 			class BufferAllocator* buffer_allocator{ nullptr };
 			class DescriptorSetAllocator* descriptor_set_allocator{ nullptr };
+			StaticFrameAllocator<VkDescriptorBufferInfo, 16 * MAX_DESCRIPTOR_BINDINGS> vk_descriptor_buffer_infos_buffer;
+			StaticFrameAllocator<VkDescriptorImageInfo, 16 * MAX_DESCRIPTOR_BINDINGS> vk_descriptor_image_infos_buffer;
 			bool supports_bindless{ false };
 
 		public:
