@@ -817,6 +817,7 @@ namespace Sunset
 		if (pass->pipeline_state_id != 0)
 		{
 			CACHE_FETCH(PipelineState, pass->pipeline_state_id)->bind(gfx_context, command_buffer);
+			pass_cache.pipeline_states[pass->pass_config.name] = pass->pipeline_state_id;
 		}
 
 		pass_cache.descriptors[pass->pass_config.name].descriptor_layouts = descriptor_layouts;
