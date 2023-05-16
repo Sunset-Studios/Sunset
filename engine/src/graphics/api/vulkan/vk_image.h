@@ -14,9 +14,13 @@ namespace Sunset
 		void initialize(class GraphicsContext* const gfx_context, AttachmentConfig& config);
 		void initialize(class GraphicsContext* const gfx_context, const AttachmentConfig& config, void* image_handle, void* image_view_handle);
 		void destroy(class GraphicsContext* const gfx_context);
-		void copy_buffer(class GraphicsContext* const gfx_context, void* command_buffer, const AttachmentConfig& config, class Buffer* buffer);
+		void copy_from_buffer(class GraphicsContext* const gfx_context, void* command_buffer, const AttachmentConfig& config, class Buffer* buffer);
+		void copy_to_buffer(class GraphicsContext* const gfx_context, void* command_buffer, const AttachmentConfig& config, class Buffer* buffer, uint32_t buffer_offset = 0, uint32_t mip_level = 0, uint32_t array_layer = 0);
+		char* map_gpu(class GraphicsContext* const gfx_context);
+		void unmap_gpu(class GraphicsContext* const gfx_context);
 		void bind(class GraphicsContext* const gfx_context, void* command_buffer);
 		void barrier(class GraphicsContext* const gfx_context, void* command_buffer, const AttachmentConfig& config, AccessFlags src_access, AccessFlags dst_access, ImageLayout src_layout, ImageLayout dst_layout, PipelineStageType src_pipeline_stage, PipelineStageType dst_pipeline_stage);
+		void blit(class GraphicsContext* const gfx_context, void* command_buffer, const AttachmentConfig& config, class Image* const other, const glm::vec3 src_blit_size, const glm::vec3 dst_blit_size, uint32_t src_mip = 0, uint32_t dst_mip = 0, int32_t src_layer = -1, int32_t dst_layer = -1);
 		void clear(class GraphicsContext* const gfx_context, void* command_buffer, const AttachmentConfig& config, const glm::vec4& clear_color);
 
 		void* get_image()

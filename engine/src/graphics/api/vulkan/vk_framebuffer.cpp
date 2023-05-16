@@ -6,7 +6,7 @@
 
 namespace Sunset
 {
-	void VulkanFramebuffer::initialize(class GraphicsContext* const gfx_context, void* render_pass_handle, const std::vector<ImageID>& attachments)
+	void VulkanFramebuffer::initialize(class GraphicsContext* const gfx_context, void* render_pass_handle, const std::vector<RenderPassAttachmentInfo>& attachments)
 	{
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
 
@@ -14,8 +14,6 @@ namespace Sunset
 		fb_create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 		fb_create_info.pNext = nullptr;
 		fb_create_info.attachmentCount = static_cast<int32_t>(attachments.size());
-		fb_create_info.width = context_state->window->get_extent().x;
-		fb_create_info.height = context_state->window->get_extent().y;
 		fb_create_info.layers = 1;
 
 		if (VkRenderPass* render_pass = static_cast<VkRenderPass*>(render_pass_handle))
@@ -26,12 +24,39 @@ namespace Sunset
 		std::vector<VkImageView> fb_attachments;
 		fb_attachments.reserve(fb_create_info.attachmentCount);
 
-		for (ImageID image_attachment_id : attachments)
+		uint32_t max_width{ 0 };
+		uint32_t max_height{ 0 };
+		for (const RenderPassAttachmentInfo& attachment : attachments)
 		{
-			Image* const image_attachment = CACHE_FETCH(Image, image_attachment_id);
-			VkImageView attachment_image_view = static_cast<VkImageView>(image_attachment->get_image_view());
+			Image* const image_attachment = CACHE_FETCH(Image, attachment.image);
+			VkImageView attachment_image_view = static_cast<VkImageView>(image_attachment->get_image_view(attachment.array_index));
 			fb_attachments.push_back(attachment_image_view);
+
+			if (image_attachment->get_attachment_config().extent.x > max_width)
+			{
+				max_width = image_attachment->get_attachment_config().extent.x;
+			}
+
+			if (image_attachment->get_attachment_config().extent.y > max_height)
+			{
+				max_height = image_attachment->get_attachment_config().extent.y;
+			}
 		}
+
+		if (max_width > 0 && max_height > 0)
+		{
+			extent.x = max_width;
+			extent.y = max_height;
+			
+		}
+		else
+		{
+			extent.x = context_state->window->get_extent().x;
+			extent.y = context_state->window->get_extent().y;
+		}
+
+		fb_create_info.width = extent.x;
+		fb_create_info.height = extent.y;
 
 		fb_create_info.pAttachments = fb_attachments.data();
 

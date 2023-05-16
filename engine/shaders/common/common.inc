@@ -37,6 +37,7 @@ layout (set = 0, binding = 2) uniform writeonly image3D storage_3D[MAX_DESCRIPTO
 
 layout (set = 0, binding = 3) uniform sampler2D textures_2D[];
 layout (set = 0, binding = 3) uniform sampler3D textures_3D[];
+layout (set = 0, binding = 3) uniform samplerCube textures_Cube[];
 
 float cubic_filter(in float x, in float b, in float c)
 {

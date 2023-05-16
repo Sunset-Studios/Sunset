@@ -358,6 +358,104 @@ namespace Sunset
 		return mesh_id;
 	}
 
+	MeshID MeshFactory::create_cube(GraphicsContext* const gfx_context)
+	{
+		Identity id{ "engine_cube" };
+		bool b_added{ false };
+		static MeshID mesh_id = MeshCache::get()->fetch_or_add(id, gfx_context, b_added);
+		Mesh* const mesh = CACHE_FETCH(Mesh, mesh_id);
+
+		if (b_added)
+		{
+			mesh->vertices.resize(24);
+
+			// Front face
+			mesh->vertices[0].position = { -1.0f, -1.0f, 1.0f }; mesh->vertices[0].normal = { 0.0f, 0.0f, -1.0f }; mesh->vertices[0].uv = { 0.0f, 0.0f };
+
+			mesh->vertices[1].position = { 1.0f, -1.0f, 1.0f }; mesh->vertices[1].normal = { 0.0f, 0.0f, -1.0f }; mesh->vertices[1].uv = { 1.0f, 0.0f };
+
+			mesh->vertices[2].position = { 1.0f, 1.0f, 1.0f }; mesh->vertices[2].normal = { 0.0f, 0.0f, -1.0f }; mesh->vertices[2].uv = { 1.0f, 1.0f };
+
+			mesh->vertices[3].position = { -1.0f, 1.0f, 1.0f }; mesh->vertices[3].normal = { 0.0f, 0.0f, -1.0f }; mesh->vertices[3].uv = { 0.0f, 1.0f };
+
+			// Back face
+			mesh->vertices[4].position = { -1.0f, -1.0f, -1.0f }; mesh->vertices[4].normal = { 0.0f, 0.0f, 1.0f }; mesh->vertices[4].uv = { 1.0f, 0.0f };
+
+			mesh->vertices[5].position = { 1.0f, -1.0f, -1.0f }; mesh->vertices[5].normal = { 0.0f, 0.0f, 1.0f }; mesh->vertices[5].uv = { 0.0f, 0.0f };
+
+			mesh->vertices[6].position = { 1.0f, 1.0f, -1.0f }; mesh->vertices[6].normal = { 0.0f, 0.0f, 1.0f }; mesh->vertices[6].uv = { 0.0f, 1.0f };
+
+			mesh->vertices[7].position = { -1.0f, 1.0f, -1.0f }; mesh->vertices[7].normal = { 0.0f, 0.0f, 1.0f }; mesh->vertices[7].uv = { 1.0f, 1.0f };
+
+			// Left face
+			mesh->vertices[8].position = { -1.0f, -1.0f, -1.0f }; mesh->vertices[8].normal = { 1.0f, 0.0f, 0.0f }; mesh->vertices[8].uv = { 1.0f, 0.0f };
+
+			mesh->vertices[9].position = { -1.0f, -1.0f, 1.0f }; mesh->vertices[9].normal = { 1.0f, 0.0f, 0.0f }; mesh->vertices[9].uv = { 0.0f, 0.0f };
+
+			mesh->vertices[10].position = { -1.0f, 1.0f, 1.0f }; mesh->vertices[10].normal = { 1.0f, 0.0f, 0.0f }; mesh->vertices[10].uv = { 0.0f, 1.0f };
+
+			mesh->vertices[11].position = { -1.0f, 1.0f, -1.0f }; mesh->vertices[11].normal = { 1.0f, 0.0f, 0.0f }; mesh->vertices[11].uv = { 1.0f, 1.0f };
+
+			// Right face
+			mesh->vertices[12].position = { 1.0f, -1.0f, -1.0f }; mesh->vertices[12].normal = { -1.0f, 0.0f, 0.0f }; mesh->vertices[12].uv = { 0.0f, 0.0f };
+
+			mesh->vertices[13].position = { 1.0f, -1.0f, 1.0f }; mesh->vertices[13].normal = { -1.0f, 0.0f, 0.0f }; mesh->vertices[13].uv = { 1.0f, 0.0f };
+
+			mesh->vertices[14].position = { 1.0f, 1.0f, 1.0f }; mesh->vertices[14].normal = { -1.0f, 0.0f, 0.0f }; mesh->vertices[14].uv = { 1.0f, 1.0f };
+
+			mesh->vertices[15].position = { 1.0f, 1.0f, -1.0f }; mesh->vertices[15].normal = { -1.0f, 0.0f, 0.0f }; mesh->vertices[15].uv = { 0.0f, 1.0f };
+
+			// Bottom face
+			mesh->vertices[16].position = { -1.0f, -1.0f, -1.0f }; mesh->vertices[16].normal = { 0.0f, -1.0f, 0.0f }; mesh->vertices[16].uv = { 1.0f, 0.0f };
+
+			mesh->vertices[17].position = { 1.0f, -1.0f, -1.0f }; mesh->vertices[17].normal = { 0.0f, -1.0f, 0.0f }; mesh->vertices[17].uv = { 0.0f, 0.0f };
+
+			mesh->vertices[18].position = { 1.0f, -1.0f, 1.0f }; mesh->vertices[18].normal = { 0.0f, -1.0f, 0.0f }; mesh->vertices[18].uv = { 0.0f, 1.0f };
+
+			mesh->vertices[19].position = { -1.0f, -1.0f, 1.0f }; mesh->vertices[19].normal = { 0.0f, -1.0f, 0.0f }; mesh->vertices[19].uv = { 1.0f, 1.0f };
+
+			// Top face
+			mesh->vertices[20].position = { -1.0f, 1.0f, -1.0f }; mesh->vertices[20].normal = { 0.0f, 1.0f, 0.0f }; mesh->vertices[20].uv = { 1.0f, 0.0f };
+
+			mesh->vertices[21].position = { 1.0f, 1.0f, -1.0f }; mesh->vertices[21].normal = { 0.0f, 1.0f, 0.0f }; mesh->vertices[21].uv = { 0.0f, 0.0f };
+
+			mesh->vertices[22].position = { 1.0f, 1.0f, 1.0f }; mesh->vertices[22].normal = { 0.0f, 1.0f, 0.0f }; mesh->vertices[22].uv = { 0.0f, 1.0f };
+
+			mesh->vertices[23].position = { -1.0f, 1.0f, 1.0f }; mesh->vertices[23].normal = { 0.0f, 1.0f, 0.0f }; mesh->vertices[23].uv = { 1.0f, 1.0f };
+
+			mesh->indices.insert(mesh->indices.end(),
+				{   
+					// Front face
+					0, 1, 2, 0, 2, 3,
+					// Back face
+					4, 5, 6, 4, 6, 7,
+					// Left face
+					8, 9, 10, 8, 10, 11,
+					// Right face
+					12, 13, 14, 12, 14, 15,
+					// Bottom face
+					16, 17, 18, 16, 18, 19,
+					// Top face
+					20, 21, 22, 20, 22, 23
+				}
+			);
+
+			update_mesh_tangent_bitangents(mesh);
+
+			mesh->name = id;
+
+			{
+				mesh->local_bounds.extents = glm::vec3(0.5f, 0.5f, 0.5f);
+				mesh->local_bounds.origin = glm::vec3(0.0f);
+				mesh->local_bounds.radius = 1.0f;
+			}
+
+			upload_mesh(gfx_context, mesh);
+		}
+
+		return mesh_id;
+	}
+
 	Sunset::MeshID MeshFactory::load(class GraphicsContext* const gfx_context, const char* path)
 	{
 		Identity id{ path };

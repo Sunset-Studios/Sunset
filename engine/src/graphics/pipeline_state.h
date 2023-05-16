@@ -56,9 +56,19 @@ namespace Sunset
 			return state_data;
 		}
 
+		void clear_viewports(class GraphicsContext* const gfx_context)
+		{
+			state_data.viewports.clear();
+		}
+
 		void add_viewport(class GraphicsContext* const gfx_context, float x_pos, float y_pos, float width, float height, float min_depth, float max_depth)
 		{
 			state_data.viewports.emplace_back(x_pos, y_pos, width, height, min_depth, max_depth);
+		}
+
+		void add_viewport(class GraphicsContext* const gfx_context, const Viewport& viewport)
+		{
+			state_data.viewports.emplace_back(viewport);
 		}
 
 		void add_scissor(class GraphicsContext* const gfx_context, int32_t x_pos, int32_t y_pos, int32_t width, int32_t height)
@@ -174,8 +184,10 @@ namespace Sunset
 		public:
 			static PipelineGraphicsStateBuilder create();
 			static PipelineGraphicsStateBuilder create(const PipelineStateData& data);
-			static PipelineGraphicsStateBuilder create_default(class Window* window);
+			static PipelineGraphicsStateBuilder create_default(const glm::ivec2& resolution);
 
+			PipelineGraphicsStateBuilder& clear_viewports();
+			PipelineGraphicsStateBuilder& add_viewport(const Viewport& viewport);
 			PipelineGraphicsStateBuilder& add_viewport(float x_pos, float y_pos, float width, float height, float min_depth, float max_depth);
 			PipelineGraphicsStateBuilder& add_scissor(int32_t x_pos, int32_t y_pos, int32_t width, int32_t height);
 			PipelineGraphicsStateBuilder& set_shader_layout(ShaderLayoutID layout);

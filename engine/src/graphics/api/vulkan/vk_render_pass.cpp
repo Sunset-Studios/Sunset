@@ -51,9 +51,9 @@ namespace Sunset
 			}
 
 			uint32_t attachment_index = static_cast<uint32_t>(config.b_is_present_pass);
-			for (ImageID image_attachment_id : config.attachments)
+			for (const RenderPassAttachmentInfo& attachment : config.attachments)
 			{
-				Image* const image_attachment = CACHE_FETCH(Image, image_attachment_id);
+				Image* const image_attachment = CACHE_FETCH(Image, attachment.image);
 				AttachmentConfig& image_attachment_config = image_attachment->get_attachment_config();
 
 				VkAttachmentDescription attachment = {};
@@ -150,6 +150,7 @@ namespace Sunset
 	void VulkanRenderPass::begin_pass(GraphicsContext* const gfx_context, uint32_t frambuffer_index, void* command_buffer, const RenderPassConfig& pass_config)
 	{
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
+		Framebuffer* const framebuffer = CACHE_FETCH(Framebuffer, data.output_framebuffers[frambuffer_index]);
 
 		VkRenderPassBeginInfo rp_begin_info = {};
 		rp_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -157,10 +158,10 @@ namespace Sunset
 		rp_begin_info.renderPass = data.render_pass;
 		rp_begin_info.renderArea.offset.x = 0;
 		rp_begin_info.renderArea.offset.y = 0;
-		rp_begin_info.renderArea.extent.width = context_state->window->get_extent().x;
-		rp_begin_info.renderArea.extent.height = context_state->window->get_extent().y;
+		rp_begin_info.renderArea.extent.width = framebuffer->get_framebuffer_extent().x;
+		rp_begin_info.renderArea.extent.height = framebuffer->get_framebuffer_extent().y;
 
-		rp_begin_info.framebuffer = static_cast<VkFramebuffer>(CACHE_FETCH(Framebuffer, data.output_framebuffers[frambuffer_index])->get_framebuffer_handle());
+		rp_begin_info.framebuffer = static_cast<VkFramebuffer>(framebuffer->get_framebuffer_handle());
 
 		std::vector<VkClearValue> clear_values;
 		{
@@ -172,9 +173,9 @@ namespace Sunset
 				clear_value.color = { { 0.9f, 0.9f, 0.9f, 1.0f } };
 			}
 
-			for (ImageID image_attachment_id : pass_config.attachments)
+			for (const RenderPassAttachmentInfo& attachment : pass_config.attachments)
 			{
-				Image* const image_attachment = CACHE_FETCH(Image, image_attachment_id);
+				Image* const image_attachment = CACHE_FETCH(Image, attachment.image);
 				AttachmentConfig& image_attachment_config = image_attachment->get_attachment_config();
 				if ((image_attachment_config.flags & ImageFlags::DepthStencil) != ImageFlags::None)
 				{
@@ -204,16 +205,16 @@ namespace Sunset
 	uint32_t VulkanRenderPass::get_num_color_attachments(const RenderPassConfig& config)
 	{
 		uint32_t total{ config.b_is_present_pass };
-		for (ImageID image_attachment_id : config.attachments)
+		for (const RenderPassAttachmentInfo& attachment : config.attachments)
 		{
-			Image* const image_attachment = CACHE_FETCH(Image, image_attachment_id);
+			Image* const image_attachment = CACHE_FETCH(Image, attachment.image);
 			AttachmentConfig& image_attachment_config = image_attachment->get_attachment_config();
 			total += static_cast<uint32_t>((image_attachment_config.flags & ImageFlags::Color) != ImageFlags::None);
 		}
 		return total;
 	}
 
-	void VulkanRenderPass::create_default_output_framebuffers(GraphicsContext* const gfx_context, Swapchain* const swapchain, const RenderPassConfig& config, const std::vector<ImageID>& attachments)
+	void VulkanRenderPass::create_default_output_framebuffers(GraphicsContext* const gfx_context, Swapchain* const swapchain, const RenderPassConfig& config, const std::vector<RenderPassAttachmentInfo>& attachments)
 	{
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
 
@@ -226,7 +227,7 @@ namespace Sunset
 
 			for (size_t i = 0; i < swapchain_image_count; ++i)
 			{
-				std::vector<ImageID> all_attachments = { swapchain_data->swapchain_images[i] };
+				std::vector<RenderPassAttachmentInfo> all_attachments = { { .image = swapchain_data->swapchain_images[i] } };
 				all_attachments.insert(all_attachments.end(), attachments.begin(), attachments.end());
 				data.output_framebuffers[i] = FramebufferFactory::create(gfx_context, &data.render_pass, all_attachments);
 			}

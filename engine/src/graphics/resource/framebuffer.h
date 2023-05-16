@@ -7,12 +7,13 @@
 
 namespace Sunset
 {
-	inline std::size_t hash_attachments_list(const std::vector<ImageID>& attachments)
+	inline std::size_t hash_attachments_list(const std::vector<RenderPassAttachmentInfo>& attachments)
 	{
 		std::size_t hash = 0;
-		for (ImageID attachment : attachments)
+		for (const RenderPassAttachmentInfo& attachment : attachments)
 		{
-			hash = Sunset::Maths::cantor_pair_hash(hash, static_cast<int32_t>(attachment));
+			hash = Sunset::Maths::cantor_pair_hash(hash, static_cast<int32_t>(attachment.image));
+			hash = Sunset::Maths::cantor_pair_hash(hash, static_cast<int32_t>(attachment.array_index));
 		}
 		return hash;
 	}
@@ -23,7 +24,7 @@ namespace Sunset
 	public:
 		GenericFramebuffer() = default;
 
-		void initialize(class GraphicsContext* const gfx_context, void* render_pass_handle = nullptr, const std::vector<ImageID>& attachments = {})
+		void initialize(class GraphicsContext* const gfx_context, void* render_pass_handle = nullptr, const std::vector<RenderPassAttachmentInfo>& attachments = {})
 		{
 			framebuffer_policy.initialize(gfx_context, render_pass_handle, attachments);
 		}
@@ -38,6 +39,11 @@ namespace Sunset
 			return framebuffer_policy.get_framebuffer_handle();
 		}
 
+		glm::vec2 get_framebuffer_extent()
+		{
+			return framebuffer_policy.get_framebuffer_extent();
+		}
+
 	private:
 		Policy framebuffer_policy;
 	};
@@ -47,7 +53,7 @@ namespace Sunset
 	public:
 		NoopFramebuffer() = default;
 
-		void initialize(class GraphicsContext* const gfx_context, void* render_pass_handle = nullptr, const std::vector<ImageID>& attachments = {})
+		void initialize(class GraphicsContext* const gfx_context, void* render_pass_handle = nullptr, const std::vector<RenderPassAttachmentInfo>& attachments = {})
 		{ }
 
 		void destroy(class GraphicsContext* const gfx_context)
@@ -56,6 +62,11 @@ namespace Sunset
 		void* get_framebuffer_handle()
 		{
 			return nullptr;
+		}
+
+		glm::vec2 get_framebuffer_extent()
+		{
+			return glm::vec2(0.0f, 0.0f);
 		}
 	};
 
@@ -70,7 +81,7 @@ namespace Sunset
 	class FramebufferFactory
 	{
 	public:
-		static FramebufferID create(class GraphicsContext* const gfx_context, void* render_pass_handle = nullptr, const std::vector<ImageID>& attachments = {}, bool b_auto_delete = false);
+		static FramebufferID create(class GraphicsContext* const gfx_context, void* render_pass_handle = nullptr, const std::vector<RenderPassAttachmentInfo>& attachments = {}, bool b_auto_delete = false);
 	};
 
 	DEFINE_RESOURCE_CACHE(FramebufferCache, FramebufferID, Framebuffer);

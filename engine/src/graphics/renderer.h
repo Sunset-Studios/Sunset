@@ -16,27 +16,34 @@ namespace Sunset
 
 		public:
 			void initialize() { }
-			void setup(class Window* const window);
+			void setup(class Window* const window, const glm::ivec2& resolution = glm::ivec2(800, 800)); 
 			void destroy();
 
 			template<typename RenderStrategy>
-			void draw()
+			void draw(bool b_offline = false)
 			{
 				static RenderStrategy strategy;
 
-				swapchain->request_next_image(graphics_context.get());
+				if (!b_offline)
+				{
+					swapchain->request_next_image(graphics_context.get());
+				}
 
 				task_allocator.reset();
 
-				strategy.render(graphics_context.get(), render_graph, swapchain);
+				strategy.render(graphics_context.get(), render_graph, swapchain, b_offline);
 
-				swapchain->present(graphics_context.get(), DeviceQueueType::Graphics);
+				if (!b_offline)
+				{
+					swapchain->present(graphics_context.get(), DeviceQueueType::Graphics);
+				}
 
 				graphics_context->advance_frame();
 			}
 
 			void draw_fullscreen_quad(void* command_buffer);
 			void draw_unit_sphere(void* command_buffer);
+			void draw_unit_cube(void* command_buffer);
 
 			GraphicsContext* context() const
 			{
@@ -102,8 +109,8 @@ namespace Sunset
 	class ScopedRender
 	{
 	public:
-		ScopedRender(Renderer* renderer)
-			: renderer(renderer)
+		ScopedRender(Renderer* renderer, bool b_offline = false)
+			: renderer(renderer), b_offline(b_offline)
 		{
 			renderer->wait_for_gpu();
 			renderer->begin_frame();
@@ -111,11 +118,12 @@ namespace Sunset
 
 		~ScopedRender()
 		{
-			renderer->draw<RenderStrategy>();
+			renderer->draw<RenderStrategy>(b_offline);
 		}
 
 	private:
 		Renderer* renderer{ nullptr };
+		bool b_offline{ false };
 	};
 }
 

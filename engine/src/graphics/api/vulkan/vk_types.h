@@ -230,6 +230,10 @@ inline VkImageViewType VK_FROM_SUNSET_IMAGE_VIEW_TYPE(Sunset::ImageFlags image_t
 	{
 		return VK_IMAGE_VIEW_TYPE_3D;
 	}
+	else if (static_cast<int32_t>(image_type & Sunset::ImageFlags::Cube) > 0)
+	{
+		return VK_IMAGE_VIEW_TYPE_CUBE;
+	}
 	return VK_IMAGE_VIEW_TYPE_2D;
 }
 
@@ -537,6 +541,23 @@ inline VmaMemoryUsage VK_FROM_SUNSET_MEMORY_USAGE(Sunset::MemoryUsageType type)
 		return VMA_MEMORY_USAGE_GPU_TO_CPU;
 	default:
 		return VMA_MEMORY_USAGE_UNKNOWN;
+	}
+}
+
+inline VkMemoryPropertyFlagBits VK_FROM_SUNSET_MEMORY_FLAGS(Sunset::MemoryUsageType type)
+{
+	switch (type)
+	{
+	case Sunset::MemoryUsageType::OnlyCPU:
+		return static_cast<VkMemoryPropertyFlagBits>(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	case Sunset::MemoryUsageType::OnlyGPU:
+		return VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+	case Sunset::MemoryUsageType::CPUToGPU:
+		return static_cast<VkMemoryPropertyFlagBits>(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	case Sunset::MemoryUsageType::GPUToCPU:
+		return static_cast<VkMemoryPropertyFlagBits>(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT);
+	default:
+		return VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 	}
 }
 

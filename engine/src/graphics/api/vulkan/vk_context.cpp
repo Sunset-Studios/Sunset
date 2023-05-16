@@ -12,6 +12,12 @@
 
 namespace Sunset
 {
+	void VulkanContext::initialize(const glm::vec2 resolution)
+	{
+		state.surface_resolution = resolution;
+		initialize(nullptr);
+	}
+
 	void VulkanContext::initialize(Window* const window)
 	{
 		vkb::InstanceBuilder builder;
@@ -26,12 +32,30 @@ namespace Sunset
 		state.instance = instance_result.instance;
 		state.debug_messenger = instance_result.debug_messenger;
 
-		create_surface(this, window);
+		if (window != nullptr)
+		{
+			create_surface(this, window);
+			state.surface_resolution = window->get_extent();
+			state.window = window;
+		}
+		else
+		{
+			// Create a headless window for offline rendering
+			const bool b_headless = true;
+			state.window = WindowFactory::create(ENGINE_NAME, glm::ivec2(0), state.surface_resolution, b_headless);
+			state.context_owns_window = true;
+			create_surface(this, state.window);
+		}
 
 		vkb::PhysicalDeviceSelector device_selector{ instance_result };
+
+		if (state.surface != nullptr)
+		{
+			device_selector.set_surface(state.surface);
+		}
+
 		state.physical_device = device_selector
 			.set_minimum_version(1, 3)
-			.set_surface(state.surface)
 			.add_required_extension("VK_EXT_descriptor_indexing")
 			.add_required_extension("VK_EXT_sampler_filter_minmax")
 			.select()
@@ -58,7 +82,6 @@ namespace Sunset
 			.build()
 			.value();
 
-		state.window = window;
 		state.supports_bindless = indexing_features.descriptorBindingPartiallyBound && indexing_features.runtimeDescriptorArray;
 
 		for (int16_t frame_number = 0; frame_number < MAX_BUFFERED_FRAMES; ++frame_number)
@@ -66,6 +89,7 @@ namespace Sunset
 			state.frame_sync_primitives[frame_number].render_semaphore = state.sync_pool.new_semaphore(&state);
 			state.frame_sync_primitives[frame_number].present_semaphore = state.sync_pool.new_semaphore(&state);
 			state.frame_sync_primitives[frame_number].render_fence = state.sync_pool.new_fence(&state);
+			state.has_pending_work[frame_number] = false;
 		}
 
 		for (int16_t queue_num = 0; queue_num < static_cast<int16_t>(DeviceQueueType::Num); ++queue_num)
@@ -93,12 +117,21 @@ namespace Sunset
 		vkDestroyDevice(state.get_device(), nullptr);
 		vkb::destroy_debug_utils_messenger(state.instance, state.debug_messenger);
 		vkDestroyInstance(state.instance, nullptr);
+
+		if (state.context_owns_window)
+		{
+			state.window->destroy();
+		}
 	}
 
 	void VulkanContext::wait_for_gpu()
 	{
 		const int16_t current_buffered_frame = get_buffered_frame_number();
-		VK_CHECK(vkWaitForFences(state.get_device(), 1, &state.sync_pool.get_fence(state.frame_sync_primitives[current_buffered_frame].render_fence), true, 1000000000));
+		if (state.has_pending_work[current_buffered_frame].load(std::memory_order_acquire))
+		{
+			VK_CHECK(vkWaitForFences(state.get_device(), 1, &state.sync_pool.get_fence(state.frame_sync_primitives[current_buffered_frame].render_fence), true, 1000000000));
+			state.has_pending_work[current_buffered_frame].store(false, std::memory_order_release);
+		}
 		VK_CHECK(vkResetFences(state.get_device(), 1, &state.sync_pool.get_fence(state.frame_sync_primitives[current_buffered_frame].render_fence)));
 	}
 

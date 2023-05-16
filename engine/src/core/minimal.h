@@ -110,7 +110,9 @@ namespace Sunset
 		Present = 0x00000200,
 		Transient = 0x00000400,
 		LocalLoad = 0x00000800,
-		Storage = 0x00001000
+		Storage = 0x00001000,
+		Cube = 0x00002000,
+		LinearTiling = 0x00004000
 	};
 
 	inline ImageFlags operator|(ImageFlags lhs, ImageFlags rhs)

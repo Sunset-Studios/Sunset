@@ -9,10 +9,10 @@
 
 namespace Sunset
 {
-	void Renderer::setup(Window* const window)
+	void Renderer::setup(Window* const window, const glm::ivec2& resolution)
 	{
-		graphics_context = GraphicsContextFactory::create(window);
-
+		graphics_context = window != nullptr ? GraphicsContextFactory::create(window) : GraphicsContextFactory::create(resolution);
+		
 		graphics_context->set_buffer_allocator(BufferAllocatorFactory::create(graphics_context.get()));
 
 		graphics_context->register_command_queue(DeviceQueueType::Graphics);
@@ -30,7 +30,7 @@ namespace Sunset
 			{ DescriptorType::Image, MAX_DESCRIPTOR_BINDINGS }
 		});
 
-		const glm::vec2 image_extent = window->get_extent();
+		const glm::vec2 image_extent = graphics_context->get_surface_resolution();
 		{
 			uint32_t image_width_npot = Maths::npot(image_extent.x);
 			uint32_t image_height_npot = Maths::npot(image_extent.y);
@@ -137,6 +137,27 @@ namespace Sunset
 		graphics_context->draw_indexed(
 			command_buffer,
 			static_cast<uint32_t>(CACHE_FETCH(ResourceState, unit_sphere_resource_state)->state_data.index_count),
+			1,
+			0);
+	}
+
+	void Renderer::draw_unit_cube(void* command_buffer)
+	{
+		static MeshID unit_cube_id = MeshFactory::create_cube(graphics_context.get());
+		Mesh* const unit_cube = CACHE_FETCH(Mesh, unit_cube_id);
+
+		static ResourceStateID unit_cube_resource_state = ResourceStateBuilder::create()
+			.set_vertex_buffer(unit_cube->vertex_buffer)
+			.set_index_buffer(unit_cube->index_buffer)
+			.set_vertex_count(unit_cube->vertices.size())
+			.set_index_count(unit_cube->indices.size())
+			.finish();
+
+		CACHE_FETCH(ResourceState, unit_cube_resource_state)->bind(graphics_context.get(), command_buffer);
+
+		graphics_context->draw_indexed(
+			command_buffer,
+			static_cast<uint32_t>(CACHE_FETCH(ResourceState, unit_cube_resource_state)->state_data.index_count),
 			1,
 			0);
 	}

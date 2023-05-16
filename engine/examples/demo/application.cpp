@@ -16,7 +16,7 @@
 #include <SDL.h>
 #include <SDL_vulkan.h>
 
-#include <Tracy.hpp>
+#include <tracy/Tracy.hpp>
 
 namespace Sunset
 {
@@ -24,7 +24,7 @@ namespace Sunset
 	{
 		bIsInitialized = true;
 
-		window = WindowFactory::create(ENGINE_NAME, glm::ivec2(0), glm::ivec2(1280, 720));
+		window = WindowFactory::create(ENGINE_NAME, glm::ivec2(0), glm::ivec2(1280, 720), false);
 
 		Renderer::get()->setup(window);
 
@@ -115,7 +115,7 @@ namespace Sunset
 				set_material(mesh_comp, mesh_material);
 			}
 
-			// Add test mesh
+			// Add test mesh 1
 			{
 				EntityID mesh_ent = scene->make_entity();
 
@@ -138,6 +138,32 @@ namespace Sunset
 				);
 
 				set_mesh(mesh_comp, MeshFactory::create_sphere(Renderer::get()->context(), glm::ivec2(32.0f, 32.0f), 1.0f));
+				set_material(mesh_comp, mesh_material);
+			}
+
+			// Add test mesh 2
+			{
+				EntityID mesh_ent = scene->make_entity();
+
+				TransformComponent* const transform_comp = scene->assign_component<TransformComponent>(mesh_ent);
+
+				set_position(transform_comp, glm::vec3(0.0f, 2.0f, 0.0f));
+				set_scale(transform_comp, glm::vec3(2.0f));
+
+				MeshComponent* const mesh_comp = scene->assign_component<MeshComponent>(mesh_ent);
+
+				MaterialID mesh_material = MaterialFactory::create(
+					Renderer::get()->context(),
+					{
+						.color = glm::vec3(0.2f, 0.4, 0.8f),
+						.uniform_roughness = 0.8f,
+						.uniform_metallic = 1.0f,
+						.uniform_clearcoat = 1.0f,
+						.uniform_clearcoat_roughness = 0.0f,
+					}
+				);
+
+				set_mesh(mesh_comp, MeshFactory::create_cube(Renderer::get()->context()));
 				set_material(mesh_comp, mesh_material);
 			}
 

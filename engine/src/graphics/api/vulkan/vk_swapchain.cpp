@@ -14,7 +14,7 @@ namespace Sunset
 
 		vkb::SwapchainBuilder swapchain_builder{ context_state->get_gpu(), context_state->get_device(), context_state->surface };
 
-		const glm::ivec2 window_extent = context_state->window->get_extent();
+		const glm::ivec2 window_extent = context_state->surface_resolution;
 		vkb::Swapchain vkb_swapchain = swapchain_builder
 			.use_default_format_selection()
 			.set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)

@@ -46,9 +46,9 @@ namespace Sunset
 			queue_policy.end_one_time_buffer_record(gfx_context);
 		}
 
-		void submit(class GraphicsContext* const gfx_context)
+		void submit(class GraphicsContext* const gfx_context, bool b_offline = false)
 		{
-			queue_policy.submit(gfx_context);
+			queue_policy.submit(gfx_context, b_offline);
 		}
 
 		void submit_immediate(class GraphicsContext* const gfx_context, const std::function<void(void* cmd_buffer)>& buffer_update_fn)
@@ -94,7 +94,7 @@ namespace Sunset
 		void end_one_time_buffer_record(class GraphicsContext* const gfx_context)
 		{ }
 
-		void submit(class GraphicsContext* const gfx_context)
+		void submit(class GraphicsContext* const gfx_context, bool b_offline = false)
 		{ }
 
 		void submit_immediate(class GraphicsContext* const gfx_context, const std::function<void(void* cmd_buffer)>& buffer_update_fn)

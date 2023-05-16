@@ -19,7 +19,7 @@ namespace Sunset
 
 	AutoCVar_Float cvar_forward_final_image_exposure("ren.forward_final_image_exposure", "The exposure to apply once HDR color gets resolved down to LDR", 1.0f);
 
-	void ForwardShadingStrategy::render(GraphicsContext* gfx_context, RenderGraph& render_graph, class Swapchain* swapchain)
+	void ForwardShadingStrategy::render(GraphicsContext* gfx_context, RenderGraph& render_graph, class Swapchain* swapchain, bool b_offline)
 	{
 		const uint16_t buffered_frame_number = gfx_context->get_buffered_frame_number();
 
@@ -156,7 +156,7 @@ namespace Sunset
 				}
 			};
 
-			const glm::vec2 image_extent = gfx_context->get_window()->get_extent();
+			const glm::vec2 image_extent = gfx_context->get_surface_resolution();
 			main_color_image_desc = render_graph.create_image(
 				gfx_context,
 				{
@@ -293,7 +293,7 @@ namespace Sunset
 		// Create final resolved scene color
 		RGResourceHandle final_image_color;
 		{
-			const glm::vec2 image_extent = gfx_context->get_window()->get_extent();
+			const glm::vec2 image_extent = gfx_context->get_surface_resolution();
 			final_image_color = render_graph.create_image(
 				gfx_context,
 				{
@@ -340,7 +340,7 @@ namespace Sunset
 
 			const uint32_t num_iterations = cvar_forward_num_bloom_pass_iterations.get();
 
-			const glm::vec2 image_extent = gfx_context->get_window()->get_extent();
+			const glm::vec2 image_extent = gfx_context->get_surface_resolution();
 			const float extent_x = Maths::ppot(image_extent.x);
 			const float extent_y = Maths::ppot(image_extent.y);
 
@@ -589,6 +589,6 @@ namespace Sunset
 		//	}
 		//);
 #endif 
-		render_graph.submit(gfx_context, swapchain);
+		render_graph.submit(gfx_context, swapchain, b_offline);
 	}
 }

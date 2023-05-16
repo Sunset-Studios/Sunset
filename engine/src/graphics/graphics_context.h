@@ -12,6 +12,11 @@ namespace Sunset
 		public:
 			GenericGraphicsContext() = default;
 
+			void initialize(const glm::vec2 resolution)
+			{
+				graphics_policy.initialize(resolution);
+			}
+
 			void initialize(class Window* const window)
 			{
 				graphics_policy.initialize(window);
@@ -55,6 +60,11 @@ namespace Sunset
 			class Window* get_window()
 			{
 				return graphics_policy.get_window();
+			}
+
+			glm::ivec2 get_surface_resolution() const
+			{
+				return graphics_policy.get_surface_resolution();
 			}
 
 			uint32_t get_frame_number() const
@@ -147,6 +157,9 @@ namespace Sunset
 		public:
 			NoopGraphicsContext() = default;
 
+			void initialize(const glm::vec2 resolution)
+			{ }
+
 			void initialize(class Window* const window)
 			{ }
 
@@ -171,6 +184,11 @@ namespace Sunset
 			class Window* get_window()
 			{
 				return nullptr;
+			}
+
+			glm::ivec2 get_surface_resolution() const
+			{
+				return glm::ivec2(0, 0);
 			}
 
 			void* get_state()

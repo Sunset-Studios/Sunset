@@ -10,9 +10,9 @@ namespace Sunset
 		public:
 			GenericWindow() = default;
 
-			void initialize(const char* title, const glm::ivec2& position, const glm::ivec2& extent)
+			void initialize(const char* title, const glm::ivec2& position, const glm::ivec2& extent, bool b_headless)
 			{
-				window_policy.initialize(title, position, extent);
+				window_policy.initialize(title, position, extent, b_headless);
 			}
 
 			void poll()
@@ -54,7 +54,7 @@ namespace Sunset
 		public:
 			NoopWindow() = default;
 
-			void initialize(const char* title, const glm::ivec2& position, const glm::ivec2& extent)
+			void initialize(const char* title, const glm::ivec2& position, const glm::ivec2& extent, bool b_headless)
 			{ }
 
 			void poll()

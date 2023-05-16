@@ -45,7 +45,7 @@ namespace Sunset
 		uint32_t get_num_color_attachments(const RenderPassConfig& config);
 
 	protected:
-		void create_default_output_framebuffers(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, const RenderPassConfig& config, const std::vector<ImageID>& attachments);
+		void create_default_output_framebuffers(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, const RenderPassConfig& config, const std::vector<RenderPassAttachmentInfo>& attachments);
 
 	protected:
 		VulkanRenderPassData data;

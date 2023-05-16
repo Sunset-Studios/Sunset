@@ -25,17 +25,29 @@ namespace Sunset
 		return state_builder;
 	}
 
-	Sunset::PipelineGraphicsStateBuilder PipelineGraphicsStateBuilder::create_default(Window* window)
+	Sunset::PipelineGraphicsStateBuilder PipelineGraphicsStateBuilder::create_default(const glm::ivec2& resolution)
 	{
 		return create()
-			.add_viewport(0.0f, 0.0f, static_cast<float>(window->get_extent().x), static_cast<float>(window->get_extent().y), 0.0f, 1.0f)
-			.add_scissor(0, 0, window->get_extent().x, window->get_extent().y)
+			.add_viewport(0.0f, 0.0f, static_cast<float>(resolution.x), static_cast<float>(resolution.y), 0.0f, 1.0f)
+			.add_scissor(0, 0, resolution.x, resolution.y)
 			.set_vertex_input_description(Vertex::get_description())
 			.set_primitive_topology_type(PipelinePrimitiveTopologyType::TriangleList)
 			.set_rasterizer_state(PipelineRasterizerPolygonMode::Fill, 1.0f, PipelineRasterizerCullMode::None)
 			.set_multisample_count(1)
 			.set_depth_stencil_state(true, true, CompareOperation::LessOrEqual)
 			.value();
+	}
+
+	PipelineGraphicsStateBuilder& PipelineGraphicsStateBuilder::clear_viewports()
+	{
+		state_data.viewports.clear();
+		return *this;
+	}
+
+	PipelineGraphicsStateBuilder& PipelineGraphicsStateBuilder::add_viewport(const Viewport& viewport)
+	{
+		state_data.viewports.emplace_back(viewport);
+		return *this;
 	}
 
 	Sunset::PipelineGraphicsStateBuilder& PipelineGraphicsStateBuilder::add_viewport(float x_pos, float y_pos, float width, float height, float min_depth, float max_depth)

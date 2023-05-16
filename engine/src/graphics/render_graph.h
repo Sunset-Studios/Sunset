@@ -97,6 +97,7 @@ namespace Sunset
 		std::optional<PushConstantPipelineData> push_constant_data;
 		std::optional<PipelineRasterizerState> rasterizer_state;
 		std::optional<PipelineAttachmentBlendState> attachment_blend;
+		std::optional<Viewport> viewport;
 		std::optional<bool> b_depth_write_enabled;
 	};
 
@@ -108,6 +109,8 @@ namespace Sunset
 		std::vector<RGResourceHandle> inputs;
 		// Outputs that this pass either writes to or produces
 		std::vector<RGResourceHandle> outputs;
+		// Array layers of corresponding output entries in the outputs vector. (Only corresponds to image outputs. Default value is 0 for each output)
+		std::vector<uint32_t> output_layers;
 		// Input resources that should be bound normally (auto computed)
 		std::vector<RGResourceHandle> pass_inputs;
 		// Input resources that are bindless and need special handling (auto computed)
@@ -116,6 +119,8 @@ namespace Sunset
 		bool b_skip_auto_descriptor_setup{ false };
 		// Whether or not to split mips from input images into separate descriptor writes (one per mip level). If false, uploads a single image with all the mip levels to GPU.
 		bool b_split_input_image_mips{ false };
+		// Whether or not prevent this pass from getting culled during render graph compilation. 
+		bool b_force_keep_pass{ false };
 	};
 
 	struct RGPassCache
@@ -206,7 +211,7 @@ namespace Sunset
 			AccessFlags dst_access,
 			ImageLayout dst_layout = ImageLayout::Undefined);
 
-		void submit(class GraphicsContext* const gfx_context, class Swapchain* const swapchain);
+		void submit(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, bool b_offline = false);
 
 		void queue_global_descriptor_writes(class GraphicsContext* const gfx_context, uint32_t buffered_frame, const std::initializer_list<DescriptorBufferDesc>& buffers);
 
@@ -225,7 +230,7 @@ namespace Sunset
 
 		void setup_physical_pass_and_resources(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGPass* pass, RGFrameData& frame_data, void* command_buffer);
 		void setup_physical_resource(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGPass* pass, RGResourceHandle resource, bool b_is_graphics_pass = true, bool b_is_input_resource = false);
-		void tie_resource_to_pass_config_attachments(class GraphicsContext* const gfx_context, RGResourceHandle resource, RGPass* pass, bool b_is_input_resource = false);
+		void tie_resource_to_pass_config_attachments(class GraphicsContext* const gfx_context, RGResourceHandle resource, RGPass* pass, uint32_t resource_params_index, bool b_is_input_resource = false);
 		void setup_pass_input_resource_bindless_type(class GraphicsContext* const gfx_context, RGResourceHandle resource, RGPass* pass);
 		void setup_pass_pipeline_state(class GraphicsContext* const gfx_context, RGPass* pass, void* command_buffer);
 		void setup_pass_descriptors(class GraphicsContext* const gfx_context, RGPass* pass, RGFrameData& frame_data, void* command_buffer);

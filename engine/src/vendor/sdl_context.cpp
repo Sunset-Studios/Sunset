@@ -99,11 +99,15 @@ namespace Sunset
 		}
 	}
 
-	void WindowSDL::initialize(const char* title, const glm::ivec2& position, const glm::ivec2& extent)
+	void WindowSDL::initialize(const char* title, const glm::ivec2& position, const glm::ivec2& extent, bool b_headless)
 	{
 		lazy_SDL_init();
 
 		SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN);
+		if (b_headless)
+		{
+			window_flags = (SDL_WindowFlags)(static_cast<uint64_t>(window_flags) | SDL_WINDOW_HIDDEN);
+		}
 
 		this->extent = extent;
 		this->position = position;

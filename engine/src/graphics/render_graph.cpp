@@ -218,6 +218,8 @@ namespace Sunset
 	void RenderGraph::update_present_pass_status(RGPass* pass)
 	{
 		pass->pass_config.b_is_present_pass = (pass->pass_config.flags & RenderPassFlags::Present) != RenderPassFlags::None;
+		// Do not cull present passes as these are usually last and have resources that have no future uses, so would get culled otherwise
+		pass->parameters.b_force_keep_pass = pass->parameters.b_force_keep_pass || pass->pass_config.b_is_present_pass;
 	}
 
 	void RenderGraph::cull_graph_passes(class GraphicsContext* const gfx_context)
@@ -232,8 +234,8 @@ namespace Sunset
 			{
 				RGPass* const producer_pass = current_registry->render_passes[pass_handle];
 
-				// Do not cull present passes as these are usually last and have resources that have not future uses, so would get culled otherwise
-				if (producer_pass->pass_config.b_is_present_pass)
+				// Do not cull passes marked as "force keep" 
+				if (producer_pass->parameters.b_force_keep_pass)
 				{
 					continue;
 				}
@@ -442,7 +444,7 @@ namespace Sunset
 		// TODO: Not entirely sure how to do this yet (with VMA?) but walk resource lifetimes to account for how much GPU memory should be allocated up front for aliasing
 	}
 
-	void RenderGraph::submit(GraphicsContext* const gfx_context, class Swapchain* const swapchain)
+	void RenderGraph::submit(GraphicsContext* const gfx_context, class Swapchain* const swapchain, bool b_offline)
 	{
 		compile(gfx_context, swapchain);
 
@@ -472,7 +474,7 @@ namespace Sunset
 		// TODO: switch the queue based on the pass type
 		gfx_context->get_command_queue(DeviceQueueType::Graphics)->end_one_time_buffer_record(gfx_context);
 		// TODO: switch the queue based on the pass type
-		gfx_context->get_command_queue(DeviceQueueType::Graphics)->submit(gfx_context);
+		gfx_context->get_command_queue(DeviceQueueType::Graphics)->submit(gfx_context, b_offline);
 	}
 
 	void RenderGraph::queue_global_descriptor_writes(class GraphicsContext* const gfx_context, uint32_t buffered_frame, const std::initializer_list<DescriptorBufferDesc>& buffers)
@@ -559,12 +561,12 @@ namespace Sunset
 	{
 		const bool b_is_graphics_pass = (pass->pass_config.flags & RenderPassFlags::Graphics) != RenderPassFlags::None;
 
-		const auto setup_resource = [this, gfx_context, swapchain, pass, b_is_graphics_pass](RGResourceHandle resource, bool b_is_input_resource)
+		const auto setup_resource = [this, gfx_context, swapchain, pass, b_is_graphics_pass](RGResourceHandle resource, uint32_t resource_params_index, bool b_is_input_resource)
 		{
 			setup_physical_resource(gfx_context, swapchain, pass, resource, b_is_graphics_pass, b_is_input_resource);
 			if (b_is_graphics_pass)
 			{
-				tie_resource_to_pass_config_attachments(gfx_context, resource, pass, b_is_input_resource);
+				tie_resource_to_pass_config_attachments(gfx_context, resource, pass, resource_params_index, b_is_input_resource);
 			}
 			if (b_is_input_resource)
 			{
@@ -574,13 +576,15 @@ namespace Sunset
 
 		// Setup resource used by the render pass. If they are output/input attachments we will handle those here as well but cache those off
 		// as those necessarily need caching along with the render passes.
-		for (RGResourceHandle input_resource : pass->parameters.inputs)
+		for (uint32_t i = 0; i < pass->parameters.inputs.size(); ++i)
 		{
-			setup_resource(input_resource, true);
+			RGResourceHandle input_resource = pass->parameters.inputs[i];
+			setup_resource(input_resource, i, true);
 		}
-		for (RGResourceHandle output_resource : pass->parameters.outputs)
+		for (uint32_t i = 0; i < pass->parameters.outputs.size(); ++i)
 		{
-			setup_resource(output_resource, false);
+			RGResourceHandle output_resource = pass->parameters.outputs[i];
+			setup_resource(output_resource, i, false);
 		}
 
 		// Create our physical render pass (is internally cached if necessary using a hash based on the pass config)
@@ -689,7 +693,7 @@ namespace Sunset
 		}
 	}
 
-	void RenderGraph::tie_resource_to_pass_config_attachments(class GraphicsContext* const gfx_context, RGResourceHandle resource, RGPass* pass, bool b_is_input_resource)
+	void RenderGraph::tie_resource_to_pass_config_attachments(class GraphicsContext* const gfx_context, RGResourceHandle resource, RGPass* pass, uint32_t resource_params_index, bool b_is_input_resource)
 	{
 		const ResourceType resource_type = static_cast<ResourceType>(get_graph_resource_type(resource));
 		const RGResourceIndex resource_index = get_graph_resource_index(resource);
@@ -699,7 +703,8 @@ namespace Sunset
 			const bool b_is_local_load = (image_resource->config.flags & ImageFlags::LocalLoad) != ImageFlags::None;
 			if (!b_is_input_resource || b_is_local_load)
 			{
-				pass->pass_config.attachments.push_back(current_registry->resource_metadata[resource].physical_id);
+				const uint32_t array_index = pass->parameters.output_layers.size() > resource_params_index ? pass->parameters.output_layers[resource_params_index] : 0;
+				pass->pass_config.attachments.push_back({ .image = current_registry->resource_metadata[resource].physical_id, .array_index = array_index });
 			}
 		}
 	}
@@ -778,7 +783,7 @@ namespace Sunset
 			}
 			else
 			{
-				PipelineGraphicsStateBuilder state_builder = PipelineGraphicsStateBuilder::create_default(gfx_context->get_window())
+				PipelineGraphicsStateBuilder state_builder = PipelineGraphicsStateBuilder::create_default(gfx_context->get_surface_resolution())
 					.clear_shader_stages()
 					.set_pass(pass->physical_id)
 					.value();
@@ -801,6 +806,12 @@ namespace Sunset
 				if (shader_setup.push_constant_data.has_value())
 				{
 					state_builder.set_push_constants(shader_setup.push_constant_data.value());
+				}
+
+				if (shader_setup.viewport.has_value())
+				{
+					state_builder.clear_viewports();
+					state_builder.add_viewport(shader_setup.viewport.value());
 				}
 
 				for (const auto& shader_stage : shader_setup.pipeline_shaders)

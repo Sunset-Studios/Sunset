@@ -38,7 +38,10 @@ namespace Sunset
 			class DescriptorSetAllocator* descriptor_set_allocator{ nullptr };
 			StaticFrameAllocator<VkDescriptorBufferInfo, 16 * MAX_DESCRIPTOR_BINDINGS> vk_descriptor_buffer_infos_buffer;
 			StaticFrameAllocator<VkDescriptorImageInfo, 16 * MAX_DESCRIPTOR_BINDINGS> vk_descriptor_image_infos_buffer;
+			glm::ivec2 surface_resolution;
 			bool supports_bindless{ false };
+			bool context_owns_window{ false };
+			std::atomic_bool has_pending_work[MAX_BUFFERED_FRAMES];
 
 		public:
 			VulkanContextState() = default;
@@ -64,6 +67,7 @@ namespace Sunset
 			~VulkanContext() = default;
 
 		public:
+			void initialize(const glm::vec2 resolution);
 			void initialize(class Window* const window);
 			void destroy(ExecutionQueue& deletion_queue);
 			void wait_for_gpu();
@@ -80,6 +84,11 @@ namespace Sunset
 			class Window* get_window()
 			{
 				return state.window;
+			}
+
+			glm::ivec2 get_surface_resolution() const
+			{
+				return state.surface_resolution;
 			}
 
 			void set_buffer_allocator(class BufferAllocator* allocator)

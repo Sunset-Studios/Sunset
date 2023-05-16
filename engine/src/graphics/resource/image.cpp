@@ -5,11 +5,6 @@
 #include <graphics/command_queue.h>
 #include <image_serializer.h>
 
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
-#include <json.hpp>
-#include <lz4.h>
-
 namespace Sunset
 {
 	Sunset::ImageID ImageFactory::create(class GraphicsContext* const gfx_context, const AttachmentConfig& config, bool auto_delete)
@@ -99,7 +94,7 @@ namespace Sunset
 
 				gfx_context->get_command_queue(DeviceQueueType::Graphics)->submit_immediate(gfx_context, [image, staging_buffer, gfx_context](void* command_buffer)
 				{
-					image->copy_buffer(gfx_context, command_buffer, staging_buffer);
+					image->copy_from_buffer(gfx_context, command_buffer, staging_buffer);
 				});
 			}
 
@@ -107,5 +102,16 @@ namespace Sunset
 		}
 
 		return image_id;
+	}
+
+	ScopedGPUImageMapping::ScopedGPUImageMapping(GraphicsContext* const gfx_context, Image* image)
+		: image(image), gfx_context(gfx_context)
+	{
+		mapped_memory = image->map_gpu(gfx_context);
+	}
+
+	ScopedGPUImageMapping::~ScopedGPUImageMapping()
+	{
+		image->unmap_gpu(gfx_context);
 	}
 }

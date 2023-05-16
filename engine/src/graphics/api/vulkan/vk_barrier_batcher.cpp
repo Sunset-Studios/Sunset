@@ -44,7 +44,7 @@ namespace Sunset
 		range.baseMipLevel = 0;
 		range.levelCount = image->get_attachment_config().mip_count;
 		range.baseArrayLayer = 0;
-		range.layerCount = 1;
+		range.layerCount = image->get_attachment_config().array_count;
 
 		VkImageMemoryBarrier image_barrier;
 		image_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;

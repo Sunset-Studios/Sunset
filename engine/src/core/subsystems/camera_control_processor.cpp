@@ -26,7 +26,7 @@ namespace Sunset
 	void CameraControlProcessor::update(class Scene* scene, double delta_time)
 	{
 		const size_t min_ubo_alignment = Renderer::get()->context()->get_min_ubo_offset_alignment();
-		const Window* window = Renderer::get()->context()->get_window();
+		const glm::ivec2 res = Renderer::get()->context()->get_surface_resolution();
 		const uint32_t current_frame_number = Renderer::get()->context()->get_frame_number();
 
 		for (EntityID entity : SceneView<CameraControlComponent>(*scene))
@@ -112,8 +112,8 @@ namespace Sunset
 				const float x_jitter = Maths::halton(camera_control_comp->data.current_jitter_index, 2) * 2.0f - 1.0f;
 				const float y_jitter = Maths::halton(camera_control_comp->data.current_jitter_index, 3) * 2.0f - 1.0f;
 
-				camera_control_comp->data.gpu_data.jitter.z = x_jitter / static_cast<float>(window->get_extent().x);
-				camera_control_comp->data.gpu_data.jitter.w = y_jitter / static_cast<float>(window->get_extent().y);
+				camera_control_comp->data.gpu_data.jitter.z = x_jitter / static_cast<float>(res.x);
+				camera_control_comp->data.gpu_data.jitter.w = y_jitter / static_cast<float>(res.y);
 
 				// TODO: What we really want here is the current viewport size
 				camera_control_comp->data.gpu_data.projection_matrix[2][0] += camera_control_comp->data.gpu_data.jitter.z;

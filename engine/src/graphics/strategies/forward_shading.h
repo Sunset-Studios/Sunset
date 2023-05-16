@@ -8,6 +8,6 @@ namespace Sunset
 	class ForwardShadingStrategy
 	{
 	public:
-		void render(class GraphicsContext* gfx_context, RenderGraph& render_graph, class Swapchain* swapchain);
+		void render(class GraphicsContext* gfx_context, RenderGraph& render_graph, class Swapchain* swapchain, bool b_offline = false);
 	};
 }

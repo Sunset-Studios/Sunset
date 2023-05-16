@@ -22,7 +22,7 @@ namespace Sunset
 
 	AutoCVar_Float cvar_final_image_exposure("ren.final_image_exposure", "The exposure to apply once HDR color gets resolved down to LDR", 2.0f);
 
-	void DeferredShadingStrategy::render(GraphicsContext* gfx_context, RenderGraph& render_graph, class Swapchain* swapchain)
+	void DeferredShadingStrategy::render(GraphicsContext* gfx_context, RenderGraph& render_graph, class Swapchain* swapchain, bool b_offline)
 	{
 		const uint16_t buffered_frame_number = gfx_context->get_buffered_frame_number();
 
@@ -165,7 +165,7 @@ namespace Sunset
 				.b_depth_write_enabled = false
 			};
 
-			const glm::vec2 image_extent = gfx_context->get_window()->get_extent();
+			const glm::vec2 image_extent = gfx_context->get_surface_resolution();
 			sky_image_desc = render_graph.create_image(
 				gfx_context,
 				{
@@ -213,7 +213,7 @@ namespace Sunset
 			};
 
 			// Create G-Buffer targets
-			const glm::vec2 image_extent = gfx_context->get_window()->get_extent();
+			const glm::vec2 image_extent = gfx_context->get_surface_resolution();
 			main_albedo_image_desc = render_graph.create_image(
 				gfx_context,
 				{
@@ -332,7 +332,7 @@ namespace Sunset
 				}
 			};
 
-			const glm::vec2 image_extent = gfx_context->get_window()->get_extent();
+			const glm::vec2 image_extent = gfx_context->get_surface_resolution();
 			motion_vectors_image_desc = render_graph.create_image(
 				gfx_context,
 				{
@@ -474,7 +474,7 @@ namespace Sunset
 				}
 			};
 
-			const glm::vec2 image_extent = gfx_context->get_window()->get_extent();
+			const glm::vec2 image_extent = gfx_context->get_surface_resolution();
 			scene_color_desc = render_graph.create_image(
 				gfx_context,
 				{
@@ -538,7 +538,7 @@ namespace Sunset
 				}
 			};
 
-			const glm::vec2 image_extent = gfx_context->get_window()->get_extent();
+			const glm::vec2 image_extent = gfx_context->get_surface_resolution();
 			const uint32_t current_frame_number = gfx_context->get_frame_number();
 
 			render_graph.add_pass(
@@ -618,7 +618,7 @@ namespace Sunset
 				}
 			};
 
-			const glm::vec2 image_extent = gfx_context->get_window()->get_extent();
+			const glm::vec2 image_extent = gfx_context->get_surface_resolution();
 			const float extent_x = Maths::npot(image_extent.x);
 			const float extent_y = Maths::npot(image_extent.y);
 
@@ -881,6 +881,6 @@ namespace Sunset
 		//	}
 		//);
 #endif 
-		render_graph.submit(gfx_context, swapchain);
+		render_graph.submit(gfx_context, swapchain, b_offline);
 	}
 }

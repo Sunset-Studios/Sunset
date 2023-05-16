@@ -101,7 +101,7 @@ namespace Sunset
 		static PipelineStateID pipeline_state;
 		if (pipeline_state == 0)
 		{
-			PipelineGraphicsStateBuilder state_builder = PipelineGraphicsStateBuilder::create_default(gfx_context->get_window())
+			PipelineGraphicsStateBuilder state_builder = PipelineGraphicsStateBuilder::create_default(gfx_context->get_surface_resolution())
 				.clear_shader_stages()
 				.set_pass(render_pass)
 				.value();

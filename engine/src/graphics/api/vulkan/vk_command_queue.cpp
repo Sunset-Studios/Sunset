@@ -114,12 +114,14 @@ namespace Sunset
 	}
 
 
-	void VulkanCommandQueue::submit(class GraphicsContext* const gfx_context)
+	void VulkanCommandQueue::submit(class GraphicsContext* const gfx_context, bool b_offline)
 	{
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
 
 		const int16_t current_buffered_frame = gfx_context->get_buffered_frame_number();
 		VkCommandBuffer& command_buffer = data.frame_command_pool_data[current_buffered_frame].command_buffer;
+
+		context_state->has_pending_work[current_buffered_frame].store(true, std::memory_order_release);
 
 		VkSubmitInfo submit_info = {};
 		submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -131,8 +133,8 @@ namespace Sunset
 		VkFence render_fence = context_state->sync_pool.get_fence(context_state->frame_sync_primitives[current_buffered_frame].render_fence);
 
 		submit_info.pWaitDstStageMask = &wait_stage;
-		submit_info.waitSemaphoreCount = 1;
-		submit_info.pWaitSemaphores = &present_semaphore;
+		submit_info.waitSemaphoreCount = 1 - static_cast<uint32_t>(b_offline);
+		submit_info.pWaitSemaphores = b_offline ? nullptr : &present_semaphore;
 		submit_info.signalSemaphoreCount = 1;
 		submit_info.pSignalSemaphores = &render_semaphore;
 		submit_info.commandBufferCount = 1;

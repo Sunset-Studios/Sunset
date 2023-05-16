@@ -24,8 +24,6 @@ namespace Sunset
 
 		private:
 			bool bIsInitialized{ false };
-			int frameNumber{ 0 };
 			class Window* window{ nullptr };
-			class Renderer* renderer{ nullptr };
 	};
 }

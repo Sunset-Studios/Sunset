@@ -35,11 +35,17 @@ namespace Sunset
 		return lhs = lhs & rhs;
 	}
 
+	struct RenderPassAttachmentInfo
+	{
+		ImageID image;
+		uint32_t array_index{ 0 };
+	};
+
 	struct RenderPassConfig
 	{
 		Identity name;
 		RenderPassFlags flags;
-		std::vector<ImageID> attachments;
+		std::vector<RenderPassAttachmentInfo> attachments;
 		bool b_is_present_pass = false;
 	};
 }

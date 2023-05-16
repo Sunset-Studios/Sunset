@@ -24,7 +24,7 @@ namespace Sunset
 	public:
 		WindowSDL() = default;
 
-		void initialize(const char* title, const glm::ivec2& position, const glm::ivec2& extent);
+		void initialize(const char* title, const glm::ivec2& position, const glm::ivec2& extent, bool b_headless);
 		void poll();
 		bool is_closing();
 		void destroy();

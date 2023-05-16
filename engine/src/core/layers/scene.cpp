@@ -76,12 +76,12 @@ namespace Sunset
 	{
 		if (active_camera == 0)
 		{
-			Window* const window = Renderer::get()->context()->get_window();
+			const glm::ivec2 res = Renderer::get()->context()->get_surface_resolution();
 
 			active_camera = make_entity();
 			CameraControlComponent* const camera_control_comp = assign_component<CameraControlComponent>(active_camera);
 			set_fov(camera_control_comp, 75.0f);
-			set_aspect_ratio(camera_control_comp, (float)window->get_extent().x / (float)window->get_extent().y);
+			set_aspect_ratio(camera_control_comp, (float)res.x / (float)res.y);
 			set_near_plane(camera_control_comp, 0.01f);
 			set_far_plane(camera_control_comp, 1000.0f);
 			set_position(camera_control_comp, glm::vec3(0.0f, 25.0f, 25.0f));
