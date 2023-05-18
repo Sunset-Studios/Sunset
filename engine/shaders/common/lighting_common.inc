@@ -91,7 +91,7 @@ vec3 calculate_brdf(
 	}
 	else if (light.type == 1) // Point
 	{
-		const vec3 light_to_frag = fragment_pos - position;
+		const vec3 light_to_frag = position - fragment_pos;
 		light_dir = normalize(light_to_frag);
 		const float distance_squared = dot(light_to_frag, light_to_frag);
 		const float light_inv_radius = 1.0f / light.radius;
@@ -101,7 +101,7 @@ vec3 calculate_brdf(
 	}
 	else if (light.type == 2) // Spot
 	{
-		const vec3 light_to_frag = fragment_pos - position;
+		const vec3 light_to_frag = position - fragment_pos;
 		light_dir = normalize(light_to_frag);
 		float cos_outer = cos(light.outer_angle);
 		float spot_scale = 1.0f / max(cos(light.direction.w) - cos_outer, 0.0001f);
