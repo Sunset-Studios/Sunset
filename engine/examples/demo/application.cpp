@@ -48,6 +48,7 @@ namespace Sunset
 			set_scene_atmospheric_rayleigh(scene.get(), 1.0f);
 			set_scene_mie_coefficient(scene.get(), 0.005f);
 			set_scene_mie_directional_g(scene.get(), 0.8f);
+			set_scene_sky_irradiance(scene.get(), "../../assets/sunset/irradiance/sunset_irradiance");
 
 			// Add light 1
 			{

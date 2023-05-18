@@ -14,8 +14,8 @@ namespace Sunset
 		void initialize(class GraphicsContext* const gfx_context, AttachmentConfig& config);
 		void initialize(class GraphicsContext* const gfx_context, const AttachmentConfig& config, void* image_handle, void* image_view_handle);
 		void destroy(class GraphicsContext* const gfx_context);
-		void copy_from_buffer(class GraphicsContext* const gfx_context, void* command_buffer, const AttachmentConfig& config, class Buffer* buffer);
-		void copy_to_buffer(class GraphicsContext* const gfx_context, void* command_buffer, const AttachmentConfig& config, class Buffer* buffer, uint32_t buffer_offset = 0, uint32_t mip_level = 0, uint32_t array_layer = 0);
+		void copy_from_buffer(class GraphicsContext* const gfx_context, void* command_buffer, const AttachmentConfig& config, class Buffer* buffer, uint32_t buffer_offset = 0, uint32_t mip_level = 0, uint32_t array_layer = 0, uint32_t array_count = 1);
+		void copy_to_buffer(class GraphicsContext* const gfx_context, void* command_buffer, const AttachmentConfig& config, class Buffer* buffer, uint32_t buffer_offset = 0, uint32_t mip_level = 0, uint32_t array_layer = 0, uint32_t array_count = 1);
 		char* map_gpu(class GraphicsContext* const gfx_context);
 		void unmap_gpu(class GraphicsContext* const gfx_context);
 		void bind(class GraphicsContext* const gfx_context, void* command_buffer);

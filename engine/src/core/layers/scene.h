@@ -23,11 +23,14 @@ namespace Sunset
 		float mie_coefficient;
 		float mie_directional_g;
 		float num_lights{ 0 };
+		int32_t irradiance_map;
+		float padding[3];
 	};
 
 	struct SceneData
 	{
 		SceneLightingData lighting;
+		ImageID irradiance_map;
 		uint32_t cam_data_buffer_start{ 0 };
 		uint32_t lighting_data_buffer_start{ 0 };
 		BufferID buffer{ 0 };
@@ -43,6 +46,7 @@ namespace Sunset
 	void set_scene_atmospheric_rayleigh(class Scene* scene, float rayleigh);
 	void set_scene_mie_coefficient(class Scene* scene, float coeff);
 	void set_scene_mie_directional_g(class Scene* scene, float g);
+	void set_scene_sky_irradiance(class Scene* scene, const char* irradiance_map_path);
 
 	class Scene : public SimulationLayer
 	{

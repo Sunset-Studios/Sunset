@@ -105,13 +105,14 @@ namespace Sunset
 		TransferSrc = 0x00000010,
 		TransferDst = 0x00000020,
 		Image2D = 0x00000040,
-		Image3D = 0x00000080,
-		Sampled = 0x00000100,
-		Present = 0x00000200,
-		Transient = 0x00000400,
-		LocalLoad = 0x00000800,
-		Storage = 0x00001000,
-		Cube = 0x00002000,
+		Image2DArray = 0x00000080,
+		Image3D = 0x00000100,
+		Sampled = 0x00000200,
+		Present = 0x00000400,
+		Transient = 0x00000800,
+		LocalLoad = 0x00001000,
+		Storage = 0x00002000,
+		Cube = 0x00004000,
 		LinearTiling = 0x00004000
 	};
 

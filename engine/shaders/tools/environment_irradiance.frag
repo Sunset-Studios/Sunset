@@ -11,6 +11,7 @@ layout (push_constant) uniform constants
 	mat4 projection;
 	mat4 view;
 	int equirect_map_index;
+	int layer_index;
 } equirect_to_cubemap_constants;
 
 void main()
@@ -31,7 +32,7 @@ void main()
 		{
 			vec3 tangent_sample = vec3(sin(theta) * cos(phi), sin(theta) * sin(phi), cos(theta));
 			vec3 sample_vec = tangent_sample.x * right + tangent_sample.y * up + tangent_sample.z * normal;
-			irradiance += texture(textures_Cube[nonuniformEXT(equirect_to_cubemap_constants.equirect_map_index)], sample_vec).rgb * cos(theta) * sin(theta);
+			irradiance += texture(textures_2DArray[nonuniformEXT(equirect_to_cubemap_constants.equirect_map_index)], sample_vec).rgb * cos(theta) * sin(theta);
 			++num_samples;
 		}
 	}

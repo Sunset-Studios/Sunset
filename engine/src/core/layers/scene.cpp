@@ -211,4 +211,24 @@ namespace Sunset
 		assert(scene != nullptr && "Cannot set mie directional G on null scene!");
 		scene->scene_data.lighting.mie_directional_g = g;
 	}
+
+	void set_scene_sky_irradiance(Scene* scene, const char* irradiance_map_path)
+	{
+		assert(scene != nullptr && "Cannot set irradiance map on null scene!");
+		AttachmentConfig config
+		{
+			.name = irradiance_map_path,
+			.path = irradiance_map_path,
+			.flags = ImageFlags::Color | ImageFlags::Sampled,
+			.usage_type = MemoryUsageType::OnlyGPU,
+			.sampler_address_mode = SamplerAddressMode::EdgeClamp,
+			.image_filter = ImageFilter::Linear
+		};
+		ImageID irradiance_map = ImageFactory::load_cubemap(Renderer::get()->context(), config);
+		if (scene->scene_data.irradiance_map != irradiance_map)
+		{
+			scene->scene_data.irradiance_map = irradiance_map;
+			scene->scene_data.lighting.irradiance_map = -1;
+		}
+	}
 }

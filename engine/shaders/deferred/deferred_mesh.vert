@@ -46,7 +46,7 @@ void main()
 	const mat3 transpose_inverse_model_matrix = mat3(transpose(inverse(model_matrix)));
 	const vec4 world_position = model_matrix * vec4(in_position, 1.0f);
 
-	vec3 n = normalize((model_matrix * vec4(in_normal, 0.0f)).xyz);
+	vec3 n = normalize((transpose_inverse_model_matrix * in_normal));
 	vec3 t = normalize((model_matrix * vec4(in_tangent, 0.0f)).xyz);
 	vec3 b = normalize((model_matrix * vec4(in_bitangent, 0.0f)).xyz);
 

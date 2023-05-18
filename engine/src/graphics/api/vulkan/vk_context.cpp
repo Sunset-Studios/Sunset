@@ -24,7 +24,7 @@ namespace Sunset
 
 		vkb::Instance instance_result = builder.set_app_name(ENGINE_NAME)
 			.request_validation_layers(true)
-			.require_api_version(1, 1, 0)
+			.require_api_version(1, 2, 0)
 			.use_default_debug_messenger()
 			.build()
 			.value();
@@ -58,6 +58,7 @@ namespace Sunset
 			.set_minimum_version(1, 3)
 			.add_required_extension("VK_EXT_descriptor_indexing")
 			.add_required_extension("VK_EXT_sampler_filter_minmax")
+			.add_required_extension("VK_EXT_shader_viewport_index_layer")
 			.select()
 			.value();
 
@@ -67,13 +68,15 @@ namespace Sunset
 		shader_draw_parameters_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DRAW_PARAMETERS_FEATURES;
 		shader_draw_parameters_features.pNext = nullptr;
 
-		VkPhysicalDeviceDescriptorIndexingFeatures indexing_features = {};
-		indexing_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT;
-		indexing_features.pNext = &shader_draw_parameters_features;
+		VkPhysicalDeviceVulkan12Features vulkan_12_features = {};
+		vulkan_12_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+		vulkan_12_features.samplerFilterMinmax = VK_TRUE;
+		vulkan_12_features.descriptorIndexing = VK_TRUE;
+		vulkan_12_features.pNext = &shader_draw_parameters_features;
 
 		VkPhysicalDeviceFeatures2 device_features = {};
 		device_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-		device_features.pNext = &indexing_features;
+		device_features.pNext = &vulkan_12_features;
 
 		vkGetPhysicalDeviceFeatures2(state.physical_device.physical_device, &device_features);
 
@@ -82,7 +85,7 @@ namespace Sunset
 			.build()
 			.value();
 
-		state.supports_bindless = indexing_features.descriptorBindingPartiallyBound && indexing_features.runtimeDescriptorArray;
+		state.supports_bindless = vulkan_12_features.descriptorBindingPartiallyBound && vulkan_12_features.runtimeDescriptorArray;
 
 		for (int16_t frame_number = 0; frame_number < MAX_BUFFERED_FRAMES; ++frame_number)
 		{

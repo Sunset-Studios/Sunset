@@ -16,10 +16,12 @@ layout (push_constant) uniform constants
 	mat4 projection;
 	mat4 view;
 	int equirect_map_index;
+	int layer_index;
 } equirect_to_cubemap_constants;
 
 void main()
 {
 	out_local_frag_pos = in_position;
+	gl_Layer = equirect_to_cubemap_constants.layer_index;
 	gl_Position = equirect_to_cubemap_constants.projection * equirect_to_cubemap_constants.view * vec4(in_position, 1.0f);
 }

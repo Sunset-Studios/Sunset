@@ -38,7 +38,7 @@ namespace Sunset
 	struct RenderPassAttachmentInfo
 	{
 		ImageID image;
-		uint32_t array_index{ 0 };
+		uint32_t image_view_index{ 0 };
 	};
 
 	struct RenderPassConfig

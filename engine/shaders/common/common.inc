@@ -1,4 +1,5 @@
 #extension GL_EXT_nonuniform_qualifier : enable
+#extension GL_ARB_shader_viewport_layer_array : enable
 
 #define MAX_DESCRIPTOR_BINDINGS 16535
 #define MAX_TEXTURES_PER_MATERIAL 16
@@ -30,6 +31,8 @@ layout (std140, set = 0, binding = 1) uniform SceneLightingData
 	float mie_coefficient;
 	float mie_directional_g;
 	float num_lights;
+	int irradiance_map;
+	float padding[3];
 } scene_lighting_data;
 
 layout (set = 0, binding = 2) uniform writeonly image2D storage_2D[MAX_DESCRIPTOR_BINDINGS];
@@ -37,7 +40,7 @@ layout (set = 0, binding = 2) uniform writeonly image3D storage_3D[MAX_DESCRIPTO
 
 layout (set = 0, binding = 3) uniform sampler2D textures_2D[];
 layout (set = 0, binding = 3) uniform sampler3D textures_3D[];
-layout (set = 0, binding = 3) uniform samplerCube textures_Cube[];
+layout (set = 0, binding = 3) uniform sampler2DArray textures_2DArray[];
 
 float cubic_filter(in float x, in float b, in float c)
 {

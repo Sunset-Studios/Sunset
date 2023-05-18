@@ -25,14 +25,14 @@ namespace Sunset
 			image_policy.initialize(gfx_context, attachment_config, image_handle, image_view_handle);
 		}
 
-		void copy_from_buffer(class GraphicsContext* const gfx_context, void* command_buffer, class Buffer* buffer)
+		void copy_from_buffer(class GraphicsContext* const gfx_context, void* command_buffer, class Buffer* buffer, uint32_t buffer_offset = 0, uint32_t mip_level = 0, uint32_t array_layer = 0, uint32_t array_count = 1)
 		{
-			image_policy.copy_from_buffer(gfx_context, command_buffer, attachment_config, buffer);
+			image_policy.copy_from_buffer(gfx_context, command_buffer, attachment_config, buffer, buffer_offset, mip_level, array_layer, array_count);
 		}
 
-		void copy_to_buffer(class GraphicsContext* const gfx_context, void* command_buffer, class Buffer* buffer, uint32_t buffer_offset = 0, uint32_t mip_level = 0, uint32_t array_layer = 0)
+		void copy_to_buffer(class GraphicsContext* const gfx_context, void* command_buffer, class Buffer* buffer, uint32_t buffer_offset = 0, uint32_t mip_level = 0, uint32_t array_layer = 0, uint32_t array_count = 1)
 		{
-			image_policy.copy_to_buffer(gfx_context, command_buffer, attachment_config, buffer, buffer_offset, mip_level, array_layer);
+			image_policy.copy_to_buffer(gfx_context, command_buffer, attachment_config, buffer, buffer_offset, mip_level, array_layer, array_count);
 		}
 
 		char* map_gpu(class GraphicsContext* const gfx_context)
@@ -55,7 +55,7 @@ namespace Sunset
 			image_policy.barrier(gfx_context, command_buffer, attachment_config, src_access, dst_access, src_layout, dst_layout, src_pipeline_stage, dst_pipeline_stage);
 		}
 
-		void blit(class GraphicsContext* const gfx_context, void* command_buffer, Image* const other, const glm::vec3 src_blit_size, const glm::vec3 dst_blit_size, uint32_t src_mip = 0, uint32_t dst_mip = 0, int32_t src_layer = -1, int32_t dst_layer = -1)
+		void blit(class GraphicsContext* const gfx_context, void* command_buffer, class Image* const other, const glm::vec3 src_blit_size, const glm::vec3 dst_blit_size, uint32_t src_mip = 0, uint32_t dst_mip = 0, int32_t src_layer = -1, int32_t dst_layer = -1)
 		{
 			image_policy.blit(gfx_context, command_buffer, attachment_config, other, src_blit_size, dst_blit_size, src_mip, dst_mip, src_layer, dst_layer);
 		}
@@ -134,10 +134,10 @@ namespace Sunset
 		void destroy(class GraphicsContext* const gfx_context)
 		{ }
 
-		void copy_from_buffer(class GraphicsContext* const gfx_context, void* command_buffer, const AttachmentConfig& config, class Buffer* buffer)
+		void copy_from_buffer(class GraphicsContext* const gfx_context, void* command_buffer, const AttachmentConfig& config, class Buffer* buffer, uint32_t buffer_offset = 0, uint32_t mip_level = 0, uint32_t array_layer = 0, uint32_t array_count = 1)
 		{ }
 
-		void copy_to_buffer(class GraphicsContext* const gfx_context, void* command_buffer, class Buffer* buffer, uint32_t buffer_offset = 0, uint32_t mip_level = 0, uint32_t array_layer = 0)
+		void copy_to_buffer(class GraphicsContext* const gfx_context, void* command_buffer, class Buffer* buffer, uint32_t buffer_offset = 0, uint32_t mip_level = 0, uint32_t array_layer = 0, uint32_t array_count = 1)
 		{ }
 
 		char* map_gpu(class GraphicsContext* const gfx_context)
@@ -210,6 +210,7 @@ namespace Sunset
 		static ImageID create(class GraphicsContext* const gfx_context, const AttachmentConfig& config, bool auto_delete = true);
 		static ImageID create_default(class GraphicsContext* const gfx_context);
 		static ImageID load(class GraphicsContext* const gfx_context, const AttachmentConfig& config);
+		static ImageID load_cubemap(class GraphicsContext* const gfx_context, const AttachmentConfig& config);
 	};
 
 	DEFINE_RESOURCE_CACHE(ImageCache, ImageID, Image);

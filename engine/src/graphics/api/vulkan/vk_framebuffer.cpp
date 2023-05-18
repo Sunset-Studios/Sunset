@@ -14,7 +14,6 @@ namespace Sunset
 		fb_create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 		fb_create_info.pNext = nullptr;
 		fb_create_info.attachmentCount = static_cast<int32_t>(attachments.size());
-		fb_create_info.layers = 1;
 
 		if (VkRenderPass* render_pass = static_cast<VkRenderPass*>(render_pass_handle))
 		{
@@ -26,20 +25,28 @@ namespace Sunset
 
 		uint32_t max_width{ 0 };
 		uint32_t max_height{ 0 };
+		uint32_t max_layer_count{ 1 };
 		for (const RenderPassAttachmentInfo& attachment : attachments)
 		{
 			Image* const image_attachment = CACHE_FETCH(Image, attachment.image);
-			VkImageView attachment_image_view = static_cast<VkImageView>(image_attachment->get_image_view(attachment.array_index));
+			VkImageView attachment_image_view = static_cast<VkImageView>(image_attachment->get_image_view(attachment.image_view_index));
 			fb_attachments.push_back(attachment_image_view);
 
-			if (image_attachment->get_attachment_config().extent.x > max_width)
+			const AttachmentConfig& attachment_config = image_attachment->get_attachment_config();
+
+			if (uint32_t width = attachment_config.extent.x; width > max_width)
 			{
-				max_width = image_attachment->get_attachment_config().extent.x;
+				max_width = width; 
 			}
 
-			if (image_attachment->get_attachment_config().extent.y > max_height)
+			if (uint32_t height = attachment_config.extent.y; height > max_height)
 			{
-				max_height = image_attachment->get_attachment_config().extent.y;
+				max_height = height;
+			}
+
+			if (uint32_t layer_count = attachment_config.array_count; layer_count > max_layer_count)
+			{
+				max_layer_count = layer_count;
 			}
 		}
 
@@ -55,6 +62,7 @@ namespace Sunset
 			extent.y = context_state->window->get_extent().y;
 		}
 
+		fb_create_info.layers = max_layer_count;
 		fb_create_info.width = extent.x;
 		fb_create_info.height = extent.y;
 

@@ -13,7 +13,7 @@ namespace Sunset
 		for (const RenderPassAttachmentInfo& attachment : attachments)
 		{
 			hash = Sunset::Maths::cantor_pair_hash(hash, static_cast<int32_t>(attachment.image));
-			hash = Sunset::Maths::cantor_pair_hash(hash, static_cast<int32_t>(attachment.array_index));
+			hash = Sunset::Maths::cantor_pair_hash(hash, static_cast<int32_t>(attachment.image_view_index));
 		}
 		return hash;
 	}

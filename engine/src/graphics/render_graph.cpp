@@ -519,6 +519,8 @@ namespace Sunset
 
 		if ((pass->pass_config.flags & RenderPassFlags::GraphLocal) != RenderPassFlags::None)
 		{
+			frame_data.global_descriptor_set = pass_cache.global_descriptor_set;
+
 			pass->executor(*this, frame_data, command_buffer);
 		}
 		else
@@ -703,8 +705,8 @@ namespace Sunset
 			const bool b_is_local_load = (image_resource->config.flags & ImageFlags::LocalLoad) != ImageFlags::None;
 			if (!b_is_input_resource || b_is_local_load)
 			{
-				const uint32_t array_index = pass->parameters.output_layers.size() > resource_params_index ? pass->parameters.output_layers[resource_params_index] : 0;
-				pass->pass_config.attachments.push_back({ .image = current_registry->resource_metadata[resource].physical_id, .array_index = array_index });
+				const uint32_t image_view_index = pass->parameters.output_layers.size() > resource_params_index ? pass->parameters.output_layers[resource_params_index] : 0;
+				pass->pass_config.attachments.push_back({ .image = current_registry->resource_metadata[resource].physical_id, .image_view_index = image_view_index });
 			}
 		}
 	}

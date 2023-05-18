@@ -46,44 +46,50 @@ void main()
 		lighting_pass_constants.albedo_texure == -1
 		? vec4(0.0, 0.0, 0.0, 0.0)
 		: texture(textures_2D[nonuniformEXT(lighting_pass_constants.albedo_texure)], in_tex_coord);
+	const vec3 albedo = tex_albedo.rgb;
 
 	vec4 tex_normal =
 		lighting_pass_constants.normal_texure == -1
 		? vec4(0.0, 0.0, 0.0, 0.0)
 		: texture(textures_2D[nonuniformEXT(lighting_pass_constants.normal_texure)], in_tex_coord);
+	const vec3 normal = tex_normal.xyz;
+	const float normal_length = length(normal);
+	const vec3 normalized_normal = normal / normal_length;
 
 	vec4 tex_smra = 
 		lighting_pass_constants.smra_texure == -1
 		? vec4(0.0, 0.0, 0.0, 0.0)
 		: texture(textures_2D[nonuniformEXT(lighting_pass_constants.smra_texure)], in_tex_coord);
+	const float reflectance = tex_smra.r * 0.0009765625 /* 1.0f / 1024 */;
+	const float metallic = tex_smra.g;
+	const float roughness = tex_smra.b;
+	const float ao = tex_smra.a;
 
 	vec2 tex_cc = 
 		lighting_pass_constants.cc_texture == -1
 		? vec2(0.0, 0.0)
 		: texture(textures_2D[nonuniformEXT(lighting_pass_constants.cc_texture)], in_tex_coord).rg;
+	const float clearcoat = tex_cc.r;
+	const float clearcoat_roughness = tex_cc.g;
 
 	vec4 tex_position = 
 		lighting_pass_constants.position_texure == -1
 		? vec4(0.0, 0.0, 0.0, 1.0)
 		: texture(textures_2D[nonuniformEXT(lighting_pass_constants.position_texure)], in_tex_coord);
+	const vec3 position = tex_position.xyz;
 
 	vec4 tex_sky = 
 		lighting_pass_constants.sky_texture == -1
 		? tex_albedo
 		: texture(textures_2D[nonuniformEXT(lighting_pass_constants.sky_texture)], in_tex_coord);
 
-	const vec3 albedo = tex_albedo.rgb;
-	const vec3 normal = tex_normal.xyz;
-	const float normal_length = length(normal);
-	const float reflectance = tex_smra.r * 0.0009765625 /* 1.0f / 1024 */;
-	const float metallic = tex_smra.g;
-	const float roughness = tex_smra.b;
-	const float ao = tex_smra.a;
-	const float clearcoat = tex_cc.r;
-	const float clearcoat_roughness = tex_cc.g;
-	const vec3 position = tex_position.xyz;
+	vec4 tex_irradiance =
+		scene_lighting_data.irradiance_map == -1
+		? vec4(0.0, 0.0, 0.0, 1.0)
+		: texture(textures_2DArray[nonuniformEXT(scene_lighting_data.irradiance_map)], normalized_normal);
+	const vec3 irradiance = tex_irradiance.rgb; 
 
-	const vec3 view_dir = normalize(position - camera_data.position.xyz);
+	const vec3 view_dir = normalize(camera_data.position.xyz - position);
 
 	const float unlit = float(normal_length <= 0.0);
 
@@ -94,7 +100,20 @@ void main()
 	{
 		LightData light = light_data.lights[i];
 		const vec3 light_position = entity_data.entities[light.entity].transform[3].xyz;
-		color += calculate_brdf(light_data.lights[i], light_position, normal / normal_length, view_dir, position, albedo, roughness, metallic, reflectance, clearcoat, clearcoat_roughness, ao);
+		color += calculate_brdf(
+			light_data.lights[i],
+			light_position,
+			normalized_normal,
+			view_dir,
+			position,
+			albedo,
+			roughness,
+			metallic,
+			reflectance,
+			clearcoat,
+			clearcoat_roughness,
+			ao,
+			irradiance);
 	}
 
 	out_frag_color = vec4(color, 1.0f);

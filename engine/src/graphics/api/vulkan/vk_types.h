@@ -209,11 +209,7 @@ inline Sunset::Format SUNSET_FROM_VK_FORMAT(VkFormat format)
 
 inline VkImageType VK_FROM_SUNSET_IMAGE_TYPE(Sunset::ImageFlags image_type)
 {
-	if (static_cast<int32_t>(image_type & Sunset::ImageFlags::Image2D) > 0)
-	{
-		return VK_IMAGE_TYPE_2D;
-	}
-	else if (static_cast<int32_t>(image_type & Sunset::ImageFlags::Image3D) > 0)
+	if (static_cast<int32_t>(image_type & Sunset::ImageFlags::Image3D) > 0)
 	{
 		return VK_IMAGE_TYPE_3D;
 	}
@@ -226,13 +222,13 @@ inline VkImageViewType VK_FROM_SUNSET_IMAGE_VIEW_TYPE(Sunset::ImageFlags image_t
 	{
 		return VK_IMAGE_VIEW_TYPE_2D;
 	}
+	else if (static_cast<int32_t>(image_type & Sunset::ImageFlags::Cube) > 0 || static_cast<int32_t>(image_type & Sunset::ImageFlags::Image2DArray) > 0)
+	{
+		return VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+	}
 	else if (static_cast<int32_t>(image_type & Sunset::ImageFlags::Image3D) > 0)
 	{
 		return VK_IMAGE_VIEW_TYPE_3D;
-	}
-	else if (static_cast<int32_t>(image_type & Sunset::ImageFlags::Cube) > 0)
-	{
-		return VK_IMAGE_VIEW_TYPE_CUBE;
 	}
 	return VK_IMAGE_VIEW_TYPE_2D;
 }

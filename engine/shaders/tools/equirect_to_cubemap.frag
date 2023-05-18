@@ -11,6 +11,7 @@ layout (push_constant) uniform constants
 	mat4 projection;
 	mat4 view;
 	int equirect_map_index;
+	int layer_index;
 } equirect_to_cubemap_constants;
 
 const vec2 inv_atan = vec2(0.1591, 0.3183);

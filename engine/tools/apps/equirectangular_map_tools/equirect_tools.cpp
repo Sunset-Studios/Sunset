@@ -29,6 +29,7 @@ namespace Sunset
 			glm::mat4 projection;
 			glm::mat4 view;
 			int32_t equirect_map_index;
+			int32_t layer_index;
 		};
 
 	public:
@@ -95,60 +96,28 @@ namespace Sunset
 			   glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f))
 			};
 
-			for (uint32_t i = 0; i < 6; ++i)
-			{
-				const std::string pass_name = "equirect_to_cubemap_pass" + std::to_string(i);
-				render_graph.add_pass(
-					gfx_context,
-					pass_name.c_str(),
-					RenderPassFlags::Graphics,
+			render_graph.add_pass(
+				gfx_context,
+				"equirect_to_cubemap_pass",
+				RenderPassFlags::Graphics,
+				{
+					.shader_setup = cubemap_shader_setup,
+					.inputs = { equirect_image_desc },
+					.outputs = { equirect_cubemap_image_desc },
+					.b_force_keep_pass = true
+				},
+				[gfx_context, capture_projection, capture_views](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
+				{
+					EquirectCubemapConstants equirect_to_cubemap_constants
 					{
-						.shader_setup = cubemap_shader_setup,
-						.inputs = { equirect_image_desc },
-						.outputs = { equirect_cubemap_image_desc },
-						.output_layers = { i },
-						.b_force_keep_pass = true
-					},
-					[gfx_context, capture_projection, view = capture_views[i]](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
-					{
-						EquirectCubemapConstants equirect_to_cubemap_constants
-						{
-							.projection = capture_projection,
-							.view = view,
-							.equirect_map_index = 0x0000ffff & frame_data.pass_bindless_resources.handles[0]
-						};
+						.projection = capture_projection,
+						.equirect_map_index = 0x0000ffff & frame_data.pass_bindless_resources.handles[0]
+					};
 
-						PushConstantPipelineData pass_data = PushConstantPipelineData::create(&equirect_to_cubemap_constants, PipelineShaderStageType::Fragment | PipelineShaderStageType::Vertex);
-
-						gfx_context->push_constants(command_buffer, frame_data.pass_pipeline_state, pass_data);
-						
-						Renderer::get()->draw_unit_cube(command_buffer);
-					}
-				);
-			}
-
-			for (uint32_t i = 0; i < 6; ++i)
-			{
-				const std::string pass_name = "environment_irradiance_pass" + std::to_string(i);
-				render_graph.add_pass(
-					gfx_context,
-					pass_name.c_str(),
-					RenderPassFlags::Graphics,
+					for (uint32_t i = 0; i < 6; ++i)
 					{
-						.shader_setup = irradiance_shader_setup,
-						.inputs = { equirect_cubemap_image_desc },
-						.outputs = { environment_irradiance_image_desc },
-						.output_layers = { i },
-						.b_force_keep_pass = true
-					},
-					[gfx_context, capture_projection, view = capture_views[i]](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
-					{
-						EquirectCubemapConstants equirect_to_cubemap_constants
-						{
-							.projection = capture_projection,
-							.view = view,
-							.equirect_map_index = 0x0000ffff & frame_data.pass_bindless_resources.handles[0]
-						};
+						equirect_to_cubemap_constants.layer_index = static_cast<int32_t>(i);
+						equirect_to_cubemap_constants.view = capture_views[i];
 
 						PushConstantPipelineData pass_data = PushConstantPipelineData::create(&equirect_to_cubemap_constants, PipelineShaderStageType::Fragment | PipelineShaderStageType::Vertex);
 
@@ -156,8 +125,41 @@ namespace Sunset
 
 						Renderer::get()->draw_unit_cube(command_buffer);
 					}
-				);
-			}
+				}
+			);
+
+
+			render_graph.add_pass(
+				gfx_context,
+				"environment_irradiance_pass",
+				RenderPassFlags::Graphics,
+				{
+					.shader_setup = irradiance_shader_setup,
+					.inputs = { equirect_cubemap_image_desc },
+					.outputs = { environment_irradiance_image_desc },
+					.b_force_keep_pass = true
+				},
+				[gfx_context, capture_projection, capture_views](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
+				{
+					EquirectCubemapConstants equirect_to_cubemap_constants
+					{
+						.projection = capture_projection,
+						.equirect_map_index = 0x0000ffff & frame_data.pass_bindless_resources.handles[0],
+					};
+
+					for (uint32_t i = 0; i < 6; ++i)
+					{
+						equirect_to_cubemap_constants.layer_index = static_cast<int32_t>(i);
+						equirect_to_cubemap_constants.view = capture_views[i];
+
+						PushConstantPipelineData pass_data = PushConstantPipelineData::create(&equirect_to_cubemap_constants, PipelineShaderStageType::Fragment | PipelineShaderStageType::Vertex);
+
+						gfx_context->push_constants(command_buffer, frame_data.pass_pipeline_state, pass_data);
+
+						Renderer::get()->draw_unit_cube(command_buffer);
+					}
+				}
+			);
 
 			render_graph.submit(gfx_context, swapchain, b_offline);
 		}
@@ -295,7 +297,7 @@ namespace Sunset
 			.name = "equirect_cubemap",
 			.format = Format::Float4x32,
 			.extent = glm::vec3(viewport_extent.x, viewport_extent.x, 1.0f),
-			.flags = ImageFlags::Color | ImageFlags::Cube | ImageFlags::Sampled | ImageFlags::TransferSrc,
+			.flags = ImageFlags::Color | ImageFlags::Image2DArray | ImageFlags::Sampled | ImageFlags::TransferSrc,
 			.usage_type = MemoryUsageType::OnlyGPU,
 			.sampler_address_mode = SamplerAddressMode::EdgeClamp,
 			.image_filter = ImageFilter::Linear,
@@ -312,7 +314,7 @@ namespace Sunset
 			.name = "irradiance_map",
 			.format = Format::Float4x32,
 			.extent = glm::vec3(32.0f, 32.0f, 1.0f),
-			.flags = ImageFlags::Color | ImageFlags::Image2D | ImageFlags::Sampled | ImageFlags::TransferSrc,
+			.flags = ImageFlags::Color | ImageFlags::Image2DArray | ImageFlags::Sampled | ImageFlags::TransferSrc,
 			.usage_type = MemoryUsageType::OnlyGPU,
 			.sampler_address_mode = SamplerAddressMode::EdgeClamp,
 			.image_filter = ImageFilter::Linear,
@@ -323,6 +325,10 @@ namespace Sunset
 
 	void EquirectToolsApplication::write_cubemap_to_png(const std::filesystem::path& out_path)
 	{
+		const std::string cubemap_directory = "cubemap";
+		const std::filesystem::path cubemap_path = out_path / cubemap_directory;
+		std::filesystem::create_directory(cubemap_path);
+
 		Image* const cubemap_image = CACHE_FETCH(Image, EquirectToolsApplication::equirect_cubemap_image);
 
 		const glm::ivec3 cubemap_size = cubemap_image->get_attachment_config().extent;
@@ -348,13 +354,10 @@ namespace Sunset
 			[this, cubemap_image, cubemap_size, layer_count, mip_count, image_channels, staging_buffer, gfx_context = Renderer::get()->context()](void* command_buffer)
 			{
 				uint32_t buffer_offset = 0;
-				for (uint32_t i = 0; i < layer_count; ++i)
+				for (uint32_t j = 0; j < mip_count; ++j)
 				{
-					for (uint32_t j = 0; j < mip_count; ++j)
-					{
-						cubemap_image->copy_to_buffer(gfx_context, command_buffer, staging_buffer, buffer_offset, j, i);
-						buffer_offset += (cubemap_size.x >> j) * (cubemap_size.y >> j) * image_channels * sizeof(float);
-					}
+					cubemap_image->copy_to_buffer(gfx_context, command_buffer, staging_buffer, buffer_offset, j, 0, layer_count);
+					buffer_offset += (cubemap_size.x >> j) * (cubemap_size.y >> j) * image_channels * sizeof(float);
 				}
 			});
 
@@ -406,7 +409,7 @@ namespace Sunset
 					std::ostringstream filename_stream;
 					filename_stream << equirect_name << "_cube_mip_" << std::to_string(j) << "_layer_" << std::to_string(i) << ".png";
 
-					std::filesystem::path new_path = out_path / filename_stream.str();
+					std::filesystem::path new_path = cubemap_path / filename_stream.str();
 
 					stbi_write_png(
 						new_path.string().c_str(),
@@ -429,6 +432,10 @@ namespace Sunset
 
 	void EquirectToolsApplication::write_irradiance_to_png(const std::filesystem::path& out_path)
 	{
+		const std::string irradiance_directory = "irradiance";
+		const std::filesystem::path irradiance_path = out_path / irradiance_directory;
+		std::filesystem::create_directory(irradiance_path);
+
 		Image* const irradiance_image = CACHE_FETCH(Image, EquirectToolsApplication::irradiance_map_image);
 
 		const glm::ivec3 irradiance_size = irradiance_image->get_attachment_config().extent;
@@ -454,13 +461,10 @@ namespace Sunset
 			[this, irradiance_image, irradiance_size, layer_count, mip_count, image_channels, staging_buffer, gfx_context = Renderer::get()->context()](void* command_buffer)
 			{
 				uint32_t buffer_offset = 0;
-				for (uint32_t i = 0; i < layer_count; ++i)
+				for (uint32_t j = 0; j < mip_count; ++j)
 				{
-					for (uint32_t j = 0; j < mip_count; ++j)
-					{
-						irradiance_image->copy_to_buffer(gfx_context, command_buffer, staging_buffer, buffer_offset, j, i);
-						buffer_offset += (irradiance_size.x >> j) * (irradiance_size.y >> j) * image_channels * sizeof(float);
-					}
+					irradiance_image->copy_to_buffer(gfx_context, command_buffer, staging_buffer, buffer_offset, j, 0, layer_count);
+					buffer_offset += (irradiance_size.x >> j) * (irradiance_size.y >> j) * image_channels * sizeof(float);
 				}
 			});
 
@@ -512,7 +516,7 @@ namespace Sunset
 					std::ostringstream filename_stream;
 					filename_stream << equirect_name << "_irradiance_mip_" << std::to_string(j) << "_layer_" << std::to_string(i) << ".png";
 
-					std::filesystem::path new_path = out_path / filename_stream.str();
+					std::filesystem::path new_path = irradiance_path / filename_stream.str();
 
 					stbi_write_png(
 						new_path.string().c_str(),

@@ -79,14 +79,15 @@ vec3 calculate_brdf(
 	float reflectance,
 	float clear_coat,
 	float clear_coat_roughness,
-	float ao)
+	float ao,
+	vec3 irradiance)
 {
 	vec3 light_dir;
 	float attenuation = 1.0f;
 
 	if (light.type == 0) // Directional
 	{
-		light_dir = normalize(light.b_use_sun_direction ? -scene_lighting_data.sunlight_direction.xyz : -position);
+		light_dir = normalize(light.b_use_sun_direction ? scene_lighting_data.sunlight_direction.xyz : -position);
 	}
 	else if (light.type == 1) // Point
 	{
@@ -142,7 +143,7 @@ vec3 calculate_brdf(
 	vec3 fr = (d * v) * f;
 
 	// diffuse BRDF
-	vec3 diffuse_color = (1.0f - metallic) * albedo;
+	vec3 diffuse_color = (1.0f - metallic) * albedo * irradiance;
 	vec3 fd = diffuse_color * fd_lambert();
 
 	// remapping and linearization of clear coat roughness
