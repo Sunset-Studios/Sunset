@@ -110,7 +110,7 @@ namespace Sunset
 		// Outputs that this pass either writes to or produces
 		std::vector<RGResourceHandle> outputs;
 		// Array layers of corresponding output entries in the outputs vector. (Only corresponds to image outputs. Default value is 0 for each output)
-		std::vector<uint32_t> output_layers;
+		std::vector<uint32_t> output_views;
 		// Input resources that should be bound normally (auto computed)
 		std::vector<RGResourceHandle> pass_inputs;
 		// Input resources that are bindless and need special handling (auto computed)

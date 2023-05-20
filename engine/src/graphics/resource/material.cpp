@@ -64,6 +64,7 @@ namespace Sunset
 		material_set_uniform_reflectance(gfx_context, material, material_ptr->description.uniform_reflectance);
 		material_set_uniform_clearcoat(gfx_context, material, material_ptr->description.uniform_clearcoat);
 		material_set_uniform_clearcoat_roughness(gfx_context, material, material_ptr->description.uniform_clearcoat_roughness);
+		material_set_uniform_emissive(gfx_context, material, material_ptr->description.uniform_emissive);
 	}
 
 	void material_update(class GraphicsContext* const gfx_context, MaterialID material, class DescriptorSet* descriptor_set)
@@ -181,6 +182,15 @@ namespace Sunset
 		assert(material_ptr != nullptr && "Cannot set texture tiling for a null material!");
 
 		material_ptr->gpu_data->uniform_clearcoat_roughness = clearcoat_roughness; 
+		material_ptr->b_dirty = true;
+	}
+
+	void material_set_uniform_emissive(GraphicsContext* const gfx_context, MaterialID material, float emissive)
+	{
+		Material* const material_ptr = CACHE_FETCH(Material, material);
+		assert(material_ptr != nullptr && "Cannot set texture tiling for a null material!");
+
+		material_ptr->gpu_data->uniform_emissive = emissive; 
 		material_ptr->b_dirty = true;
 	}
 

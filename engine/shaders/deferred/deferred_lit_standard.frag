@@ -47,6 +47,7 @@ void main()
 		? vec4(0.0, 0.0, 0.0, 0.0)
 		: texture(textures_2D[nonuniformEXT(lighting_pass_constants.albedo_texure)], in_tex_coord);
 	const vec3 albedo = tex_albedo.rgb;
+	const float emissive = tex_albedo.a;
 
 	vec4 tex_normal =
 		lighting_pass_constants.normal_texure == -1
@@ -116,5 +117,5 @@ void main()
 			irradiance);
 	}
 
-	out_frag_color = vec4(color, 1.0f);
+	out_frag_color = vec4(color + (albedo * emissive), 1.0f);
 }

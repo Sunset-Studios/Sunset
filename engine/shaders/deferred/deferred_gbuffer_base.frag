@@ -31,6 +31,8 @@ struct MaterialData
 	float uniform_reflectance;
 	float uniform_clearcoat;
 	float uniform_clearcoat_roughness;
+	float uniform_emissive;
+	float padding[3];
 	int textures[MAX_TEXTURES_PER_MATERIAL];
 	float tiling_coeffs[MAX_TEXTURES_PER_MATERIAL];
 };
@@ -93,7 +95,7 @@ void main()
 
 	const float specular = material.uniform_reflectance > 0.0f ? material.uniform_reflectance : pow(2.0f, 10.0f * (1.0f - roughness));
 
-	out_frag_color = vec4(albedo, 1.0f);
+	out_frag_color = vec4(albedo, material.uniform_emissive);
 	out_smra.r = specular;
 	out_smra.g = metallic;
 	out_smra.b = roughness;

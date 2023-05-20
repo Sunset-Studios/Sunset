@@ -19,6 +19,7 @@ namespace Sunset
 		float uniform_reflectance{ 0.0f };
 		float uniform_clearcoat{ 0.0f };
 		float uniform_clearcoat_roughness{ 1.0f };
+		float uniform_emissive{ 0.0f };
 		ImagePathList textures;
 	};
 
@@ -30,6 +31,8 @@ namespace Sunset
 		float uniform_reflectance{ 0.0f };
 		float uniform_clearcoat{ 0.0f };
 		float uniform_clearcoat_roughness{ 1.0f };
+		float uniform_emissive{ 0.0f };
+		float padding[3];
 		int32_t textures[MAX_MATERIAL_TEXTURES];
 		float tiling_coeffs[MAX_MATERIAL_TEXTURES];
 	};
@@ -62,8 +65,7 @@ namespace Sunset
 	void material_set_uniform_reflectance(class GraphicsContext* const gfx_context, MaterialID material, float reflectance);
 	void material_set_uniform_clearcoat(class GraphicsContext* const gfx_context, MaterialID material, float clearcoat);
 	void material_set_uniform_clearcoat_roughness(class GraphicsContext* const gfx_context, MaterialID material, float clearcoat_roughness);
-
-
+	void material_set_uniform_emissive(class GraphicsContext* const gfx_context, MaterialID material, float emissive);
 
 	class MaterialFactory
 	{

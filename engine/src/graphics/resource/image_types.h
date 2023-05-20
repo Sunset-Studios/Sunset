@@ -39,6 +39,7 @@ namespace Sunset
 		uint8_t has_store_op : 1 = 1;
 		uint8_t is_bindless : 1 = 1;
 		uint8_t does_min_reduction : 1 = 0;
+		uint8_t linear_mip_filtering : 1 = 0;
 		uint8_t padding : 3 = 0;
 	};
 }

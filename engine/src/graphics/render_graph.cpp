@@ -705,7 +705,7 @@ namespace Sunset
 			const bool b_is_local_load = (image_resource->config.flags & ImageFlags::LocalLoad) != ImageFlags::None;
 			if (!b_is_input_resource || b_is_local_load)
 			{
-				const uint32_t image_view_index = pass->parameters.output_layers.size() > resource_params_index ? pass->parameters.output_layers[resource_params_index] : 0;
+				const uint32_t image_view_index = pass->parameters.output_views.size() > resource_params_index ? pass->parameters.output_views[resource_params_index] : 0;
 				pass->pass_config.attachments.push_back({ .image = current_registry->resource_metadata[resource].physical_id, .image_view_index = image_view_index });
 			}
 		}

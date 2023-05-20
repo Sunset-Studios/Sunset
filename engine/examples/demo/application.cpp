@@ -131,10 +131,10 @@ namespace Sunset
 					Renderer::get()->context(),
 					{
 						.color = glm::vec3(1.0f, 0.2, 0.2f),
-						.uniform_roughness = 0.8f,
+						.uniform_roughness = 0.75f,
 						.uniform_metallic = 1.0f,
 						.uniform_clearcoat = 1.0f,
-						.uniform_clearcoat_roughness = 0.0f,
+						.uniform_clearcoat_roughness = 0.0f
 					}
 				);
 

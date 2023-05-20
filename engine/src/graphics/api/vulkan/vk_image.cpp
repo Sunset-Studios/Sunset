@@ -95,7 +95,7 @@ namespace Sunset
 			image_view_info.image = image;
 			image_view_info.format = VK_FROM_SUNSET_FORMAT(config.format);
 			image_view_info.subresourceRange.baseMipLevel = i;
-			image_view_info.subresourceRange.levelCount = i == 0 ? config.mip_count : 1;
+			image_view_info.subresourceRange.levelCount = 1;
 			image_view_info.subresourceRange.baseArrayLayer = 0;
 			image_view_info.subresourceRange.layerCount = config.array_count;
 			image_view_info.subresourceRange.aspectMask = VK_FROM_SUNSET_IMAGE_USAGE_ASPECT_FLAGS(config.flags);
@@ -116,7 +116,7 @@ namespace Sunset
 			sampler_create_info.addressModeW = VK_FROM_SUNSET_SAMPLER_ADDRESS_MODE(config.sampler_address_mode);
 			sampler_create_info.minLod = 0.0f;
 			sampler_create_info.maxLod = 16.0f;
-			sampler_create_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+			sampler_create_info.mipmapMode = config.linear_mip_filtering ? VK_SAMPLER_MIPMAP_MODE_LINEAR : VK_SAMPLER_MIPMAP_MODE_NEAREST;
 
 			VkSamplerReductionModeCreateInfo create_info_sampler_reduction = {};
 			if (config.does_min_reduction)
