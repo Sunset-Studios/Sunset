@@ -303,7 +303,7 @@ namespace Sunset
 						glm::vec3(x, y, z),										 // position
 						glm::normalize(glm::vec3(x, y, z)),					     // normal
 						glm::vec3(1.0f, 1.0f, 1.0f),							 // color
-						glm::vec2((float)j / sectorCount, (float)i / stackCount) // uv
+						glm::vec2(static_cast<float>(j) / static_cast<float>(sectorCount), static_cast<float>(i) / static_cast<float>(stackCount)) // uv
 					);
 				}
 			}
@@ -360,58 +360,58 @@ namespace Sunset
 			mesh->vertices.resize(24);
 
 			// Front face
-			mesh->vertices[0].position = { -1.0f, -1.0f, 1.0f }; mesh->vertices[0].normal = { 0.0f, 0.0f, 1.0f }; mesh->vertices[0].uv = { 0.0f, 0.0f };
+			mesh->vertices[0].position = { -0.5f, -0.5f, 0.5f }; mesh->vertices[0].normal = { 0.0f, 0.0f, 1.0f }; mesh->vertices[0].uv = { 0.0f, 0.0f };
 
-			mesh->vertices[1].position = { 1.0f, -1.0f, 1.0f }; mesh->vertices[1].normal = { 0.0f, 0.0f, 1.0f }; mesh->vertices[1].uv = { 1.0f, 0.0f };
+			mesh->vertices[1].position = { 0.5f, -0.5f, 0.5f }; mesh->vertices[1].normal = { 0.0f, 0.0f, 1.0f }; mesh->vertices[1].uv = { 1.0f, 0.0f };
 
-			mesh->vertices[2].position = { 1.0f, 1.0f, 1.0f }; mesh->vertices[2].normal = { 0.0f, 0.0f, 1.0f }; mesh->vertices[2].uv = { 1.0f, 1.0f };
+			mesh->vertices[2].position = { 0.5f, 0.5f, 0.5f }; mesh->vertices[2].normal = { 0.0f, 0.0f, 1.0f }; mesh->vertices[2].uv = { 1.0f, 1.0f };
 
-			mesh->vertices[3].position = { -1.0f, 1.0f, 1.0f }; mesh->vertices[3].normal = { 0.0f, 0.0f, 1.0f }; mesh->vertices[3].uv = { 0.0f, 1.0f };
+			mesh->vertices[3].position = { -0.5f, 0.5f, 0.5f }; mesh->vertices[3].normal = { 0.0f, 0.0f, 1.0f }; mesh->vertices[3].uv = { 0.0f, 1.0f };
 
 			// Back face
-			mesh->vertices[4].position = { -1.0f, -1.0f, -1.0f }; mesh->vertices[4].normal = { 0.0f, 0.0f, -1.0f }; mesh->vertices[4].uv = { 1.0f, 0.0f };
+			mesh->vertices[4].position = { -0.5f, -0.5f, -0.5f }; mesh->vertices[4].normal = { 0.0f, 0.0f, -1.0f }; mesh->vertices[4].uv = { 1.0f, 0.0f };
 
-			mesh->vertices[5].position = { 1.0f, -1.0f, -1.0f }; mesh->vertices[5].normal = { 0.0f, 0.0f, -1.0f }; mesh->vertices[5].uv = { 0.0f, 0.0f };
+			mesh->vertices[5].position = { 0.5f, -0.5f, -0.5f }; mesh->vertices[5].normal = { 0.0f, 0.0f, -1.0f }; mesh->vertices[5].uv = { 0.0f, 0.0f };
 
-			mesh->vertices[6].position = { 1.0f, 1.0f, -1.0f }; mesh->vertices[6].normal = { 0.0f, 0.0f, -1.0f }; mesh->vertices[6].uv = { 0.0f, 1.0f };
+			mesh->vertices[6].position = { 0.5f, 0.5f, -0.5f }; mesh->vertices[6].normal = { 0.0f, 0.0f, -1.0f }; mesh->vertices[6].uv = { 0.0f, 1.0f };
 
-			mesh->vertices[7].position = { -1.0f, 1.0f, -1.0f }; mesh->vertices[7].normal = { 0.0f, 0.0f, -1.0f }; mesh->vertices[7].uv = { 1.0f, 1.0f };
+			mesh->vertices[7].position = { -0.5f, 0.5f, -0.5f }; mesh->vertices[7].normal = { 0.0f, 0.0f, -1.0f }; mesh->vertices[7].uv = { 1.0f, 1.0f };
 
 			// Left face
-			mesh->vertices[8].position = { -1.0f, -1.0f, -1.0f }; mesh->vertices[8].normal = { -1.0f, 0.0f, 0.0f }; mesh->vertices[8].uv = { 1.0f, 0.0f };
+			mesh->vertices[8].position = { -0.5f, -0.5f, -0.5f }; mesh->vertices[8].normal = { -1.0f, 0.0f, 0.0f }; mesh->vertices[8].uv = { 1.0f, 0.0f };
 
-			mesh->vertices[9].position = { -1.0f, -1.0f, 1.0f }; mesh->vertices[9].normal = { -1.0f, 0.0f, 0.0f }; mesh->vertices[9].uv = { 0.0f, 0.0f };
+			mesh->vertices[9].position = { -0.5f, -0.5f, 0.5f }; mesh->vertices[9].normal = { -1.0f, 0.0f, 0.0f }; mesh->vertices[9].uv = { 0.0f, 0.0f };
 
-			mesh->vertices[10].position = { -1.0f, 1.0f, 1.0f }; mesh->vertices[10].normal = { -1.0f, 0.0f, 0.0f }; mesh->vertices[10].uv = { 0.0f, 1.0f };
+			mesh->vertices[10].position = { -0.5f, 0.5f, 0.5f }; mesh->vertices[10].normal = { -1.0f, 0.0f, 0.0f }; mesh->vertices[10].uv = { 0.0f, 1.0f };
 
-			mesh->vertices[11].position = { -1.0f, 1.0f, -1.0f }; mesh->vertices[11].normal = { -1.0f, 0.0f, 0.0f }; mesh->vertices[11].uv = { 1.0f, 1.0f };
+			mesh->vertices[11].position = { -0.5f, 0.5f, -0.5f }; mesh->vertices[11].normal = { -1.0f, 0.0f, 0.0f }; mesh->vertices[11].uv = { 1.0f, 1.0f };
 
 			// Right face
-			mesh->vertices[12].position = { 1.0f, -1.0f, -1.0f }; mesh->vertices[12].normal = { 1.0f, 0.0f, 0.0f }; mesh->vertices[12].uv = { 0.0f, 0.0f };
+			mesh->vertices[12].position = { 0.5f, -0.5f, -0.5f }; mesh->vertices[12].normal = { 1.0f, 0.0f, 0.0f }; mesh->vertices[12].uv = { 0.0f, 0.0f };
 
-			mesh->vertices[13].position = { 1.0f, -1.0f, 1.0f }; mesh->vertices[13].normal = { 1.0f, 0.0f, 0.0f }; mesh->vertices[13].uv = { 1.0f, 0.0f };
+			mesh->vertices[13].position = { 0.5f, -0.5f, 0.5f }; mesh->vertices[13].normal = { 1.0f, 0.0f, 0.0f }; mesh->vertices[13].uv = { 1.0f, 0.0f };
 
-			mesh->vertices[14].position = { 1.0f, 1.0f, 1.0f }; mesh->vertices[14].normal = { 1.0f, 0.0f, 0.0f }; mesh->vertices[14].uv = { 1.0f, 1.0f };
+			mesh->vertices[14].position = { 0.5f, 0.5f, 0.5f }; mesh->vertices[14].normal = { 1.0f, 0.0f, 0.0f }; mesh->vertices[14].uv = { 1.0f, 1.0f };
 
-			mesh->vertices[15].position = { 1.0f, 1.0f, -1.0f }; mesh->vertices[15].normal = { 1.0f, 0.0f, 0.0f }; mesh->vertices[15].uv = { 0.0f, 1.0f };
+			mesh->vertices[15].position = { 0.5f, 0.5f, -0.5f }; mesh->vertices[15].normal = { 1.0f, 0.0f, 0.0f }; mesh->vertices[15].uv = { 0.0f, 1.0f };
 
 			// Bottom face
-			mesh->vertices[16].position = { -1.0f, -1.0f, -1.0f }; mesh->vertices[16].normal = { 0.0f, -1.0f, 0.0f }; mesh->vertices[16].uv = { 1.0f, 0.0f };
+			mesh->vertices[16].position = { -0.5f, -0.5f, -0.5f }; mesh->vertices[16].normal = { 0.0f, -1.0f, 0.0f }; mesh->vertices[16].uv = { 1.0f, 0.0f };
 
-			mesh->vertices[17].position = { 1.0f, -1.0f, -1.0f }; mesh->vertices[17].normal = { 0.0f, -1.0f, 0.0f }; mesh->vertices[17].uv = { 0.0f, 0.0f };
+			mesh->vertices[17].position = { 0.5f, -0.5f, -0.5f }; mesh->vertices[17].normal = { 0.0f, -1.0f, 0.0f }; mesh->vertices[17].uv = { 0.0f, 0.0f };
 
-			mesh->vertices[18].position = { 1.0f, -1.0f, 1.0f }; mesh->vertices[18].normal = { 0.0f, -1.0f, 0.0f }; mesh->vertices[18].uv = { 0.0f, 1.0f };
+			mesh->vertices[18].position = { 0.5f, -0.5f, 0.5f }; mesh->vertices[18].normal = { 0.0f, -1.0f, 0.0f }; mesh->vertices[18].uv = { 0.0f, 1.0f };
 
-			mesh->vertices[19].position = { -1.0f, -1.0f, 1.0f }; mesh->vertices[19].normal = { 0.0f, -1.0f, 0.0f }; mesh->vertices[19].uv = { 1.0f, 1.0f };
+			mesh->vertices[19].position = { -0.5f, -0.5f, 0.5f }; mesh->vertices[19].normal = { 0.0f, -1.0f, 0.0f }; mesh->vertices[19].uv = { 1.0f, 1.0f };
 
 			// Top face
-			mesh->vertices[20].position = { -1.0f, 1.0f, -1.0f }; mesh->vertices[20].normal = { 0.0f, 1.0f, 0.0f }; mesh->vertices[20].uv = { 1.0f, 0.0f };
+			mesh->vertices[20].position = { -0.5f, 0.5f, -0.5f }; mesh->vertices[20].normal = { 0.0f, 1.0f, 0.0f }; mesh->vertices[20].uv = { 1.0f, 0.0f };
 
-			mesh->vertices[21].position = { 1.0f, 1.0f, -1.0f }; mesh->vertices[21].normal = { 0.0f, 1.0f, 0.0f }; mesh->vertices[21].uv = { 0.0f, 0.0f };
+			mesh->vertices[21].position = { 0.5f, 0.5f, -0.5f }; mesh->vertices[21].normal = { 0.0f, 1.0f, 0.0f }; mesh->vertices[21].uv = { 0.0f, 0.0f };
 
-			mesh->vertices[22].position = { 1.0f, 1.0f, 1.0f }; mesh->vertices[22].normal = { 0.0f, 1.0f, 0.0f }; mesh->vertices[22].uv = { 0.0f, 1.0f };
+			mesh->vertices[22].position = { 0.5f, 0.5f, 0.5f }; mesh->vertices[22].normal = { 0.0f, 1.0f, 0.0f }; mesh->vertices[22].uv = { 0.0f, 1.0f };
 
-			mesh->vertices[23].position = { -1.0f, 1.0f, 1.0f }; mesh->vertices[23].normal = { 0.0f, 1.0f, 0.0f }; mesh->vertices[23].uv = { 1.0f, 1.0f };
+			mesh->vertices[23].position = { -0.5f, 0.5f, 0.5f }; mesh->vertices[23].normal = { 0.0f, 1.0f, 0.0f }; mesh->vertices[23].uv = { 1.0f, 1.0f };
 
 			mesh->indices.insert(mesh->indices.end(),
 				{   

@@ -77,5 +77,5 @@ void main()
 
 	color = pow(color, vec3(1.0 / (1.2 + (1.2 * in_sun_fade))));
 
-	out_frag_color = vec4(color, 1.0f);
+	out_frag_color = vec4(color, 0.0f);
 }

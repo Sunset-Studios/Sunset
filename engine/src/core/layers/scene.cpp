@@ -212,6 +212,26 @@ namespace Sunset
 		scene->scene_data.lighting.mie_directional_g = g;
 	}
 
+	void set_scene_sky_box(Scene* scene, const char* sky_box_path)
+	{
+		assert(scene != nullptr && "Cannot set skybox on null scene!");
+		AttachmentConfig config
+		{
+			.name = sky_box_path,
+			.path = sky_box_path,
+			.flags = ImageFlags::Color | ImageFlags::Sampled | ImageFlags::TransferDst | ImageFlags::Image2DArray,
+			.usage_type = MemoryUsageType::OnlyGPU,
+			.sampler_address_mode = SamplerAddressMode::EdgeClamp,
+			.image_filter = ImageFilter::Linear
+		};
+		ImageID sky_box = ImageFactory::load_cubemap(Renderer::get()->context(), config);
+		if (scene->scene_data.sky_box != sky_box)
+		{
+			scene->scene_data.sky_box = sky_box;
+			scene->scene_data.lighting.sky_box = -1;
+		}
+	}
+
 	void set_scene_sky_irradiance(Scene* scene, const char* irradiance_map_path)
 	{
 		assert(scene != nullptr && "Cannot set irradiance map on null scene!");
@@ -229,6 +249,47 @@ namespace Sunset
 		{
 			scene->scene_data.irradiance_map = irradiance_map;
 			scene->scene_data.lighting.irradiance_map = -1;
+		}
+	}
+
+	void set_scene_prefilter_map(Scene* scene, const char* prefilter_map_path)
+	{
+		assert(scene != nullptr && "Cannot set prefilter map on null scene!");
+		AttachmentConfig config
+		{
+			.name = prefilter_map_path,
+			.path = prefilter_map_path,
+			.flags = ImageFlags::Color | ImageFlags::Sampled,
+			.usage_type = MemoryUsageType::OnlyGPU,
+			.sampler_address_mode = SamplerAddressMode::EdgeClamp,
+			.image_filter = ImageFilter::Linear,
+			.mip_count = 5
+		};
+		ImageID prefilter_map = ImageFactory::load_cubemap(Renderer::get()->context(), config);
+		if (scene->scene_data.prefilter_map != prefilter_map)
+		{
+			scene->scene_data.prefilter_map = prefilter_map;
+			scene->scene_data.lighting.prefilter_map = -1;
+		}
+	}
+
+	void set_scene_brdf_lut(Scene* scene, const char* brdf_lut_path)
+	{
+		assert(scene != nullptr && "Cannot set brdf LUT on null scene!");
+		AttachmentConfig config
+		{
+			.name = brdf_lut_path,
+			.path = brdf_lut_path,
+			.flags = ImageFlags::Color | ImageFlags::Sampled,
+			.usage_type = MemoryUsageType::OnlyGPU,
+			.sampler_address_mode = SamplerAddressMode::EdgeClamp,
+			.image_filter = ImageFilter::Linear
+		};
+		ImageID brdf_lut = ImageFactory::load(Renderer::get()->context(), config);
+		if (scene->scene_data.brdf_lut != brdf_lut)
+		{
+			scene->scene_data.brdf_lut = brdf_lut;
+			scene->scene_data.lighting.brdf_lut = -1;
 		}
 	}
 }

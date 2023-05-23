@@ -15,7 +15,7 @@ namespace Sunset
 	class EquirectToolsApplication
 	{
 		public:
-			void init(const std::filesystem::path& equirect_path, bool generate_cubemap = false, bool generate_irradiance_map = false, bool generate_prefilter_map = false);
+			void init(const std::filesystem::path& equirect_path, bool generate_cubemap = false, bool generate_irradiance_map = false, bool generate_prefilter_map = false, bool generate_brdf_lut = false);
 			void cleanup();
 			void run();
 
@@ -26,14 +26,16 @@ namespace Sunset
 			void create_equirect_cubemap();
 			void create_irradiance_map();
 			void create_prefilter_map();
+			void create_brdf_lut();
 
-			void write_ibl_texture_to_png(const std::filesystem::path& out_path, const char* texture_dir_name, ImageID texture_id, bool b_use_only_first_mip = false);
+			void write_ibl_texture_to_png(const std::filesystem::path& out_path, const char* texture_dir_name, ImageID texture_id, bool b_use_only_first_mip = false, bool b_flip_on_write = false);
 
 		public:
 			static ImageID equirect_image;
 			static ImageID equirect_cubemap_image;
 			static ImageID irradiance_map_image;
 			static ImageID prefilter_map_image;
+			static ImageID brdf_lut_image;
 
 		private:
 			std::filesystem::path parent_equirect_path;
@@ -41,5 +43,6 @@ namespace Sunset
 			bool b_generate_cubemap_textures{ false };
 			bool b_generate_irradiance_map{ false };
 			bool b_generate_prefilter_map{ false };
+			bool b_generate_brdf_lut{ false };
 	};
 }

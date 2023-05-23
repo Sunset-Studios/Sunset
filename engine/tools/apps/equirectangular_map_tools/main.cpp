@@ -8,6 +8,7 @@ int main(int argc, char* argv[])
 	bool b_generate_cubemap_textures = false;
 	bool b_generate_irradiance_map = false;
 	bool b_generate_prefilter_map = false;
+	bool b_generate_brdf_lut = false;
 	std::filesystem::path equirect_map_path;
 
 	for (uint32_t i = 1; i < argc; ++i)
@@ -24,6 +25,10 @@ int main(int argc, char* argv[])
 		{
 			b_generate_prefilter_map = true;
 		}
+		else if (strcmp(argv[i], "-b") == 0 || strcmp(argv[i], "--generate_brdf_lut") == 0)
+		{
+			b_generate_brdf_lut = true;
+		}
 		else
 		{
 			const std::filesystem::path file_path{ argv[i] };
@@ -36,7 +41,7 @@ int main(int argc, char* argv[])
 		}
 	}
 
-	if ((!b_generate_cubemap_textures && !b_generate_irradiance_map) || equirect_map_path.empty())
+	if ((!b_generate_cubemap_textures && !b_generate_irradiance_map && !b_generate_prefilter_map && !b_generate_brdf_lut) || equirect_map_path.empty())
 	{
 		std::cout << "Usage: EquirectTool [-c|--generate_cubemap_textures] [-i|--generate_irradiance_map] <equirect_file>" << std::endl;
 		return -1;
@@ -45,7 +50,7 @@ int main(int argc, char* argv[])
 	{
 		Sunset::EquirectToolsApplication app;
 
-		app.init(equirect_map_path, b_generate_cubemap_textures, b_generate_irradiance_map, b_generate_prefilter_map);
+		app.init(equirect_map_path, b_generate_cubemap_textures, b_generate_irradiance_map, b_generate_prefilter_map, b_generate_brdf_lut);
 
 		app.run();
 

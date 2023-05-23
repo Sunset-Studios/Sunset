@@ -14,8 +14,10 @@
 
 namespace Sunset
 {
+	AutoCVar_Bool cvar_use_skybox("ren.use_skybox", "Whether or not to render a skybox (supplied to the scene as a cubemap texture) instead of using the preetham skydome shader.", false);
+
 	AutoCVar_Int cvar_num_bloom_pass_iterations("ren.bloom.num_pass_iterations", "The number of bloom horizontal and vertical blur iterations. (0 to turn bloom off).", 6);
-	AutoCVar_Float cvar_bloom_intensity("ren.bloom.intensity", "The intensity of the applied final bloom", 0.2f);
+	AutoCVar_Float cvar_bloom_intensity("ren.bloom.intensity", "The intensity of the applied final bloom", 0.1f);
 
 	AutoCVar_Int cvar_taa_inverse_luminance_filter("ren.taa.inverse_luminance_filter_enabled", "Whether to do inverse luminance filtering during the history color resolve", 1);
 	AutoCVar_Int cvar_taa_luminance_diff_filter("ren.taa.luminance_diff_enabled", "Whether to do luminance difference filtering during the history color resolve", 1);
@@ -155,16 +157,6 @@ namespace Sunset
 		// Skydome pass
 		RGResourceHandle sky_image_desc;
 		{
-			RGShaderDataSetup shader_setup
-			{
-				.pipeline_shaders =
-				{
-					{ PipelineShaderStageType::Vertex, "../../shaders/common/skydome.vert.sun" },
-					{ PipelineShaderStageType::Fragment, "../../shaders/common/skydome.frag.sun"}
-				},
-				.b_depth_write_enabled = false
-			};
-
 			const glm::vec2 image_extent = gfx_context->get_surface_resolution();
 			sky_image_desc = render_graph.create_image(
 				gfx_context,
@@ -180,19 +172,58 @@ namespace Sunset
 				}
 			);
 
-			render_graph.add_pass(
-				gfx_context,
-				"skydome_pass",
-				RenderPassFlags::Graphics,
+			if (cvar_use_skybox.get())
+			{
+				RGShaderDataSetup shader_setup
 				{
-					.shader_setup = shader_setup,
-					.outputs = { sky_image_desc }
-				},
-				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
+					.pipeline_shaders =
+					{
+						{ PipelineShaderStageType::Vertex, "../../shaders/common/skybox.vert.sun" },
+						{ PipelineShaderStageType::Fragment, "../../shaders/common/skybox.frag.sun"}
+					},
+					.b_depth_write_enabled = false
+				};
+
+				render_graph.add_pass(
+					gfx_context,
+					"skybox_pass",
+					RenderPassFlags::Graphics,
+					{
+						.shader_setup = shader_setup,
+						.outputs = { sky_image_desc }
+					},
+					[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
+					{
+						Renderer::get()->draw_unit_cube(command_buffer);
+					}
+				);
+			}
+			else
+			{
+				RGShaderDataSetup shader_setup
 				{
-					Renderer::get()->draw_unit_sphere(command_buffer);
-				}
-			);
+					.pipeline_shaders =
+					{
+						{ PipelineShaderStageType::Vertex, "../../shaders/common/skydome.vert.sun" },
+						{ PipelineShaderStageType::Fragment, "../../shaders/common/skydome.frag.sun"}
+					},
+					.b_depth_write_enabled = false
+				};
+
+				render_graph.add_pass(
+					gfx_context,
+					"skydome_pass",
+					RenderPassFlags::Graphics,
+					{
+						.shader_setup = shader_setup,
+						.outputs = { sky_image_desc }
+					},
+					[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
+					{
+						Renderer::get()->draw_unit_sphere(command_buffer);
+					}
+				);
+			}
 		}
 
 		// G-Buffer pass
@@ -220,7 +251,6 @@ namespace Sunset
 					.name = "main_albedo",
 					.format = Format::Float4x32,
 					.extent = glm::vec3(image_extent.x, image_extent.y, 1.0f),
-					.clear_color = glm::vec3(0.2f, 0.9f, 0.5f),
 					.flags = ImageFlags::Color | ImageFlags::Image2D | ImageFlags::Sampled,
 					.usage_type = MemoryUsageType::OnlyGPU,
 					.sampler_address_mode = SamplerAddressMode::Repeat,
@@ -291,7 +321,7 @@ namespace Sunset
 					.flags = ImageFlags::Color | ImageFlags::Sampled | ImageFlags::Image2D,
 					.usage_type = MemoryUsageType::OnlyGPU,
 					.sampler_address_mode = SamplerAddressMode::EdgeClamp,
-					.image_filter = ImageFilter::Linear,
+					.image_filter = ImageFilter::Nearest,
 					.attachment_clear = true,
 				}
 			);

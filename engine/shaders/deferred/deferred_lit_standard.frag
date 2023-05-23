@@ -87,10 +87,22 @@ void main()
 	vec4 tex_irradiance =
 		scene_lighting_data.irradiance_map == -1
 		? vec4(0.0, 0.0, 0.0, 1.0)
-		: texture(textures_2DArray[nonuniformEXT(scene_lighting_data.irradiance_map)], normalized_normal);
+		: texture(textures_2DArray[nonuniformEXT(scene_lighting_data.irradiance_map)], cube_dir_to_tex_coord_and_layer(normalized_normal));
 	const vec3 irradiance = tex_irradiance.rgb; 
 
 	const vec3 view_dir = normalize(camera_data.position.xyz - position);
+	const vec3 reflection = reflect(-view_dir, normalized_normal);
+
+	vec4 tex_prefilter =
+		scene_lighting_data.prefilter_map == -1
+		? vec4(0.0, 0.0, 0.0, 1.0)
+		: textureLod(textures_2DArray[nonuniformEXT(scene_lighting_data.prefilter_map)], cube_dir_to_tex_coord_and_layer(reflection), roughness * 4.0);
+	const vec3 prefiltered_color = tex_prefilter.rgb;
+
+	vec2 tex_env_brdf =
+		scene_lighting_data.brdf_lut == -1
+		? vec2(0.0, 0.0)
+		: texture(textures_2D[nonuniformEXT(scene_lighting_data.brdf_lut)], vec2(max(dot(normalized_normal, view_dir), 0.0), roughness)).rg;
 
 	const float unlit = float(normal_length <= 0.0);
 
@@ -114,7 +126,9 @@ void main()
 			clearcoat,
 			clearcoat_roughness,
 			ao,
-			irradiance);
+			irradiance,
+			prefiltered_color,
+			tex_env_brdf);
 	}
 
 	out_frag_color = vec4(color + (albedo * emissive), 1.0f);

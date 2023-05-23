@@ -76,7 +76,7 @@ void main()
 	const vec3 normal =
 		normal_tex_index == -1
 		? in_normal
-		: (gl_FrontFacing ? in_tbn_matrix : -in_tbn_matrix) * normalize(texture(textures_2D[nonuniformEXT(normal_tex_index)], in_tex_coord * material.tiling_coeffs[1]).xyz * 2.0f - 1.0f);
+		: in_tbn_matrix * normalize(texture(textures_2D[nonuniformEXT(normal_tex_index)], in_tex_coord * material.tiling_coeffs[1]).xyz * 2.0f - 1.0f);
 
 	const float roughness =
 		roughness_tex_index == -1
@@ -90,7 +90,7 @@ void main()
 
 	const float ao =
 		ao_tex_index == -1
-		? 0.0f
+		? 1.0f
 		: texture(textures_2D[nonuniformEXT(ao_tex_index)], in_tex_coord * material.tiling_coeffs[4]).r;
 
 	const float specular = material.uniform_reflectance > 0.0f ? material.uniform_reflectance : pow(2.0f, 10.0f * (1.0f - roughness));

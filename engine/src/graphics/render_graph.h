@@ -99,6 +99,7 @@ namespace Sunset
 		std::optional<PipelineAttachmentBlendState> attachment_blend;
 		std::optional<Viewport> viewport;
 		std::optional<bool> b_depth_write_enabled;
+		std::optional<CompareOperation> depth_stencil_compare_op;
 	};
 
 	struct RGPassParameters

@@ -17,8 +17,8 @@ layout (push_constant) uniform constants
 	mat4 view;
 	int equirect_map_index;
 	int layer_index;
-	float source_cubemap_resolution;
 	float roughness;
+	float source_cubemap_resolution;
 } prefilter_cubemap_constants;
 
 void main()

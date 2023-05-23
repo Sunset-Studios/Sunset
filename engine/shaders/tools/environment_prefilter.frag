@@ -13,11 +13,11 @@ layout (push_constant) uniform constants
 	mat4 view;
 	int equirect_map_index;
 	int layer_index;
+	float roughness;	
 	float source_cubemap_resolution;
-	float roughness;
 } prefilter_cubemap_constants;
 
-const uint sample_count = 1024;
+const uint sample_count = 2048;
 
 void main()
 {
@@ -40,14 +40,14 @@ void main()
 			float n_dot_h = max(dot(normal, h), 0.0);
 			float h_dot_v = max(dot(h, view), 0.0);
 			float dggx = d_ggx(n_dot_h, prefilter_cubemap_constants.roughness);
-			float pdf = dggx * n_dot_h / (4.0 * h_dot_v) + 0.0001;
+			float pdf = (dggx * n_dot_h / (4.0 * h_dot_v)) + 0.0001;
 
 			float sa_texel = 4.0 * PI / (6.0 * prefilter_cubemap_constants.source_cubemap_resolution * prefilter_cubemap_constants.source_cubemap_resolution);
-			float sa_sample = 1.0 / (float(sample_count) * pdf * 0.0001);
+			float sa_sample = 1.0 / (float(sample_count) * pdf + 0.0001);
 
 			float mip_level = prefilter_cubemap_constants.roughness == 0.0 ? 0.0 : 0.5 * log2(sa_sample / sa_texel);
 
-			// TODO: use mip_level to textureLod into specific cubemap mip 
+			l = cube_dir_to_tex_coord_and_layer(-l);
 			prefiltered_color += textureLod(textures_2DArray[nonuniformEXT(prefilter_cubemap_constants.equirect_map_index)], l, mip_level).rgb * n_dot_l;
 			total_weight += n_dot_l;
 		}

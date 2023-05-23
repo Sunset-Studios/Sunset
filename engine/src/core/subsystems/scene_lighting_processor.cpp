@@ -20,14 +20,14 @@ namespace Sunset
 
 		QUEUE_RENDERGRAPH_COMMAND(SetIrradianceMap, [=](class RenderGraph& render_graph, RGFrameData& frame_data, void* command_buffer)
 		{
-			if (frame_data.global_descriptor_set != nullptr && scene->scene_data.lighting.irradiance_map == -1 && scene->scene_data.irradiance_map != 0)
+			auto write_bindless_lighting_image = [=](ImageID lighting_image, int32_t& bindless_index)
 			{
 				std::vector<DescriptorBindlessWrite> bindless_writes;
 				bindless_writes.push_back(
 					DescriptorBindlessWrite{
 						.slot = ImageBindTableSlot,
 						.type = DescriptorType::Image,
-						.buffer = CACHE_FETCH(Image, scene->scene_data.irradiance_map),
+						.buffer = CACHE_FETCH(Image, lighting_image),
 						.set = frame_data.global_descriptor_set
 					}
 				);
@@ -37,7 +37,28 @@ namespace Sunset
 
 				if (bound_texture_handle >= 0)
 				{
-					scene->scene_data.lighting.irradiance_map = (0x0000ffff & bound_texture_handle);
+					bindless_index = (0x0000ffff & bound_texture_handle);
+				}
+			};
+
+			// Push IBL textures to descriptor set
+			if (frame_data.global_descriptor_set != nullptr)
+			{
+				if (scene->scene_data.lighting.irradiance_map == -1 && scene->scene_data.irradiance_map != 0)
+				{
+					write_bindless_lighting_image(scene->scene_data.irradiance_map, scene->scene_data.lighting.irradiance_map);
+				}
+				if (scene->scene_data.lighting.sky_box == -1 && scene->scene_data.sky_box != 0)
+				{
+					write_bindless_lighting_image(scene->scene_data.sky_box, scene->scene_data.lighting.sky_box);
+				}
+				if (scene->scene_data.lighting.prefilter_map == -1 && scene->scene_data.prefilter_map != 0)
+				{
+					write_bindless_lighting_image(scene->scene_data.prefilter_map, scene->scene_data.lighting.prefilter_map);
+				}
+				if (scene->scene_data.lighting.brdf_lut == -1 && scene->scene_data.brdf_lut != 0)
+				{
+					write_bindless_lighting_image(scene->scene_data.brdf_lut, scene->scene_data.lighting.brdf_lut);
 				}
 			}
 

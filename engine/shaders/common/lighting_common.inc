@@ -80,7 +80,9 @@ vec3 calculate_brdf(
 	float clear_coat,
 	float clear_coat_roughness,
 	float ao,
-	vec3 irradiance)
+	vec3 irradiance,
+	vec3 prefiltered_color,
+	vec2 env_brdf)
 {
 	vec3 light_dir;
 	float attenuation = 1.0f;
@@ -144,7 +146,8 @@ vec3 calculate_brdf(
 
 	// diffuse BRDF
 	vec3 diffuse_color = (1.0f - metallic) * albedo * irradiance;
-	vec3 fd = diffuse_color * fd_lambert();
+	vec3 env_specular = prefiltered_color * (f * env_brdf.x + env_brdf.y);
+	vec3 fd = (diffuse_color + env_specular) * fd_lambert() * ao;
 
 	// remapping and linearization of clear coat roughness
 	float clamped_clear_coat_roughness = clamp(clear_coat_roughness, 0.089f, 1.0f);

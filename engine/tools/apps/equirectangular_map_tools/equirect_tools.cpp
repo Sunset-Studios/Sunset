@@ -22,6 +22,7 @@ namespace Sunset
 	ImageID EquirectToolsApplication::equirect_cubemap_image;
 	ImageID EquirectToolsApplication::irradiance_map_image;
 	ImageID EquirectToolsApplication::prefilter_map_image;
+	ImageID EquirectToolsApplication::brdf_lut_image;
 
 	class IBLBakingStrategy
 	{
@@ -66,6 +67,11 @@ namespace Sunset
 			RGResourceHandle environment_prefilter_image_desc = render_graph.register_image(
 				gfx_context,
 				EquirectToolsApplication::prefilter_map_image
+			);
+
+			RGResourceHandle brdf_lut_image_desc = render_graph.register_image(
+				gfx_context,
+				EquirectToolsApplication::brdf_lut_image
 			);
 
 			RGShaderDataSetup cubemap_shader_setup
@@ -116,14 +122,30 @@ namespace Sunset
 				}
 			};
 
+			RGShaderDataSetup brdf_shader_setup
+			{
+				.pipeline_shaders =
+				{
+					{ PipelineShaderStageType::Vertex, "../../shaders/common/fullscreen.vert.sun" },
+					{ PipelineShaderStageType::Fragment, "../../shaders/tools/brdf_lut.frag.sun" }
+				},
+				.viewport = Viewport
+				{
+					.x = 0,
+					.y = 0,
+					.width = 512,
+					.height = 512 
+				}
+			};
+
 			const glm::mat4 capture_projection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
 
 			const glm::mat4 capture_views[] =
 			{
-			   glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
 			   glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
-			   glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  1.0f,  0.0f), glm::vec3(0.0f,  0.0f,  1.0f)),
+			   glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
 			   glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f,  0.0f), glm::vec3(0.0f,  0.0f, -1.0f)),
+			   glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  1.0f,  0.0f), glm::vec3(0.0f,  0.0f,  1.0f)),
 			   glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f,  1.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
 			   glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f))
 			};
@@ -159,7 +181,6 @@ namespace Sunset
 					}
 				}
 			);
-
 
 			render_graph.add_pass(
 				gfx_context,
@@ -249,11 +270,26 @@ namespace Sunset
 				}
 			}
 
+			render_graph.add_pass(
+				gfx_context,
+				"brdf_lut_pass",
+				RenderPassFlags::Graphics,
+				{
+					.shader_setup = brdf_shader_setup,
+					.outputs = { brdf_lut_image_desc },
+					.b_force_keep_pass = true
+				},
+				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
+				{
+					Renderer::get()->draw_fullscreen_quad(command_buffer);
+				}
+			);
+
 			render_graph.submit(gfx_context, swapchain, b_offline);
 		}
 	};
 
-	void EquirectToolsApplication::init(const std::filesystem::path& equirect_path, bool generate_cubemap, bool generate_irradiance_map, bool generate_prefilter_map)
+	void EquirectToolsApplication::init(const std::filesystem::path& equirect_path, bool generate_cubemap, bool generate_irradiance_map, bool generate_prefilter_map, bool generate_brdf_lut)
 	{
 		Renderer::get()->setup(nullptr, glm::ivec2(1280, 1280));
 
@@ -262,12 +298,14 @@ namespace Sunset
 		b_generate_cubemap_textures = generate_cubemap;
 		b_generate_irradiance_map = generate_irradiance_map;
 		b_generate_prefilter_map = generate_prefilter_map;
+		b_generate_brdf_lut = generate_brdf_lut;
 
 		load_equirect_image(equirect_path);
 
 		create_equirect_cubemap();
 		create_irradiance_map();
 		create_prefilter_map();
+		create_brdf_lut();
 
 		SimulationCore::get()->register_layer(std::make_unique<Scene>());
 	}
@@ -301,6 +339,11 @@ namespace Sunset
 		if (b_generate_prefilter_map)
 		{
 			write_ibl_texture_to_png(parent_equirect_path, "prefilter", EquirectToolsApplication::prefilter_map_image, false);
+		}
+
+		if (b_generate_brdf_lut)
+		{
+			write_ibl_texture_to_png(parent_equirect_path, "brdf_lut", EquirectToolsApplication::brdf_lut_image, true, true);
 		}
 
 		//bool bQuit = false;
@@ -437,7 +480,22 @@ namespace Sunset
 		EquirectToolsApplication::prefilter_map_image = ImageFactory::create(Renderer::get()->context(), config);
 	}
 
-	void EquirectToolsApplication::write_ibl_texture_to_png(const std::filesystem::path& out_path, const char* texture_dir_name, ImageID texture_id, bool b_use_only_first_mip)
+	void EquirectToolsApplication::create_brdf_lut()
+	{
+		AttachmentConfig config
+		{
+			.name = "brdf_lut",
+			.format = Format::Float4x32,
+			.extent = glm::vec3(512.0f, 512.0f, 1.0f),
+			.flags = ImageFlags::Color | ImageFlags::Image2D | ImageFlags::Sampled | ImageFlags::TransferSrc,
+			.usage_type = MemoryUsageType::OnlyGPU,
+			.sampler_address_mode = SamplerAddressMode::EdgeClamp,
+			.image_filter = ImageFilter::Linear
+		};
+		EquirectToolsApplication::brdf_lut_image = ImageFactory::create(Renderer::get()->context(), config);
+	}
+
+	void EquirectToolsApplication::write_ibl_texture_to_png(const std::filesystem::path& out_path, const char* texture_dir_name, ImageID texture_id, bool b_use_only_first_mip, bool b_flip_on_write)
 	{
 		const std::string out_directory = texture_dir_name;
 		const std::filesystem::path out_texture_path = out_path / out_directory;
@@ -507,7 +565,10 @@ namespace Sunset
 				}
 			}
 
-			stbi_flip_vertically_on_write(true);
+			if (b_flip_on_write)
+			{
+				stbi_flip_vertically_on_write(true);
+			}
 
 			// Write our temporary 8 bit buffer to a set of .png images
 			buffer_offset = 0;

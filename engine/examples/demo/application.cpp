@@ -48,7 +48,11 @@ namespace Sunset
 			set_scene_atmospheric_rayleigh(scene.get(), 1.0f);
 			set_scene_mie_coefficient(scene.get(), 0.005f);
 			set_scene_mie_directional_g(scene.get(), 0.8f);
-			set_scene_sky_irradiance(scene.get(), "../../assets/sunset/irradiance/sunset_irradiance");
+
+			set_scene_sky_irradiance(scene.get(), "../../assets/sky/irradiance/sky_irradiance");
+			set_scene_sky_box(scene.get(), "../../assets/sky/cubemap/sky_cubemap");
+			set_scene_prefilter_map(scene.get(), "../../assets/sky/prefilter/sky_prefilter");
+			set_scene_brdf_lut(scene.get(), "../../assets/sky/brdf_lut/sky_brdf_lut_mip_0_layer_0.sun");
 
 			// Add light 1
 			{
@@ -79,6 +83,23 @@ namespace Sunset
 				set_light_type(light_comp, LightType::Point);
 				set_light_radius(light_comp, 15.0f);
 				set_light_intensity(light_comp, 10000.0f);
+				set_light_entity_index(light_comp, get_entity_index(light_entity));
+			}
+
+			// Add light 3
+			{
+				EntityID light_entity = scene->make_entity();
+
+				TransformComponent* const transform_comp = scene->assign_component<TransformComponent>(light_entity);
+
+				set_position(transform_comp, glm::vec3(-20.0f, 8.5f, 0.0f));
+
+				LightComponent* const light_comp = scene->assign_component<LightComponent>(light_entity);
+
+				set_light_color(light_comp, glm::vec3(1.0f, 1.0f, 1.0f));
+				set_light_type(light_comp, LightType::Point);
+				set_light_radius(light_comp, 35.0f);
+				set_light_intensity(light_comp, 2000.0f);
 				set_light_entity_index(light_comp, get_entity_index(light_entity));
 			}
 
@@ -130,11 +151,14 @@ namespace Sunset
 				MaterialID mesh_material = MaterialFactory::create(
 					Renderer::get()->context(),
 					{
-						.color = glm::vec3(1.0f, 0.2, 0.2f),
-						.uniform_roughness = 0.75f,
-						.uniform_metallic = 1.0f,
-						.uniform_clearcoat = 1.0f,
-						.uniform_clearcoat_roughness = 0.0f
+						.textures =
+						{
+							"../../assets/metal-albedo.sun",
+							"../../assets/metal-normal.sun",
+							"../../assets/metal-roughness.sun",
+							"../../assets/metal-metallic.sun",
+							"../../assets/metal-ao.sun"
+						}
 					}
 				);
 
@@ -149,7 +173,7 @@ namespace Sunset
 				TransformComponent* const transform_comp = scene->assign_component<TransformComponent>(mesh_ent);
 
 				set_position(transform_comp, glm::vec3(0.0f, 2.0f, 0.0f));
-				set_scale(transform_comp, glm::vec3(2.0f));
+				set_scale(transform_comp, glm::vec3(4.0f));
 
 				MeshComponent* const mesh_comp = scene->assign_component<MeshComponent>(mesh_ent);
 
@@ -157,9 +181,9 @@ namespace Sunset
 					Renderer::get()->context(),
 					{
 						.color = glm::vec3(0.2f, 0.4, 0.8f),
-						.uniform_roughness = 0.8f,
-						.uniform_metallic = 1.0f,
-						.uniform_clearcoat = 1.0f,
+						.uniform_roughness = 0.05f,
+						.uniform_metallic = 0.0f,
+						.uniform_clearcoat = 0.0f,
 						.uniform_clearcoat_roughness = 0.0f,
 					}
 				);

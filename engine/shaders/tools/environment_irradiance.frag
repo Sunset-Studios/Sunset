@@ -32,6 +32,7 @@ void main()
 		{
 			vec3 tangent_sample = vec3(sin(theta) * cos(phi), sin(theta) * sin(phi), cos(theta));
 			vec3 sample_vec = tangent_sample.x * right + tangent_sample.y * up + tangent_sample.z * normal;
+			sample_vec = cube_dir_to_tex_coord_and_layer(-sample_vec);
 			irradiance += texture(textures_2DArray[nonuniformEXT(equirect_to_cubemap_constants.equirect_map_index)], sample_vec).rgb * cos(theta) * sin(theta);
 			++num_samples;
 		}

@@ -32,7 +32,9 @@ layout (std140, set = 0, binding = 1) uniform SceneLightingData
 	float mie_directional_g;
 	float num_lights;
 	int irradiance_map;
-	float padding[3];
+	int sky_box;
+    int prefilter_map;
+    int brdf_lut;
 } scene_lighting_data;
 
 layout (set = 0, binding = 2) uniform writeonly image2D storage_2D[MAX_DESCRIPTOR_BINDINGS];
@@ -102,6 +104,47 @@ vec3 to_world_pos(vec2 uv, float depth, mat4 inverse_view_proj)
 	vec4 h = to_ndc(uv, depth);
 	vec4 d = inverse_view_proj * h;
 	return d.xyz / d.w;
+}
+
+vec3 cube_dir_to_tex_coord_and_layer(vec3 dir)
+{
+    vec3 abs_dir = abs(dir);
+
+    float layer;
+    vec2 texcoord;
+
+    if (abs_dir.x > abs_dir.y && abs_dir.x > abs_dir.z)
+    {
+        layer = (dir.x > 0.0 ? 0.0 : 1.0);
+        texcoord = vec2(-dir.z, dir.y) / abs_dir.x;
+    }
+    else if (abs_dir.y > abs_dir.z)
+    {
+        layer = (dir.y > 0.0 ? 2.0 : 3.0);
+        texcoord = vec2(dir.x, -dir.z) / abs_dir.y;
+    }
+    else
+    {
+        layer = (dir.z > 0.0 ? 4.0 : 5.0);
+        texcoord = vec2(dir.x, dir.y) / abs_dir.z;
+    }
+    
+    // Flip the y coordinate for the negative faces
+    if (mod(layer, 2.0) == 0.0)
+    {
+     	texcoord.x = -texcoord.x;
+    }
+    // Bottom face needs additional adjustment due to other face flips
+    if (layer == 3.0)
+    {
+	    texcoord.y = -texcoord.y;
+		texcoord.x = -texcoord.x;
+    }
+    
+    // Remap from [-1,1] to [0,1]
+    texcoord = texcoord * 0.5 + 0.5;
+    
+    return vec3(texcoord, layer);
 }
 
 // Samples a texture with Catmull-Rom filtering, using 9 texture fetches instead of 16.
