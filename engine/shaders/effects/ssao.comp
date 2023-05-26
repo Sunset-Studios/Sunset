@@ -26,6 +26,8 @@ layout (push_constant) uniform constants
 	vec2 resolution;
 	float radius;
 	float bias;
+	float strength;
+	float padding;
 } ssao_constants;
 
 void main()
@@ -59,7 +61,8 @@ void main()
 		float range_check = smoothstep(0.0, 1.0, ssao_constants.radius / abs(frag_pos.z - sample_depth));
 		occlusion += (sample_depth - ssao_constants.bias >= sample_pos.z ? 1.0 : 0.0) * range_check;
 	}
-	occlusion = 1.0 - (occlusion / float(KERNEL_SIZE));
+	const float occlusion_factor = occlusion / float(KERNEL_SIZE);
+	occlusion = pow(1.0 - occlusion_factor, max(1.0, ssao_constants.strength * occlusion_factor));
 
 	imageStore(storage_2D[nonuniformEXT(ssao_constants.out_ssao_texture)], texel_pos, vec4(occlusion, occlusion, occlusion, occlusion));
 }

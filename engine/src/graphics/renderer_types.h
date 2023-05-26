@@ -129,6 +129,8 @@ namespace Sunset
 		glm::vec2 resolution;
 		float radius;
 		float bias;
+		float strength;
+		float padding;
 	};
 
 	struct SSAOBlurData

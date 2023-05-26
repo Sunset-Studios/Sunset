@@ -19,6 +19,9 @@ namespace Sunset
 {
 	AutoCVar_Bool cvar_use_skybox("ren.use_skybox", "Whether or not to render a skybox (supplied to the scene as a cubemap texture) instead of using the preetham skydome shader.", false);
 
+	AutoCVar_Float cvar_ssao_strength("ren.ssao.strength", "The strength of the SSAO contribution applied to ambient lighting calculations", 2.0f);
+	AutoCVar_Float cvar_ssao_radius("ren.ssao.radius", "The contribution radius of SSAO samples", 1.0f);
+
 	AutoCVar_Int cvar_num_bloom_pass_iterations("ren.bloom.num_pass_iterations", "The number of bloom horizontal and vertical blur iterations. (0 to turn bloom off).", 6);
 	AutoCVar_Float cvar_bloom_intensity("ren.bloom.intensity", "The intensity of the applied final bloom", 0.1f);
 
@@ -579,8 +582,9 @@ namespace Sunset
 						.out_ssao_texture = (0x0000ffff & ssao_image_handle),
 						.noise_scale = glm::vec2(image_extent.x * 0.25f, image_extent.y * 0.25f),
 						.resolution = image_extent,
-						.radius = 0.8f,
-						.bias = 0.03f
+						.radius = static_cast<float>(cvar_ssao_radius.get()),
+						.bias = 0.05f,
+						.strength = static_cast<float>(cvar_ssao_strength.get())
 					};
 
 					PushConstantPipelineData pass_data = PushConstantPipelineData::create(&ssao_data, PipelineShaderStageType::Compute);
