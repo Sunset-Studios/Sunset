@@ -36,6 +36,7 @@ layout (push_constant) uniform constants
 	int normal_texure;
 	int position_texure;
 	int sky_texture;
+	int ssao_texture;
 } lighting_pass_constants;
 
 void main()
@@ -84,6 +85,11 @@ void main()
 		? tex_albedo
 		: texture(textures_2D[nonuniformEXT(lighting_pass_constants.sky_texture)], in_tex_coord);
 
+	float tex_ssao = 
+		lighting_pass_constants.ssao_texture == -1
+		? 1.0
+		: texture(textures_2D[nonuniformEXT(lighting_pass_constants.ssao_texture)], in_tex_coord).r;
+
 	vec4 tex_irradiance =
 		scene_lighting_data.irradiance_map == -1
 		? vec4(0.0, 0.0, 0.0, 1.0)
@@ -125,7 +131,7 @@ void main()
 			reflectance,
 			clearcoat,
 			clearcoat_roughness,
-			ao,
+			min(ao, tex_ssao),
 			irradiance,
 			prefiltered_color,
 			tex_env_brdf);

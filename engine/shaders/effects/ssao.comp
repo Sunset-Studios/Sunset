@@ -1,0 +1,65 @@
+#version 460
+
+#include "common/common.inc"
+
+layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+const int KERNEL_SIZE = 64;
+
+struct SSAOData
+{
+	vec3 kernel[KERNEL_SIZE];
+};
+
+layout (std430, set = 1, binding = 0) readonly buffer SSAODataBuffer
+{
+	SSAOData data;
+} ssao_data;
+
+layout (push_constant) uniform constants
+{
+	int ssao_noise_texture;
+	int position_texture;
+	int normal_texture;
+	int out_ssao_texture;
+	vec2 noise_scale;
+	vec2 resolution;
+	float radius;
+	float bias;
+} ssao_constants;
+
+void main()
+{
+	ivec2 texel_pos = ivec2(gl_GlobalInvocationID.xy);
+	vec2 tex_coords = vec2(gl_GlobalInvocationID.xy) / ssao_constants.resolution;
+
+	const vec3 frag_pos = (camera_data.view * texture(textures_2D[nonuniformEXT(ssao_constants.position_texture)], tex_coords)).xyz;
+	const vec3 normal = normalize(texture(textures_2D[nonuniformEXT(ssao_constants.normal_texture)], tex_coords).xyz);
+	const vec3 random_vec = texture(textures_2D[nonuniformEXT(ssao_constants.ssao_noise_texture)], tex_coords * ssao_constants.noise_scale).xyz;
+
+	const vec3 tangent = normalize(random_vec - normal * dot(random_vec, normal));
+	const vec3 bitangent = normalize(cross(normal, tangent));
+	const mat3 tbn = mat3(tangent, bitangent, normal);
+
+	mat4 unjittered_proj = camera_data.proj;
+	unjittered_proj[2][0] -= camera_data.jitter.z;
+	unjittered_proj[2][1] -= camera_data.jitter.w;
+
+	float occlusion = 0.0;
+	for (int i = 0; i < KERNEL_SIZE; ++i)
+	{
+		vec3 sample_pos = frag_pos + (tbn * ssao_data.data.kernel[i]) * ssao_constants.radius;
+		vec4 offset = vec4(sample_pos, 1.0);
+
+		offset = unjittered_proj * offset;
+		offset.xyz /= offset.w;
+		offset.xyz = offset.xyz * 0.5 + 0.5;
+
+		float sample_depth = (camera_data.view * texture(textures_2D[nonuniformEXT(ssao_constants.position_texture)], offset.xy)).z;
+		float range_check = smoothstep(0.0, 1.0, ssao_constants.radius / abs(frag_pos.z - sample_depth));
+		occlusion += (sample_depth - ssao_constants.bias >= sample_pos.z ? 1.0 : 0.0) * range_check;
+	}
+	occlusion = 1.0 - (occlusion / float(KERNEL_SIZE));
+
+	imageStore(storage_2D[nonuniformEXT(ssao_constants.out_ssao_texture)], texel_pos, vec4(occlusion, occlusion, occlusion, occlusion));
+}

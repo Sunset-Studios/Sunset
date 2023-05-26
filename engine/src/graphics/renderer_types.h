@@ -77,6 +77,8 @@ namespace Sunset
 		int32_t normal_texure;
 		int32_t position_texure;
 		int32_t sky_texure;
+		int32_t ssao_texture;
+		int32_t padding;
 	};
 
 	struct TAAData
@@ -108,5 +110,31 @@ namespace Sunset
 		int32_t bloom_brightness_texture;
 		float exposure;
 		float bloom_intensity;
+	};
+
+	constexpr uint32_t SSAOKernelSize = 64;
+
+	struct SSAOKernelData
+	{
+		glm::vec3 kernel[SSAOKernelSize];
+	};
+
+	struct SSAOData
+	{
+		int32_t ssao_noise_texture;
+		int32_t position_texture;
+		int32_t normal_texture;
+		int32_t out_ssao_texture;
+		glm::vec2 noise_scale;
+		glm::vec2 resolution;
+		float radius;
+		float bias;
+	};
+
+	struct SSAOBlurData
+	{
+		int32_t ssao_staging_texture;
+		int32_t out_ssao_texture;
+		glm::vec2 resolution;
 	};
 }

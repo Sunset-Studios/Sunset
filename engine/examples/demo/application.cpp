@@ -138,6 +138,7 @@ namespace Sunset
 			}
 
 			// Add test mesh 1
+
 			{
 				EntityID mesh_ent = scene->make_entity();
 
@@ -167,12 +168,13 @@ namespace Sunset
 			}
 
 			// Add test mesh 2
+			for (uint32_t i = 0; i < 20; ++i)
 			{
 				EntityID mesh_ent = scene->make_entity();
 
 				TransformComponent* const transform_comp = scene->assign_component<TransformComponent>(mesh_ent);
 
-				set_position(transform_comp, glm::vec3(0.0f, 2.0f, 0.0f));
+				set_position(transform_comp, glm::vec3((i % 5) * 4.2f, 2.5f, (i / 5) * 4.2f));
 				set_scale(transform_comp, glm::vec3(4.0f));
 
 				MeshComponent* const mesh_comp = scene->assign_component<MeshComponent>(mesh_ent);

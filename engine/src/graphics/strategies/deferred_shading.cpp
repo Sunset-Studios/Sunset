@@ -4,6 +4,7 @@
 #include <graphics/resource/buffer.h>
 #include <graphics/descriptor.h>
 #include <graphics/resource/image.h>
+#include <graphics/command_queue.h>
 #include <window/window.h>
 #include <core/data_globals.h>
 #include <utility/maths.h>
@@ -11,6 +12,8 @@
 #ifndef NDEBUG
 #include <utility/gui/gui_core.h>
 #endif
+
+#include <random>
 
 namespace Sunset
 {
@@ -26,6 +29,8 @@ namespace Sunset
 
 	void DeferredShadingStrategy::render(GraphicsContext* gfx_context, RenderGraph& render_graph, class Swapchain* swapchain, bool b_offline)
 	{
+		DeferredShadingPersistentStorage::get()->initialize();
+
 		const uint16_t buffered_frame_number = gfx_context->get_buffered_frame_number();
 
 		MeshTaskQueue& mesh_task_queue = Renderer::get()->get_mesh_task_queue();
@@ -77,6 +82,11 @@ namespace Sunset
 			LightGlobals::get()->light_data.data_buffer[buffered_frame_number]
 		);
 
+		RGResourceHandle ssao_data_buffer_desc = render_graph.register_buffer(
+			gfx_context,
+			DeferredShadingPersistentStorage::get()->ssao_data_buffer[buffered_frame_number]
+		);
+
 		RGResourceHandle hzb_image_desc = render_graph.register_image(
 			gfx_context,
 			Renderer::get()->get_persistent_image("hi_z", buffered_frame_number)
@@ -85,6 +95,11 @@ namespace Sunset
 		RGResourceHandle temporal_color_history = render_graph.register_image(
 			gfx_context,
 			Renderer::get()->get_persistent_image("temporal_color_history", buffered_frame_number)
+		);
+
+		RGResourceHandle ssao_noise_image_desc = render_graph.register_image(
+			gfx_context,
+			Renderer::get()->get_persistent_image("ssao_noise", buffered_frame_number)
 		);
 
 		// Mesh cull pass
@@ -492,6 +507,130 @@ namespace Sunset
 			);
 		}
 
+		// SSAO pass
+		RGResourceHandle ssao_image_desc;
+		{
+			RGShaderDataSetup ssao_shader_setup
+			{
+				.pipeline_shaders =
+				{
+					{ PipelineShaderStageType::Compute, "../../shaders/effects/ssao.comp.sun" }
+				}
+			};
+
+			RGShaderDataSetup ssao_blur_shader_setup
+			{
+				.pipeline_shaders =
+				{
+					{ PipelineShaderStageType::Compute, "../../shaders/effects/ssao_blur.comp.sun" }
+				}
+			};
+
+			const glm::vec2 image_extent = gfx_context->get_surface_resolution();
+			RGResourceHandle ssao_staging_image_desc = render_graph.create_image(
+				gfx_context,
+				{
+					.name = "ssao_staging_image",
+					.format = Format::Float32,
+					.extent = glm::vec3(image_extent.x, image_extent.y, 1.0f),
+					.flags = ImageFlags::Color | ImageFlags::Image2D | ImageFlags::Sampled | ImageFlags::Storage,
+					.usage_type = MemoryUsageType::OnlyGPU,
+					.sampler_address_mode = SamplerAddressMode::Repeat,
+					.image_filter = ImageFilter::Nearest,
+					.attachment_clear = true
+				}
+			);
+
+			ssao_image_desc = render_graph.create_image(
+				gfx_context,
+				{
+					.name = "ssao_image",
+					.format = Format::Float32,
+					.extent = glm::vec3(image_extent.x, image_extent.y, 1.0f),
+					.flags = ImageFlags::Color | ImageFlags::Image2D | ImageFlags::Sampled | ImageFlags::Storage,
+					.usage_type = MemoryUsageType::OnlyGPU,
+					.sampler_address_mode = SamplerAddressMode::Repeat,
+					.image_filter = ImageFilter::Nearest,
+					.attachment_clear = true
+				}
+			);
+
+			render_graph.add_pass(
+				gfx_context,
+				"ssao_pass",
+				RenderPassFlags::Compute,
+				{
+					.shader_setup = ssao_shader_setup,
+					.inputs = { ssao_data_buffer_desc, ssao_noise_image_desc, main_position_image_desc, main_normal_image_desc, ssao_staging_image_desc },
+					.outputs = { ssao_staging_image_desc }
+				},
+				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
+				{
+					const BindingTableHandle ssao_noise_image_handle = frame_data.pass_bindless_resources.handles[0];
+					const BindingTableHandle position_image_handle = frame_data.pass_bindless_resources.handles[1];
+					const BindingTableHandle normal_image_handle = frame_data.pass_bindless_resources.handles[2];
+					const BindingTableHandle ssao_image_handle = frame_data.pass_bindless_resources.handles[4];
+
+					SSAOData ssao_data 
+					{
+						.ssao_noise_texture = (0x0000ffff & ssao_noise_image_handle),
+						.position_texture = (0x0000ffff & position_image_handle),
+						.normal_texture = (0x0000ffff & normal_image_handle),
+						.out_ssao_texture = (0x0000ffff & ssao_image_handle),
+						.noise_scale = glm::vec2(image_extent.x * 0.25f, image_extent.y * 0.25f),
+						.resolution = image_extent,
+						.radius = 0.8f,
+						.bias = 0.03f
+					};
+
+					PushConstantPipelineData pass_data = PushConstantPipelineData::create(&ssao_data, PipelineShaderStageType::Compute);
+
+					gfx_context->push_constants(command_buffer, frame_data.pass_pipeline_state, pass_data);
+					
+					gfx_context->dispatch_compute(
+						command_buffer,
+						static_cast<uint32_t>((image_extent.x + 15) / 16),
+						static_cast<uint32_t>((image_extent.y + 15) / 16),
+						1
+					);
+				}
+			);
+
+			render_graph.add_pass(
+				gfx_context,
+				"ssao_blur_pass",
+				RenderPassFlags::Compute,
+				{
+					.shader_setup = ssao_blur_shader_setup,
+					.inputs = { ssao_staging_image_desc, ssao_image_desc },
+					.outputs = { ssao_image_desc }
+				},
+				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
+				{
+					const BindingTableHandle ssao_staging_image_handle = frame_data.pass_bindless_resources.handles[0];
+					const BindingTableHandle ssao_image_handle = frame_data.pass_bindless_resources.handles[3];
+
+					SSAOBlurData ssao_data
+					{
+						.ssao_staging_texture = (0x0000ffff & ssao_staging_image_handle),
+						.out_ssao_texture = (0x0000ffff & ssao_image_handle),
+						.resolution = image_extent
+					};
+
+					PushConstantPipelineData pass_data = PushConstantPipelineData::create(&ssao_data, PipelineShaderStageType::Compute);
+
+					gfx_context->push_constants(command_buffer, frame_data.pass_pipeline_state, pass_data);
+
+					gfx_context->dispatch_compute(
+						command_buffer,
+						static_cast<uint32_t>((image_extent.x + 15) / 16),
+						static_cast<uint32_t>((image_extent.y + 15) / 16),
+						1
+					);
+				}
+			);
+		}
+
 		// Lighting pass
 		RGResourceHandle scene_color_desc;
 		{
@@ -527,7 +666,8 @@ namespace Sunset
 					.shader_setup = shader_setup,
 					.inputs = { entity_data_buffer_desc, light_data_buffer_desc,
 								compacted_object_instance_buffer_desc, main_albedo_image_desc,
-								main_smra_image_desc, main_cc_image_desc, main_normal_image_desc, main_position_image_desc, sky_image_desc },
+								main_smra_image_desc, main_cc_image_desc, main_normal_image_desc,
+								main_position_image_desc, sky_image_desc, ssao_image_desc },
 					.outputs = { scene_color_desc }
 				},
 				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
@@ -538,6 +678,7 @@ namespace Sunset
 					const BindingTableHandle normal_image_handle = frame_data.pass_bindless_resources.handles[3];
 					const BindingTableHandle position_image_handle = frame_data.pass_bindless_resources.handles[4];
 					const BindingTableHandle sky_image_handle = frame_data.pass_bindless_resources.handles[5];
+					const BindingTableHandle ssao_image_handle = frame_data.pass_bindless_resources.handles[6];
 
 					LightingPassData lighting_data
 					{
@@ -546,7 +687,8 @@ namespace Sunset
 						.cc_texture = 0x0000ffff & cc_image_handle,
 						.normal_texure = 0x0000ffff & normal_image_handle,
 						.position_texure = 0x0000ffff & position_image_handle,
-						.sky_texure = 0x0000ffff & sky_image_handle
+						.sky_texure = 0x0000ffff & sky_image_handle,
+						.ssao_texture = 0x0000ffff & ssao_image_handle
 					};
 
 					PushConstantPipelineData pass_data = PushConstantPipelineData::create(&lighting_data, PipelineShaderStageType::Fragment);
@@ -620,7 +762,8 @@ namespace Sunset
 
 		// Bloom pass
 		const uint32_t num_iterations = cvar_num_bloom_pass_iterations.get();
-		if (num_iterations > 0) {
+		if (num_iterations > 0)
+		{
 			RGResourceHandle bloom_blur_image_desc;
 
 			RGShaderDataSetup bloom_downsample_shader_setup
@@ -912,5 +1055,154 @@ namespace Sunset
 		//);
 #endif 
 		render_graph.submit(gfx_context, swapchain, b_offline);
+	}
+
+	void DeferredShadingPersistentStorage::initialize()
+	{
+		if (!b_initialized)
+		{
+			GraphicsContext* const gfx_context = Renderer::get()->context();
+			const glm::vec2 image_extent = gfx_context->get_surface_resolution();
+
+			{
+				uint32_t image_width_npot = Maths::npot(image_extent.x);
+				uint32_t image_height_npot = Maths::npot(image_extent.y);
+				uint32_t mip_levels = glm::max(std::log2(image_width_npot), std::log2(image_height_npot));
+
+				Renderer::get()->register_persistent_image(
+					"hi_z",
+					ImageFactory::create(
+						gfx_context,
+						{
+							.name = "hi_z",
+							.format = Format::Float32,
+							.extent = glm::vec3(image_width_npot, image_height_npot, 1.0f),
+							.flags = ImageFlags::Color | ImageFlags::Sampled | ImageFlags::Storage | ImageFlags::TransferDst | ImageFlags::TransferSrc,
+							.usage_type = MemoryUsageType::OnlyGPU,
+							.sampler_address_mode = SamplerAddressMode::EdgeClamp,
+							.image_filter = ImageFilter::Linear,
+							.mip_count = mip_levels,
+							.attachment_clear = true,
+							.attachment_stencil_clear = true,
+							.does_min_reduction = true
+						}
+					)
+				);
+			}
+
+			{
+				Renderer::get()->register_persistent_image(
+					"temporal_color_history",
+					ImageFactory::create(
+						gfx_context,
+						{
+							.name = "temporal_color_history",
+							.format = Format::Float4x32,
+							.extent = glm::vec3(image_extent.x, image_extent.y, 1.0f),
+							.flags = ImageFlags::Color | ImageFlags::Sampled | ImageFlags::Storage,
+							.usage_type = MemoryUsageType::OnlyGPU,
+							.sampler_address_mode = SamplerAddressMode::EdgeClamp,
+							.image_filter = ImageFilter::Linear,
+							.attachment_clear = true
+						}
+						)
+				);
+			}
+
+			{
+				Renderer::get()->register_persistent_image(
+					"ssao_noise",
+					ImageFactory::create(
+						gfx_context,
+						{
+							.name = "ssao_noise",
+							.format = Format::Float4x32,
+							.extent = glm::vec3(4.0f, 4.0f, 1.0f),
+							.flags = ImageFlags::Color | ImageFlags::Sampled | ImageFlags::TransferDst,
+							.usage_type = MemoryUsageType::OnlyGPU,
+							.sampler_address_mode = SamplerAddressMode::Repeat,
+							.image_filter = ImageFilter::Nearest,
+							.attachment_clear = true
+						}
+					)
+				);
+
+				BufferID staging_buffer_id = BufferFactory::create(
+					gfx_context,
+					{
+						.name = "ssao_noise_staging",
+						.buffer_size = 16 * sizeof(glm::vec4),
+						.type = BufferType::TransferSource,
+						.memory_usage = MemoryUsageType::CPUToGPU 
+					},
+					false
+				);
+
+				std::uniform_real_distribution<float> random_floats(0.0f, 1.0f);
+				std::default_random_engine rng;
+
+				glm::vec4 ssao_noise_data[16];
+				for (uint32_t i = 0; i < 16; ++i)
+				{
+					ssao_noise_data[i] = glm::vec4(random_floats(rng) * 2.0f - 1.0f, random_floats(rng) * 2.0f - 1.0f, 0.0f, 0.0f);
+				}
+
+				Buffer* const ssao_noise_staging_buffer = CACHE_FETCH(Buffer, staging_buffer_id);
+				ssao_noise_staging_buffer->copy_from(
+					gfx_context,
+					&ssao_noise_data,
+					16 * sizeof(glm::vec4)
+				);
+
+				gfx_context->get_command_queue(DeviceQueueType::Graphics)->submit_immediate(Renderer::get()->context(), [ssao_noise_staging_buffer, gfx_context](void* command_buffer)
+				{
+					for (uint32_t i = 0; i < MAX_BUFFERED_FRAMES; ++i)
+					{
+						const ImageID ssao_noise_image = Renderer::get()->get_persistent_image("ssao_noise", i);
+						CACHE_FETCH(Image, ssao_noise_image)->copy_from_buffer(gfx_context, command_buffer, ssao_noise_staging_buffer);
+					}
+				});
+
+				CACHE_DELETE(Buffer, staging_buffer_id, gfx_context);
+			}
+
+			{
+				std::uniform_real_distribution<float> random_floats(0.0f, 1.0f);
+				std::default_random_engine rng;
+				SSAOKernelData ssao_data;
+
+				for (uint32_t i = 0; i < SSAOKernelSize; ++i)
+				{
+					ssao_data.kernel[i] = glm::vec3(random_floats(rng) * 2.0f - 1.0f, random_floats(rng) * 2.0f - 1.0f, random_floats(rng));
+					ssao_data.kernel[i] = glm::normalize(ssao_data.kernel[i]);
+					ssao_data.kernel[i] *= random_floats(rng);
+
+					float scale = static_cast<float>(i) / static_cast<float>(SSAOKernelSize);
+					scale = 0.1f + (scale * scale) * (1.0f - 0.1f);
+					ssao_data.kernel[i] *= scale;
+				}
+
+				for (int i = 0; i < MAX_BUFFERED_FRAMES; ++i)
+				{
+					ssao_data_buffer[i] = BufferFactory::create(
+						gfx_context,
+						{
+							.name = "ssao_data",
+							.buffer_size = sizeof(SSAOKernelData),
+							.type = BufferType::StorageBuffer
+						}
+					);
+
+					Buffer* const ssao_buffer = CACHE_FETCH(Buffer, ssao_data_buffer[i]);
+					ssao_buffer->copy_from(
+						gfx_context,
+						&ssao_data,
+						sizeof(SSAOKernelData)
+					);
+				}
+			}
+
+			b_initialized = true;
+		}
 	}
 }
