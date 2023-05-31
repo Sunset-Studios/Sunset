@@ -16,6 +16,8 @@ layout (std140, set = 0, binding = 0) uniform CameraBuffer
 	vec4 frustum_planes[6];
 	vec4 position;
 	vec4 jitter;
+    float fov;
+    float padding[3];
 } camera_data;
 
 layout (std140, set = 0, binding = 1) uniform SceneLightingData

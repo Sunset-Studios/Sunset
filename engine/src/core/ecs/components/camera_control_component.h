@@ -19,6 +19,8 @@ namespace Sunset
 		glm::vec4 frustum_planes[6];
 		glm::vec4 position;
 		glm::vec4 jitter{ 0.0f, 0.0f, 0.0f, 0.0f };
+		float fov;
+		float padding[3];
 	};
 
 	struct CameraTransformData

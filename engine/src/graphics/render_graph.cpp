@@ -565,15 +565,18 @@ namespace Sunset
 
 		const auto setup_resource = [this, gfx_context, swapchain, pass, b_is_graphics_pass](RGResourceHandle resource, uint32_t resource_params_index, bool b_is_input_resource)
 		{
-			setup_physical_resource(gfx_context, swapchain, pass, resource, b_is_graphics_pass, b_is_input_resource);
-			if (b_is_graphics_pass)
+			if (auto it = current_registry->resource_metadata.find(resource); it != current_registry->resource_metadata.end())
 			{
-				tie_resource_to_pass_config_attachments(gfx_context, resource, pass, resource_params_index, b_is_input_resource);
-			}
-			if (b_is_input_resource)
-			{
-				setup_pass_input_resource_bindless_type(gfx_context, resource, pass);
-			}
+				setup_physical_resource(gfx_context, swapchain, pass, resource, b_is_graphics_pass, b_is_input_resource);
+				if (b_is_graphics_pass)
+				{
+					tie_resource_to_pass_config_attachments(gfx_context, resource, pass, resource_params_index, b_is_input_resource);
+				}
+				if (b_is_input_resource)
+				{
+					setup_pass_input_resource_bindless_type(gfx_context, resource, pass);
+				}
+			}	
 		};
 
 		// Setup resource used by the render pass. If they are output/input attachments we will handle those here as well but cache those off

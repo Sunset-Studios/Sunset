@@ -78,7 +78,6 @@ namespace Sunset
 		int32_t position_texure;
 		int32_t sky_texure;
 		int32_t ssao_texture;
-		int32_t padding;
 	};
 
 	struct TAAData
@@ -133,10 +132,32 @@ namespace Sunset
 		float padding;
 	};
 
-	struct SSAOBlurData
+	struct SSRData
 	{
-		int32_t ssao_staging_texture;
-		int32_t out_ssao_texture;
+		int32_t scene_color_texture;
+		int32_t position_texture;
+		int32_t normal_texture;
+		int32_t smra_texture;
+		int32_t out_ssr_texture;
+		int32_t ray_hit_steps;
+		float max_ray_distance;
+		float padding;
+		glm::vec2 resolution;
+	};
+
+	struct SSRResolveData
+	{
+		int32_t smra_texture;
+		int32_t ssr_texture;
+		int32_t ssr_blurred_texture;
+		int32_t scene_color_texture;
+		float ssr_strength;
+	};
+
+	struct BoxBlurData
+	{
+		int32_t staging_texture;
+		int32_t out_texture;
 		glm::vec2 resolution;
 	};
 }

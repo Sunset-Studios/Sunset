@@ -1,0 +1,204 @@
+#version 460
+
+#include "common/common.inc"
+
+layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+layout (push_constant) uniform constants
+{
+	int scene_color_texture;
+	int position_texture;
+	int normal_texture;
+	int smra_texture;
+	int out_ssr_texture;
+	int ray_hit_steps;
+	float max_ray_distance;
+	float padding;
+	vec2 resolution;
+} ssr_constants;
+
+void main()
+{
+	// Ignore any work items that are outside of the screen resolution.
+	if (gl_GlobalInvocationID.x >= ssr_constants.resolution.x || gl_GlobalInvocationID.y >= ssr_constants.resolution.y)
+	{
+		return;
+	}
+
+	// Calculate the inverse of the screen resolution.
+	const vec2 inv_resolution = 1.0 / ssr_constants.resolution;
+
+	// Get the current texel position and texture coordinates.
+	ivec2 texel_pos = ivec2(gl_GlobalInvocationID.xy);
+	vec2 tex_coords = vec2(gl_GlobalInvocationID.xy) * inv_resolution;	
+
+	// Fetch the position from the position texture and transform it from world to view space.
+	vec4 tex_position = texture(textures_2D[nonuniformEXT(ssr_constants.position_texture)], tex_coords);
+	vec4 position = camera_data.view * vec4(tex_position.xyz, 1.0);
+	float reflection_instance = tex_position.w;
+	// Fetch the surface roughness from the smra texture.
+	float roughness = texture(textures_2D[nonuniformEXT(ssr_constants.smra_texture)], tex_coords).b;
+
+	// If the position is at infinity (w component is 0) or the surface is fully rough (roughness is 1),
+	// we don't compute reflections, so write out black to the SSR output texture and return.
+	if (position.w <= 0 || roughness == 1.0)
+	{
+		imageStore(storage_2D[nonuniformEXT(ssr_constants.out_ssr_texture)], texel_pos, vec4(0.0, 0.0, 0.0, 0.0));
+		return;
+	}
+
+	// Calculate the normalized position and normal, and the reflection vector off the surface.
+	mat4 inv_transpose_view = inverse(transpose(camera_data.view)); 
+	vec3 unit_position = normalize(position.xyz);
+	vec3 normal = normalize((inv_transpose_view * texture(textures_2D[nonuniformEXT(ssr_constants.normal_texture)], tex_coords)).xyz);
+	vec3 ref = normalize(reflect(unit_position, normal));
+
+	// Start and end points of the ray in view space.
+	vec4 view_start = vec4(position.xyz, 1.0);
+	vec4 view_end = vec4(position.xyz + (ref * ssr_constants.max_ray_distance), 1.0);
+	vec4 inv_view_start = 1.0 / view_start;
+	vec4 inv_view_end = 1.0 / view_end;
+
+	// Adjust the projection matrix to remove any jitter, which is used for temporal anti-aliasing.
+	mat4 unjittered_proj = camera_data.proj;
+	unjittered_proj[2][0] -= camera_data.jitter.z;
+	unjittered_proj[2][1] -= camera_data.jitter.w;
+
+	// Transform the ray start and end points to NDC and screen space.
+	vec4 frag_start = unjittered_proj * view_start;
+	frag_start.xyz /= frag_start.w;
+	frag_start.xy = (frag_start.xy * 0.5 + 0.5) * ssr_constants.resolution;
+
+	vec4 frag_end = unjittered_proj * view_end;
+	frag_end.xyz /= frag_end.w;
+	frag_end.xy = (frag_end.xy * 0.5 + 0.5) * ssr_constants.resolution;
+
+	// The current position on the ray in screen space and texture coordinates.
+	vec2 current_frag = frag_start.xy;
+	vec2 uv = current_frag * inv_resolution;
+
+	// Calculate the ray direction in screen space.
+	float delta_x = frag_end.x - frag_start.x;
+	float delta_y = frag_end.y - frag_start.y;
+	// If the ray is more horizontal than vertical, we'll march in the x direction, otherwise in the y direction.
+	float use_x = abs(delta_x) >= abs(delta_y) ? 1.0 : 0.0;
+	vec2 increment = vec2(delta_x, delta_y) / max(float(ssr_constants.ray_hit_steps), 0.0001);
+
+	// Variables for ray marching and intersection detection.
+	float last_ray_search = 0;
+	float ray_search = 0;
+
+	int coarse_hit = 0;
+	int refined_hit = 0;
+
+	float depth_thickness_factor = length(vec2(delta_x, delta_y)) * tan(camera_data.fov * 0.5) / (uv.x * uv.y);
+	float view_distance = view_start.z;
+	float depth = depth_thickness_factor;
+
+	vec4 position_to = position;
+	float hit_instance = reflection_instance; 
+
+	// Coarse ray marching: march the ray in screen space and check if it intersects the depth buffer.
+	for (int i = 0; i < ssr_constants.ray_hit_steps; ++i)
+	{
+		// Advance the current position on the ray.
+		current_frag += increment;
+		uv = current_frag * inv_resolution;
+
+		if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0)
+		{
+			last_ray_search = ray_search;
+			continue;
+		}
+
+		vec4 tex_position = texture(textures_2D[nonuniformEXT(ssr_constants.position_texture)], uv);
+		position_to = camera_data.view * vec4(tex_position.xyz, 1.0);
+
+		// Interpolate the ray search factor based on whether we're marching in x or y direction.
+		ray_search = mix((current_frag.y - frag_start.y) / delta_y, (current_frag.x - frag_start.x) / delta_x, use_x);
+		ray_search = clamp(ray_search, 0.0, 1.0);
+
+		// Interpolate the view distance along the ray based on the ray search factor.
+		view_distance = 1.0 / mix(inv_view_start.z, inv_view_end.z, ray_search);
+		// Calculate the depth difference between the current position and the ray position.
+		depth = position_to.z - view_distance;
+
+		// If the depth difference is positive and less than the thickness, we've found an intersection.
+		if (length(tex_position.xyz) > 0.0 && depth > 0 && depth < depth_thickness_factor)
+		{
+			coarse_hit = 1;
+			hit_instance = tex_position.w;
+			break;
+		}
+
+		last_ray_search = ray_search;
+	}
+
+	// If we've found an intersection, we'll do a refined search with twice the amount of steps.
+	ray_search = last_ray_search + ((ray_search - last_ray_search) * 0.5);
+
+	// Refined ray marching: repeat the same process but with smaller step size and binary searching for a more accurate depth.
+	for (int i = 0; i < ssr_constants.ray_hit_steps * coarse_hit; ++i)
+	{
+		current_frag = mix(frag_start.xy, frag_end.xy, ray_search);
+		uv = current_frag * inv_resolution;
+
+		if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0)
+		{
+			float temp_ray_search = ray_search;
+			ray_search += (ray_search - last_ray_search) * 0.5;
+			last_ray_search = temp_ray_search;
+			continue;
+		}
+
+		vec4 tex_position = texture(textures_2D[nonuniformEXT(ssr_constants.position_texture)], uv);
+		position_to = camera_data.view * vec4(tex_position.xyz, 1.0);
+
+		view_distance = 1.0 / mix(inv_view_start.z, inv_view_end.z, ray_search);
+		depth = position_to.z - view_distance;
+
+		if (length(tex_position.xyz) > 0.0 && depth > 0 && depth < depth_thickness_factor)
+		{
+			refined_hit = 1;
+			hit_instance = tex_position.w;
+			ray_search = last_ray_search + ((ray_search - last_ray_search) * 0.5);
+		}
+		else
+		{
+			float temp_ray_search = ray_search;
+			ray_search += (ray_search - last_ray_search) * 0.5;
+			last_ray_search = temp_ray_search;
+		}
+	}
+
+	// Calculate several fading factors that will be used to fade out the reflection based on several conditions.
+	const float camera_facing_fade = (1.0 - max(dot(-unit_position, ref), 0.0));
+	const float intersection_distance_fade = (1.0 - clamp(depth / (depth_thickness_factor), 0.0, 1.0));
+	const float max_distance_fade = (1.0 - clamp(length(position_to - position) / ssr_constants.max_ray_distance, 0.0, 1.0));
+	const float out_of_bounds_uv = (uv.x < 0 || uv.x > 1 ? 0 : 1) * (uv.y < 0 || uv.y > 1 ? 0 : 1);
+	const float instance_self_reflection = reflection_instance == hit_instance ? 0.0 : 1.0;
+
+	// Check if the reflection vector faces away from the hit normal
+	vec3 hit_normal = normalize((inv_transpose_view * texture(textures_2D[nonuniformEXT(ssr_constants.normal_texture)], uv)).xyz);
+	float reflection_hit_normal_facing_fade = max(-dot(hit_normal, ref), 0.0);
+
+	// The visibility of the reflection is the product of the refined hit flag, the w component of the hit position, and all fading factors.
+	float visibility =
+		refined_hit
+		* camera_facing_fade
+		* position_to.w
+		* intersection_distance_fade
+		* max_distance_fade
+		* out_of_bounds_uv
+		* instance_self_reflection
+		* reflection_hit_normal_facing_fade;
+	visibility = clamp(visibility, 0.0, 1.0);
+
+	// Fetch the scene color from the scene color texture.
+	vec4 scene_color = texture(textures_2D[nonuniformEXT(ssr_constants.scene_color_texture)], uv);
+	// The final color is a blend between black and the scene color, weighted by the visibility.
+	vec4 color = vec4(mix(vec3(0.0), scene_color.rgb, visibility), 1.0);
+
+	// Write the final color to the SSR output texture.
+	imageStore(storage_2D[nonuniformEXT(ssr_constants.out_ssr_texture)], texel_pos, color);
+}

@@ -102,6 +102,6 @@ void main()
 	out_smra.a = ao;
 	out_cc.r = material.uniform_clearcoat;
 	out_cc.g = material.uniform_clearcoat_roughness;
-	out_normal = vec4(normal, in_instance_index);
-	out_position = vec4(in_position, 1.0f);
+	out_normal = vec4(normal, 1.0);
+	out_position = vec4(in_position, in_instance_index);
 }

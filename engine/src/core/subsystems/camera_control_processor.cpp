@@ -37,6 +37,8 @@ namespace Sunset
 			{
 				camera_control_comp->data.gpu_data.prev_view_projection_matrix = camera_control_comp->data.gpu_data.view_projection_matrix;
 			}
+
+			camera_control_comp->data.gpu_data.fov = glm::radians(camera_control_comp->data.fov);
 			
 			camera_control_comp->data.gpu_data.view_matrix = glm::lookAt(
 				camera_control_comp->data.position,

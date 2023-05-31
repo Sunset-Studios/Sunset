@@ -1,0 +1,34 @@
+#version 460
+
+#include "common/common.inc"
+
+layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+layout (push_constant) uniform constants
+{
+	int staging_texture;
+	int out_texture;
+	vec2 resolution;
+} box_blur_constants;
+
+void main()
+{
+	ivec2 texel_pos = ivec2(gl_GlobalInvocationID.xy);
+
+	const vec2 screen_uv = nearest_uv(texel_pos, box_blur_constants.resolution);
+
+	const vec2 texel_size = 1.0 / vec2(textureSize(textures_2D[nonuniformEXT(box_blur_constants.staging_texture)], 0));
+
+	vec4 result = vec4(0.0);
+	for (int x = -2; x < 2; ++x)
+	{
+		for (int y = -2; y < 2; ++y)
+		{
+			vec2 offset = vec2(float(x), float(y)) * texel_size;
+			result += texture(textures_2D[nonuniformEXT(box_blur_constants.staging_texture)], screen_uv + offset);
+		}
+	}
+	result /= 25.0;
+
+	imageStore(storage_2D[nonuniformEXT(box_blur_constants.out_texture)], texel_pos, result);
+}
