@@ -82,7 +82,7 @@ namespace Sunset
 				set_light_color(light_comp, glm::vec3(1.0f, 0.2f, 0.2f));
 				set_light_type(light_comp, LightType::Point);
 				set_light_radius(light_comp, 15.0f);
-				set_light_intensity(light_comp, 10000.0f);
+				set_light_intensity(light_comp, 1000.0f);
 				set_light_entity_index(light_comp, get_entity_index(light_entity));
 			}
 
@@ -99,7 +99,7 @@ namespace Sunset
 				set_light_color(light_comp, glm::vec3(1.0f, 1.0f, 1.0f));
 				set_light_type(light_comp, LightType::Point);
 				set_light_radius(light_comp, 35.0f);
-				set_light_intensity(light_comp, 2000.0f);
+				set_light_intensity(light_comp, 200.0f);
 				set_light_entity_index(light_comp, get_entity_index(light_entity));
 			}
 
@@ -119,19 +119,19 @@ namespace Sunset
 					{
 						.textures =
 						{
-							"../../assets/tile_albedo.sun",
-							"../../assets/tile_normal.sun",
-							"../../assets/tile_roughness.sun",
-							"../../assets/tile_metallic.sun",
-							"../../assets/tile_ao.sun"
+							"../../assets/panels_albedo.sun",
+							"../../assets/panels_normal.sun",
+							"../../assets/panels_roughness.sun",
+							"../../assets/panels_metallic.sun",
+							"../../assets/panels_ao.sun"
 						}
 					}
 				);
-				material_set_texture_tiling(Renderer::get()->context(), mesh_material, 0, 2.0f);
-				material_set_texture_tiling(Renderer::get()->context(), mesh_material, 1, 2.0f);
-				material_set_texture_tiling(Renderer::get()->context(), mesh_material, 2, 2.0f);
-				material_set_texture_tiling(Renderer::get()->context(), mesh_material, 3, 2.0f);
-				material_set_texture_tiling(Renderer::get()->context(), mesh_material, 4, 2.0f);
+				material_set_texture_tiling(Renderer::get()->context(), mesh_material, 0, 5.0f);
+				material_set_texture_tiling(Renderer::get()->context(), mesh_material, 1, 5.0f);
+				material_set_texture_tiling(Renderer::get()->context(), mesh_material, 2, 5.0f);
+				material_set_texture_tiling(Renderer::get()->context(), mesh_material, 3, 5.0f);
+				material_set_texture_tiling(Renderer::get()->context(), mesh_material, 4, 5.0f);
 
 				set_mesh(mesh_comp, MeshFactory::create_quad(Renderer::get()->context()));
 				set_material(mesh_comp, mesh_material);
@@ -191,6 +191,36 @@ namespace Sunset
 				);
 
 				set_mesh(mesh_comp, MeshFactory::create_cube(Renderer::get()->context()));
+				set_material(mesh_comp, mesh_material);
+			}
+
+			// Add test mesh 3
+			{
+				EntityID mesh_ent = scene->make_entity();
+
+				TransformComponent* const transform_comp = scene->assign_component<TransformComponent>(mesh_ent);
+
+				set_position(transform_comp, glm::vec3(15.0f, 5.5f, 15.0f));
+				set_rotation(transform_comp, glm::vec3(0.0f, 90.0f, 0.0f));
+				set_scale(transform_comp, glm::vec3(5.0f));
+
+				MeshComponent* const mesh_comp = scene->assign_component<MeshComponent>(mesh_ent);
+
+				MaterialID mesh_material = MaterialFactory::create(
+					Renderer::get()->context(),
+					{
+						.textures =
+						{
+							"../../assets/metal-albedo.sun",
+							"../../assets/metal-normal.sun",
+							"../../assets/metal-roughness.sun",
+							"../../assets/metal-metallic.sun",
+							"../../assets/metal-ao.sun"
+						}
+					}
+				);
+
+				set_mesh(mesh_comp, MeshFactory::load(Renderer::get()->context(), "../../assets/drone.sun"));
 				set_material(mesh_comp, mesh_material);
 			}
 

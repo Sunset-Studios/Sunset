@@ -172,7 +172,7 @@ void main()
 	}
 
 	// Calculate several fading factors that will be used to fade out the reflection based on several conditions.
-	const float camera_facing_fade = (1.0 - max(dot(-unit_position, ref), 0.0));
+	const float camera_facing_fade = (1.0 - max(dot(unit_position, ref), 0.0));
 	const float intersection_distance_fade = (1.0 - clamp(depth / (depth_thickness_factor), 0.0, 1.0));
 	const float max_distance_fade = (1.0 - clamp(length(position_to - position) / ssr_constants.max_ray_distance, 0.0, 1.0));
 	const float out_of_bounds_uv = (uv.x < 0 || uv.x > 1 ? 0 : 1) * (uv.y < 0 || uv.y > 1 ? 0 : 1);

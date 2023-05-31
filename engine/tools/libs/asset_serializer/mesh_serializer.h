@@ -73,6 +73,10 @@ namespace Sunset
 		{
 			return VertexFormat::P32N8C8U16;
 		}
+		else if (strcmp(format_str, "PNCUTB32") == 0)
+		{
+			return VertexFormat::PNCUTB32;
+		}
 		else
 		{
 			return VertexFormat::Undefined;
@@ -87,6 +91,8 @@ namespace Sunset
 			return "PNCU32";
 		case VertexFormat::P32N8C8U16:
 			return "P32N8C8U16";
+		case VertexFormat::PNCUTB32:
+			return "PNCUTB32";
 		default:
 			return "Undefined";
 		}

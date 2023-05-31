@@ -1174,7 +1174,7 @@ namespace Sunset
 						.ssr_texture = (0x0000ffff & frame_data.pass_bindless_resources.handles[1]),
 						.ssr_blurred_texture = (0x0000ffff & frame_data.pass_bindless_resources.handles[2]),
 						.scene_color_texture = (0x0000ffff & frame_data.pass_bindless_resources.handles[3]),
-						.ssr_strength = 2.0f
+						.ssr_strength = 3.0f
 					};
 
 					PushConstantPipelineData pass_data = PushConstantPipelineData::create(&fullscreen_data, PipelineShaderStageType::Fragment);

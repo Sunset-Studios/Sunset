@@ -25,6 +25,7 @@ void main()
 		: texture(textures_2D[nonuniformEXT(ssr_resolve_constants.smra_texure)], in_tex_coord);
 	const float reflectance = tex_smra.r * 0.0009765625 /* 1.0f / 1024 */;
 	const float roughness = tex_smra.b;
+	const float metallic = tex_smra.g;
 
 	vec3 tex_ssr = 
 		ssr_resolve_constants.ssr_texture == -1
@@ -41,5 +42,5 @@ void main()
 		? vec4(0.0, 0.0, 0.0, 0.0)
 		: texture(textures_2D[nonuniformEXT(ssr_resolve_constants.scene_color_texture)], in_tex_coord);
 
-	out_frag_color = vec4(tex_scene_color.rgb + (ssr_color.rgb * ssr_resolve_constants.ssr_strength * tex_scene_color.rgb * reflectance), 1.0f);
+	out_frag_color = vec4(tex_scene_color.rgb + (ssr_color.rgb * ssr_resolve_constants.ssr_strength * reflectance), 1.0f);
 }
