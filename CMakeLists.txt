@@ -19,6 +19,7 @@ endfunction()
 include(FetchContent)
 
 set(BENCHMARK_ENABLE_TESTING off)
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 
 # Fetch GoogleTest and GoogleBenchmark
 FetchContent_Declare(googletest
@@ -155,5 +156,18 @@ if(NOT shaderc_POPULATED)
   set_target_third_party(shaderc-pkg-config)
   set_target_third_party(testdata)
 endif()
+
+# Fetch Jolt
+FetchContent_Declare(
+    JoltPhysics
+    GIT_REPOSITORY https://github.com/jrouwe/JoltPhysics.git
+    GIT_TAG master 
+    SOURCE_SUBDIR "Build"
+)
+set(BUILD_SHARED_LIBS ON CACHE BOOL "" FORCE)
+set(USE_STATIC_MSVC_RUNTIME_LIBRARY OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(JoltPhysics)
+
+set_target_third_party(Jolt)
 
 add_subdirectory("${ENGINE_DIR}")

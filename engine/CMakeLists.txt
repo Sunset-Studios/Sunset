@@ -25,9 +25,9 @@ set_property(TARGET Sunset PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE
 
 target_compile_definitions(Sunset PRIVATE PROJECT_PATH="${CMAKE_SOURCE_DIR}")
 
-target_link_libraries(Sunset vkbootstrap vma glm imgui lz4 json spirv_reflect Vulkan::Vulkan sdl2 AssetSerializer Tracy::TracyClient)
+target_link_libraries(Sunset vkbootstrap vma glm imgui lz4 json spirv_reflect Vulkan::Vulkan sdl2 AssetSerializer Tracy::TracyClient Jolt atomic_queue)
 
-target_include_directories(Sunset PUBLIC ${INCLUDE_DIRS})
+target_include_directories(Sunset PUBLIC ${INCLUDE_DIRS} ${JoltPhysics_SOURCE_DIR}/../Jolt)
 
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/examples")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/tools/apps")

@@ -10,6 +10,10 @@
 #define USE_SDL_WINDOWING 1
 #endif
 
+#ifndef USE_JOLT_PHYSICS
+#define USE_JOLT_PHYSICS 1
+#endif
+
 #if USE_VULKAN_GRAPHICS
 #include <graphics/api/vulkan/vk_context.h>
 #include <graphics/api/vulkan/vk_swapchain.h>
@@ -31,4 +35,9 @@
 
 #if defined USE_VULKAN_GRAPHICS && defined USE_SDL_WINDOWING
 #include <utility/gui/api/imgui_gui_core.h>
+#endif
+
+#if USE_JOLT_PHYSICS
+#include <physics/api/jolt/jolt_context.h>
+#include <physics/api/jolt/jolt_body.h>
 #endif

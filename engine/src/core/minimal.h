@@ -3,6 +3,7 @@
 #define ENGINE_NAME "Sunset"
 
 #include <glm/glm.hpp>
+#include <glm/gtx/quaternion.hpp>
 
 #include <memory>
 #include <vector>

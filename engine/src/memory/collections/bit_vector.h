@@ -33,6 +33,12 @@ namespace Sunset
 			bits[word_index] &= ~(size_t(1) << bit_index);
 		}
 
+		void reset()
+		{
+			bits.clear();
+			bits.resize(bits.capacity(), 0);
+		}
+
 	private:
 		std::vector<size_t> bits;
 	};

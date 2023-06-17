@@ -5,6 +5,7 @@
 #include <core/subsystems/camera_input_controller.h>
 #include <core/subsystems/scene_lighting_processor.h>
 #include <core/subsystems/light_processor.h>
+#include <core/subsystems/physics_scene_processor.h>
 #include <core/ecs/components/camera_control_component.h>
 
 #include <window/window.h>
@@ -46,7 +47,17 @@ namespace Sunset
 	{
 		for (auto it = subsystems.begin(); it != subsystems.end(); ++it)
 		{
+			(*it)->pre_update(this);
+		}
+
+		for (auto it = subsystems.begin(); it != subsystems.end(); ++it)
+		{
 			(*it)->update(this, delta_time);
+		}
+
+		for (auto it = subsystems.begin(); it != subsystems.end(); ++it)
+		{
+			(*it)->post_update(this);
 		}
 	}
 
@@ -99,6 +110,7 @@ namespace Sunset
 		add_subsystem<StaticMeshProcessor>();
 		add_subsystem<LightProcessor>();
 		add_subsystem<SceneLightingProcessor>();
+		add_subsystem<PhysicsSceneProcessor>();
 	}
 
 	void Scene::setup_renderer_data()

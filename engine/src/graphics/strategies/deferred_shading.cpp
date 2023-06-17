@@ -24,6 +24,9 @@ namespace Sunset
 	AutoCVar_Float cvar_ssao_radius("ren.ssao.radius", "The contribution radius of SSAO samples", 1.0f);
 
 	AutoCVar_Bool cvar_ssr_enabled("ren.ssr.enable", "Whether or not to do screen space reflections", true);
+	AutoCVar_Int cvar_ssr_max_ray_hit_steps("ren.ssr.max_ray_hit_steps", "Maximum number of shader loop steps to use when checking for depth hits during SSR pass", 24);
+	AutoCVar_Float cvar_ssr_max_ray_distance("ren.ssr.max_ray_distance", "Maximum distance in world units to step the reflection ray during SSR pass", 16.0f);
+	AutoCVar_Float cvar_ssr_strength("ren.ssr.strength", "Multiplier to ramp up final SSR color by", 3.0f);
 
 	AutoCVar_Int cvar_num_bloom_pass_iterations("ren.bloom.num_pass_iterations", "The number of bloom horizontal and vertical blur iterations. (0 to turn bloom off).", 6);
 	AutoCVar_Float cvar_bloom_intensity("ren.bloom.intensity", "The intensity of the applied final bloom", 0.2f);
@@ -1091,8 +1094,8 @@ namespace Sunset
 						.normal_texture = (0x0000ffff & normal_image_handle),
 						.smra_texture = (0x0000ffff & smra_image_handle),
 						.out_ssr_texture = (0x0000ffff & ssr_image_handle),
-						.ray_hit_steps = 24,
-						.max_ray_distance = 16.0f,
+						.ray_hit_steps = cvar_ssr_max_ray_hit_steps.get(),
+						.max_ray_distance = static_cast<float>(cvar_ssr_max_ray_distance.get()),
 						.resolution = image_extent,
 					};
 
@@ -1174,7 +1177,7 @@ namespace Sunset
 						.ssr_texture = (0x0000ffff & frame_data.pass_bindless_resources.handles[1]),
 						.ssr_blurred_texture = (0x0000ffff & frame_data.pass_bindless_resources.handles[2]),
 						.scene_color_texture = (0x0000ffff & frame_data.pass_bindless_resources.handles[3]),
-						.ssr_strength = 3.0f
+						.ssr_strength = static_cast<float>(cvar_ssr_strength.get())
 					};
 
 					PushConstantPipelineData pass_data = PushConstantPipelineData::create(&fullscreen_data, PipelineShaderStageType::Fragment);

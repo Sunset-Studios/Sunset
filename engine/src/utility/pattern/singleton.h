@@ -1,14 +1,17 @@
 #pragma once
 
+#include <utility>
+
 namespace Sunset
 {
 	template<class T>
 	class Singleton
 	{
 		public:
-			static T* get()
+			template<typename ...Args>
+			static T* get(Args&&... args)
 			{
-				static T t;
+				static T t(std::forward<Args>(args)...);
 				t.initialize();
 				return &t;
 			}

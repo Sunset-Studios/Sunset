@@ -12,6 +12,7 @@
 #include <core/ecs/components/mesh_component.h>
 #include <core/ecs/components/transform_component.h>
 #include <core/ecs/components/light_component.h>
+#include <core/ecs/components/body_component.h>
 
 #include <SDL.h>
 #include <SDL_vulkan.h>
@@ -29,6 +30,8 @@ namespace Sunset
 		Renderer::get()->setup(window);
 
 		InputProvider::get()->push_context(InputProvider::default_context());
+
+		Physics::get()->context()->set_global_gravity(glm::vec3(0.0f, -9.81f, 0.0f));
 
 #ifndef NDEBUG
 		{
@@ -135,6 +138,14 @@ namespace Sunset
 
 				set_mesh(mesh_comp, MeshFactory::create_quad(Renderer::get()->context()));
 				set_material(mesh_comp, mesh_material);
+
+				BodyComponent* const body_comp = scene->assign_component<BodyComponent>(mesh_ent);
+
+				BoxShapeDescription box_shape
+				{
+					.half_extent = glm::vec3(100.0f, 1.0f, 100.0f)
+				};
+				set_body_shape(body_comp, box_shape);
 			}
 
 			// Add test mesh 1
@@ -144,7 +155,7 @@ namespace Sunset
 
 				TransformComponent* const transform_comp = scene->assign_component<TransformComponent>(mesh_ent);
 
-				set_position(transform_comp, glm::vec3(0.0f, 8.5f, 0.0f));
+				set_position(transform_comp, glm::vec3(0.0f, 8.5f, -5.0f));
 				set_scale(transform_comp, glm::vec3(2.0f));
 
 				MeshComponent* const mesh_comp = scene->assign_component<MeshComponent>(mesh_ent);
@@ -165,6 +176,15 @@ namespace Sunset
 
 				set_mesh(mesh_comp, MeshFactory::create_sphere(Renderer::get()->context(), glm::ivec2(32.0f, 32.0f), 1.0f));
 				set_material(mesh_comp, mesh_material);
+
+				BodyComponent* const body_comp = scene->assign_component<BodyComponent>(mesh_ent);
+
+				SphereShapeDescription sphere_shape
+				{
+					.radius = 1.0	
+				};
+				set_body_shape(body_comp, sphere_shape);
+				set_body_type(body_comp, PhysicsBodyType::Dynamic);
 			}
 
 			// Add test mesh 2

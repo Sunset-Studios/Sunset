@@ -38,11 +38,27 @@ namespace Sunset
 		transform_comp->transform.b_dirty = true;
 	}
 
+	void recalculate_transform(TransformComponent* transform_comp)
+	{
+		glm::mat4 translation = glm::translate(glm::mat4(1.0f), transform_comp->transform.position);
+		glm::mat4 rotation = glm::mat4_cast(glm::normalize(transform_comp->transform.rotation));
+		glm::mat4 scale = glm::scale(glm::mat4(1.0f), transform_comp->transform.scale);
+		transform_comp->transform.local_matrix = translation * rotation * scale;
+	}
+
 	void set_scale(Scene* scene, EntityID entity, const glm::vec3& new_scale)
 	{
 		if (TransformComponent* const transform_comp = scene->get_component<TransformComponent>(entity))
 		{
 			set_scale(transform_comp, new_scale);
+		}
+	}
+
+	void recalculate_transform(Scene* scene, EntityID entity)
+	{
+		if (TransformComponent* const transform_comp = scene->get_component<TransformComponent>(entity))
+		{
+			recalculate_transform(transform_comp);
 		}
 	}
 }

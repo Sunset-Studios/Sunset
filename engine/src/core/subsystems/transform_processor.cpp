@@ -33,14 +33,16 @@ namespace Sunset
 
 			if (transform_comp->transform.b_dirty)
 			{
-				glm::mat4 translation = glm::translate(glm::mat4(1.0f), transform_comp->transform.position);
-				glm::mat4 rotation = glm::mat4_cast(glm::normalize(transform_comp->transform.rotation));
-				glm::mat4 scale = glm::scale(glm::mat4(1.0f), transform_comp->transform.scale);
-				transform_comp->transform.local_matrix = translation * rotation * scale;
+				recalculate_transform(transform_comp);
 				transform_comp->transform.b_dirty = false;
 
 				EntityGlobals::get()->entity_transform_dirty_states.set(get_entity_index(entity));
 			}
 		}
+	}
+
+	void TransformProcessor::post_update(Scene* scene)
+	{
+		EntityGlobals::get()->entity_transform_dirty_states.reset();
 	}
 }

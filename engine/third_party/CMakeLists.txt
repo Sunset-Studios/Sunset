@@ -33,6 +33,7 @@ add_library(lz4 STATIC)
 add_library(sdl2 INTERFACE)
 add_library(imgui STATIC)
 add_library(spirv_reflect STATIC)
+add_library(atomic_queue INTERFACE)
 
 set_target_third_party(TracyClient)
 set_target_third_party(vkbootstrap)
@@ -40,6 +41,7 @@ set_target_third_party(tinyobjloader)
 set_target_third_party(lz4)
 set_target_third_party(imgui)
 set_target_third_party(spirv_reflect)
+set_target_third_party(atomic_queue)
 
 target_sources(vkbootstrap PRIVATE 
     ${CMAKE_CURRENT_SOURCE_DIR}/vkbootstrap/VkBootstrap.h
@@ -95,6 +97,8 @@ target_sources(spirv_reflect PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/spirv/spirv_reflect.c
 )
 
+target_include_directories(atomic_queue INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/atomic_queue)
+
 list(APPEND INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR})
 
 HEADER_DIRECTORIES_APPEND(INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/tracy/public")
@@ -108,4 +112,5 @@ HEADER_DIRECTORIES_APPEND(INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/lz4")
 HEADER_DIRECTORIES_APPEND(INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/imgui")
 HEADER_DIRECTORIES_APPEND(INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/spirv")
 HEADER_DIRECTORIES_APPEND(INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/volk")
+HEADER_DIRECTORIES_APPEND(INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/atomic_queue")
 HEADER_DIRECTORIES_APPEND(INCLUDE_DIRS "${sdl2_DIR}/include")
