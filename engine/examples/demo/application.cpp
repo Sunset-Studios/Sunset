@@ -155,7 +155,7 @@ namespace Sunset
 
 				TransformComponent* const transform_comp = scene->assign_component<TransformComponent>(mesh_ent);
 
-				set_position(transform_comp, glm::vec3(0.0f, 8.5f, -5.0f));
+				set_position(transform_comp, glm::vec3(0.0f, 8.5f, -2.0f));
 				set_scale(transform_comp, glm::vec3(2.0f));
 
 				MeshComponent* const mesh_comp = scene->assign_component<MeshComponent>(mesh_ent);
@@ -185,6 +185,7 @@ namespace Sunset
 				};
 				set_body_shape(body_comp, sphere_shape);
 				set_body_type(body_comp, PhysicsBodyType::Dynamic);
+				set_body_gravity_scale(body_comp, 5.0f);
 			}
 
 			// Add test mesh 2
@@ -212,6 +213,14 @@ namespace Sunset
 
 				set_mesh(mesh_comp, MeshFactory::create_cube(Renderer::get()->context()));
 				set_material(mesh_comp, mesh_material);
+
+				BodyComponent* const body_comp = scene->assign_component<BodyComponent>(mesh_ent);
+
+				BoxShapeDescription box_shape
+				{
+					.half_extent = glm::vec3(3.0f, 3.0f, 3.0f)
+				};
+				set_body_shape(body_comp, box_shape);
 			}
 
 			// Add test mesh 3

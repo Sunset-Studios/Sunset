@@ -32,6 +32,16 @@ namespace Sunset
         }
     }
 
+    void set_body_gravity_scale(BodyComponent* body_comp, float gravity_scale)
+    {
+        assert(body_comp != nullptr && "Cannot set body type on a null body component!");
+        if (body_comp->body_data.body >= 0)
+        {
+            body_comp->body_data.gravity_scale = gravity_scale;
+            body_comp->body_data.dirty_flags |= PhysicsBodyDirtyFlags::GRAVITY_SCALE;
+        }
+    }
+
     void set_body_position(Scene* scene, EntityID entity, const glm::vec3& position)
     {
         if (BodyComponent* const body_comp = scene->get_component<BodyComponent>(entity))
@@ -53,6 +63,14 @@ namespace Sunset
         if (BodyComponent* const body_comp = scene->get_component<BodyComponent>(entity))
         {
             set_body_type(body_comp, body_type);
+        }
+    }
+
+    void set_body_gravity_scale(Scene* scene, EntityID entity, float gravity_scale)
+    {
+        if (BodyComponent* const body_comp = scene->get_component<BodyComponent>(entity))
+        {
+            set_body_gravity_scale(body_comp, gravity_scale);
         }
     }
 }

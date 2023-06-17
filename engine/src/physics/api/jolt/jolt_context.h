@@ -122,6 +122,7 @@ namespace Sunset
 		void set_body_position(BodyHandle body, const glm::vec3& position);
 		void set_body_rotation(BodyHandle body, const glm::quat& rotation);
 		void set_body_type(BodyHandle body, PhysicsBodyType body_type);
+		void set_body_gravity_scale(BodyHandle body, float gravity_scale);
 		void set_body_active(BodyHandle body);
 		void set_body_inactive(BodyHandle body);
 		glm::vec3 get_body_position(BodyHandle body);

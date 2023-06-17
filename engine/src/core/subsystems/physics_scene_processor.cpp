@@ -14,6 +14,11 @@ namespace Sunset
 
 	void PhysicsSceneProcessor::destroy(Scene* scene)
 	{
+		for (EntityID entity : SceneView<BodyComponent, TransformComponent>(*scene))
+		{
+			BodyComponent* const body_comp = scene->get_component<BodyComponent>(entity);
+			Physics::get()->context()->destroy_body(body_comp->body_data.body);
+		}
 		Physics::get()->destroy();
 	}
 
@@ -30,7 +35,8 @@ namespace Sunset
 			if ((body_comp->body_data.dirty_flags & PhysicsBodyDirtyFlags::BODY) || EntityGlobals::get()->entity_transform_dirty_states.test(get_entity_index(entity)))
 			{
 				phys_context->set_body_position(body_comp->body_data.body, transform_comp->transform.position);
-				phys_context->set_body_rotation(body_comp->body_data.body, transform_comp->transform.rotation);
+				//phys_context->set_body_rotation(body_comp->body_data.body, transform_comp->transform.rotation);
+				phys_context->set_body_active(body_comp->body_data.body);
 				body_comp->body_data.dirty_flags &= ~(PhysicsBodyDirtyFlags::BODY);
 				continue;
 			}
@@ -53,17 +59,18 @@ namespace Sunset
 				body_comp->body_data.dirty_flags &= ~(PhysicsBodyDirtyFlags::BODY_TYPE);
 			}
 
+			if (body_comp->body_data.dirty_flags & PhysicsBodyDirtyFlags::GRAVITY_SCALE)
+			{
+				phys_context->set_body_gravity_scale(body_comp->body_data.body, body_comp->body_data.gravity_scale);
+				body_comp->body_data.dirty_flags &= ~(PhysicsBodyDirtyFlags::GRAVITY_SCALE);
+			}
+
 			if (body_comp->body_data.body_type != PhysicsBodyType::Static)
 			{
-				// We don't use set_position/set_rotation calls when updating the entity transform with the physics body position/rotation data because we want
-				// to directly modify the entity transform without marking it as 'dirty'. Otherwise the code will pick back up in the entity_transform_dirty_states
-				// check above in the next frame and we'll be redundantly setting the physics body position unnecessarily.
-				phys_context->set_body_active(body_comp->body_data.body);
 				body_comp->body_data.position = phys_context->get_body_position(body_comp->body_data.body);
 				body_comp->body_data.rotation = phys_context->get_body_rotation(body_comp->body_data.body);
-				transform_comp->transform.position = body_comp->body_data.position;
-				transform_comp->transform.rotation = body_comp->body_data.rotation;
-				recalculate_transform(transform_comp);
+				set_position(transform_comp, body_comp->body_data.position);
+				set_rotation(transform_comp, glm::eulerAngles(body_comp->body_data.rotation));
 			}
 		}
 		Physics::get()->context()->step_simulation();

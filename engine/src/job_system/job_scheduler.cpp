@@ -1,7 +1,11 @@
 #include <job_system/job_scheduler.h>
+#include <utility/cvar.h>
 
 namespace Sunset
 {
+	// TODO: this is mostly temporary until we get a condition variable setup going in order to signal sleeping threads when they have work
+	AutoCVar_Int cvar_idle_thread_millisecond_sleep("jobs.idle_thread_millisecond_sleep", "Number of millisecondsd to wait between sleeps when job scheduler threads have no work queued", 5);
+
 	std::vector<JobQueue> JobScheduler::per_thread_queues;
 
 	JobScheduler::JobScheduler()
@@ -26,6 +30,10 @@ namespace Sunset
 						{
 							Job::Handle job = thread_queue->pop();
 							job.resume();
+						}
+						else
+						{
+							std::this_thread::sleep_for(std::chrono::milliseconds(cvar_idle_thread_millisecond_sleep.get()));
 						}
 					}
 				}, i, this);

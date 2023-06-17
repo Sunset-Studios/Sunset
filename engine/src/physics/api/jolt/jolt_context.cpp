@@ -81,7 +81,7 @@ namespace Sunset
 
 	void JoltContext::step_simulation()
 	{
-		static const uint32_t fixed_delta_time = 1.0f / 60.0f;
+		static const float fixed_delta_time = 1.0f / 60.0f;
 		system_data->physics_system.Update(fixed_delta_time, cvar_num_collision_steps.get(), cvar_num_integration_substeps.get(), &system_data->temp_allocator, &system_data->job_system);
 	}
 
@@ -193,6 +193,17 @@ namespace Sunset
 		}
 	}
 
+	void JoltContext::set_body_gravity_scale(BodyHandle body, float gravity_scale)
+	{
+		if (body >= 0)
+		{
+			JPH::BodyInterface& body_interface = system_data->physics_system.GetBodyInterface();
+
+			const JPH::BodyID jolt_body(body);
+			body_interface.SetGravityFactor(jolt_body, gravity_scale);
+		}
+	}
+
 	void JoltContext::set_body_active(BodyHandle body)
 	{
 		if (body >= 0)
@@ -279,7 +290,7 @@ namespace Sunset
 		switch (inLayer1)
 		{
 		case CollisionLayers::STATIC:
-			return inLayer2 == BroadPhaseLayers::STATIC;
+			return inLayer2 == BroadPhaseLayers::DYNAMIC;
 		case CollisionLayers::DYNAMIC:
 			return true;
 		default:
@@ -308,12 +319,10 @@ namespace Sunset
 
 	void JoltBodyActivationListener::OnBodyActivated(const JPH::BodyID& inBodyID, JPH::uint64 inBodyUserData)
 	{
-		std::cout << "Body Activated: " << inBodyID.GetIndexAndSequenceNumber() << std::endl;
 	}
 
 	void JoltBodyActivationListener::OnBodyDeactivated(const JPH::BodyID& inBodyID, JPH::uint64 inBodyUserData)
 	{
-		std::cout << "Body Deactivated: " << inBodyID.GetIndexAndSequenceNumber() << std::endl;
 	}
 }
 
