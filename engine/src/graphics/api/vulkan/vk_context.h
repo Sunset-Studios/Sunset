@@ -31,7 +31,7 @@ namespace Sunset
 			VkSurfaceKHR surface{ nullptr };
 			VulkanSyncPool sync_pool;
 			VulkanFrameSyncPrimitives frame_sync_primitives[MAX_BUFFERED_FRAMES];
-			uint32_t frame_number{ 0 };
+			int32_t frame_number{ -1 };
 			class Window* window{ nullptr };
 			class CommandQueue* queues[static_cast<int16_t>(DeviceQueueType::Num)];
 			class BufferAllocator* buffer_allocator{ nullptr };

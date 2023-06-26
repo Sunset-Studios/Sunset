@@ -30,19 +30,19 @@ namespace Sunset
 			return swapchain_policy.get_format();
 		}
 
-		uint32_t get_current_image_index()
+		uint32_t get_current_image_index(int32_t buffered_frame)
 		{
-			return swapchain_policy.get_current_image_index();
+			return swapchain_policy.get_current_image_index(buffered_frame);
 		}
 
-		void request_next_image(class GraphicsContext* const gfx_context)
+		void request_next_image(class GraphicsContext* const gfx_context, int32_t buffered_frame)
 		{
-			swapchain_policy.request_next_image(gfx_context);
+			swapchain_policy.request_next_image(gfx_context, buffered_frame);
 		}
 
-		void present(class GraphicsContext* const gfx_context, DeviceQueueType queue_type)
+		void present(class GraphicsContext* const gfx_context, DeviceQueueType queue_type, int32_t buffered_frame)
 		{
-			swapchain_policy.present(gfx_context, queue_type);
+			swapchain_policy.present(gfx_context, queue_type, buffered_frame);
 		}
 
 	private:
@@ -70,15 +70,15 @@ namespace Sunset
 			return Format::Undefined;
 		}
 
-		uint32_t get_current_image_index()
+		uint32_t get_current_image_index(int32_t buffered_frame)
 		{
 			return 0;
 		}
 
-		void request_next_image(class GraphicsContext* const gfx_context)
+		void request_next_image(class GraphicsContext* const gfx_context, int32_t buffered_frame)
 		{ }
 
-		void present(class GraphicsContext* const gfx_context, DeviceQueueType queue_type)
+		void present(class GraphicsContext* const gfx_context, DeviceQueueType queue_type, int32_t buffered_frame)
 		{ }
 	};
 

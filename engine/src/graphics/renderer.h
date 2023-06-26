@@ -20,25 +20,29 @@ namespace Sunset
 			void destroy();
 
 			template<typename RenderStrategy>
-			void draw(bool b_offline = false)
+			Sunset::ThreadedJob<1> draw(bool b_offline = false, int32_t buffered_frame_to_render = -1)
 			{
+				ZoneScopedN("Renderer::draw");
+
 				static RenderStrategy strategy;
 
-				if (!b_offline)
+				const uint32_t buffered_frame = buffered_frame_to_render >= 0 ? buffered_frame_to_render : graphics_context->get_buffered_frame_number();
+
+				if (!b_offline && b_last_work_submitted)
 				{
-					swapchain->request_next_image(graphics_context.get());
+					swapchain->request_next_image(graphics_context.get(), buffered_frame);
 				}
 
-				task_allocator.reset();
+				b_last_work_submitted = strategy.render(graphics_context.get(), render_graph, swapchain, buffered_frame, b_offline);
 
-				strategy.render(graphics_context.get(), render_graph, swapchain, b_offline);
-
-				if (!b_offline)
+				if (!b_offline && b_last_work_submitted)
 				{
-					swapchain->present(graphics_context.get(), DeviceQueueType::Graphics);
+					swapchain->present(graphics_context.get(), DeviceQueueType::Graphics, buffered_frame);
 				}
 
-				graphics_context->advance_frame();
+				building_command_list[buffered_frame].store(false);
+
+				co_return;
 			}
 
 			void draw_fullscreen_quad(void* command_buffer);
@@ -55,31 +59,38 @@ namespace Sunset
 				return render_graph;
 			}
 
-			inline MeshTaskQueue& get_mesh_task_queue()
+			inline MeshTaskQueue& get_mesh_task_queue(uint32_t buffered_frame_number)
 			{
-				return mesh_task_queue;
+				return mesh_task_queue[buffered_frame_number];
 			}
 
 			inline MeshRenderTask* fresh_rendertask()
 			{
-				return task_allocator.get_new();
+				return task_allocator[graphics_context->get_buffered_frame_number()].get_new();
 			}
 
-			inline DrawCullData& get_draw_cull_data()
+			inline DrawCullData& get_draw_cull_data(int32_t buffered_frame_number)
 			{
-				return current_draw_cull_data;
+				return current_draw_cull_data[buffered_frame_number];
 			}
 
-			inline void set_draw_cull_data(DrawCullData draw_cull_data)
+			inline void set_draw_cull_data(DrawCullData draw_cull_data, int32_t buffered_frame_number)
 			{
-				current_draw_cull_data = draw_cull_data;
+				current_draw_cull_data[buffered_frame_number] = draw_cull_data;
 			}
 
 			inline void wait_for_gpu()
 			{
+				ZoneScopedN("Renderer::wait_for_gpu");
 				graphics_context->wait_for_gpu();
 			}
 
+			void set_is_building_command_list(uint32_t buffered_frame_number, bool b_building)
+			{
+				building_command_list[buffered_frame_number].store(b_building);
+			}
+
+			void wait_for_command_list_build();
 			void begin_frame();
 			void queue_graph_command(Identity name, std::function<void(class RenderGraph&, RGFrameData&, void*)> command_callback);
 			void register_persistent_image(Identity id, ImageID image);
@@ -96,11 +107,14 @@ namespace Sunset
 			std::unique_ptr<GraphicsContext> graphics_context;
 			class Swapchain* swapchain;
 
-			MeshRenderTaskFrameAllocator task_allocator;
-			MeshTaskQueue mesh_task_queue;
+			MeshRenderTaskFrameAllocator task_allocator[MAX_BUFFERED_FRAMES];
+			MeshTaskQueue mesh_task_queue[MAX_BUFFERED_FRAMES];
+			DrawCullData current_draw_cull_data[MAX_BUFFERED_FRAMES];
 			RenderGraph render_graph;
-			DrawCullData current_draw_cull_data;
-			std::unordered_map<Identity, ImageID> persistent_image_map;
+			phmap::parallel_flat_hash_map<Identity, ImageID> persistent_image_map;
+
+			bool b_last_work_submitted{ true };
+			std::atomic_bool building_command_list[MAX_BUFFERED_FRAMES];
 	};
 
 	// Handles renderer lifetime calls (render graph begin/submit, renderer draw, etc.)
@@ -112,18 +126,21 @@ namespace Sunset
 		ScopedRender(Renderer* renderer, bool b_offline = false)
 			: renderer(renderer), b_offline(b_offline)
 		{
-			renderer->wait_for_gpu();
+			ZoneScopedN("ScopedRender::ScopedRender");
 			renderer->begin_frame();
+			buffered_frame_to_render = renderer->context()->get_buffered_frame_number();
 		}
 
 		~ScopedRender()
 		{
-			renderer->draw<RenderStrategy>(b_offline);
+			renderer->set_is_building_command_list(buffered_frame_to_render, true);
+			renderer->draw<RenderStrategy>(b_offline, buffered_frame_to_render);
 		}
 
 	private:
 		Renderer* renderer{ nullptr };
 		bool b_offline{ false };
+		int32_t buffered_frame_to_render{ 0 };
 	};
 }
 

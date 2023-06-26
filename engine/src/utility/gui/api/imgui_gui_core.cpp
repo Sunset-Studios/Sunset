@@ -72,10 +72,13 @@ namespace Sunset
 				ImGui_ImplVulkan_Init(&init_info, render_pass_data->render_pass);
 			}
 
-			gfx_context->get_command_queue(DeviceQueueType::Graphics)->submit_immediate(gfx_context, [](void* command_buffer)
+			for (uint32_t i = 0; i < MAX_BUFFERED_FRAMES; ++i)
 			{
-				ImGui_ImplVulkan_CreateFontsTexture(static_cast<VkCommandBuffer>(command_buffer));
-			});
+				gfx_context->get_command_queue(DeviceQueueType::Graphics)->submit_immediate(gfx_context, i, [](void* command_buffer)
+				{
+					ImGui_ImplVulkan_CreateFontsTexture(static_cast<VkCommandBuffer>(command_buffer));
+				});
+			}
 
 			ImGui_ImplVulkan_DestroyFontUploadObjects();
 

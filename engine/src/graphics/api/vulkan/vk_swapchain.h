@@ -14,7 +14,7 @@ namespace Sunset
 			VkSwapchainKHR swapchain;
 			VkFormat swapchain_image_format;
 			std::vector<ImageID> swapchain_images;
-			uint32_t current_image_index;
+			uint32_t current_image_index[MAX_BUFFERED_FRAMES];
 	};
 
 	class VulkanSwapchain
@@ -37,13 +37,13 @@ namespace Sunset
 				return SUNSET_FROM_VK_FORMAT(data.swapchain_image_format);
 			}
 
-			uint32_t get_current_image_index()
+			uint32_t get_current_image_index(int32_t buffered_frame)
 			{
-				return data.current_image_index;
+				return data.current_image_index[buffered_frame];
 			}
 
-			void request_next_image(class GraphicsContext* const gfx_context);
-			void present(class GraphicsContext* const gfx_context, DeviceQueueType queue_type);
+			void request_next_image(class GraphicsContext* const gfx_context, int32_t buffered_frame);
+			void present(class GraphicsContext* const gfx_context, DeviceQueueType queue_type, int32_t buffered_frame);
 
 		protected:
 			VulkanSwapchainData data;

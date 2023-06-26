@@ -16,7 +16,7 @@ namespace Sunset
 			std::vector<int32_t> free_indices;
 			std::vector<int32_t> bound_indices;
 		};
-		std::unordered_map<uint32_t, BindingTableEntry> binding_table;
+		phmap::flat_hash_map<uint32_t, BindingTableEntry> binding_table;
 
 		inline bool has_binding_slot(uint32_t slot);
 		void add_binding_slot(uint32_t slot, uint32_t count);

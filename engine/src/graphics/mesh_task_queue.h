@@ -13,8 +13,8 @@ namespace Sunset
 		~MeshRenderTaskExecutor() = default;
 
 		void reset();
-		void operator()(class GraphicsContext* const gfx_context, void* command_buffer, RenderPassID render_pass, ResourceStateID resource_state, PipelineStateID pipeline_state, uint32_t instance_count = 1, const PushConstantPipelineData& push_constants = {});
-		void operator()(class GraphicsContext* const gfx_context, void* command_buffer, RenderPassID render_pass, DescriptorSet* descriptor_set, const IndirectDrawBatch& indirect_draw, uint32_t indirect_draw_index, class Buffer* indirect_buffer, PipelineStateID pipeline_state, const PushConstantPipelineData& push_constants = {});
+		void operator()(class GraphicsContext* const gfx_context, void* command_buffer, RenderPassID render_pass, ResourceStateID resource_state, PipelineStateID pipeline_state, int32_t buffered_frame_number, uint32_t instance_count = 1, const PushConstantPipelineData& push_constants = {});
+		void operator()(class GraphicsContext* const gfx_context, void* command_buffer, RenderPassID render_pass, DescriptorSet* descriptor_set, const IndirectDrawBatch& indirect_draw, uint32_t indirect_draw_index, class Buffer* indirect_buffer, PipelineStateID pipeline_state, int32_t buffered_frame_number, const PushConstantPipelineData& push_constants = {});
 
 	private:
 		MaterialID cached_material{ 0 };
@@ -33,7 +33,10 @@ namespace Sunset
 	class MeshTaskQueue
 	{
 		public:
-			MeshTaskQueue() = default;
+			MeshTaskQueue()
+			{
+				queue.reserve(MIN_ENTITIES);
+			}
 			~MeshTaskQueue() = default;
 
 			bool empty() const
@@ -87,21 +90,20 @@ namespace Sunset
 			}
 
 			void sort_and_batch(class GraphicsContext* const gfx_context);
-			void submit_compute_cull(class GraphicsContext* const gfx_context, void* command_buffer, ExecutionQueue* deletion_queue = nullptr);
-			void submit_draws(class GraphicsContext* const gfx_context, void* command_buffer, RenderPassID render_pass, DescriptorSet* descriptor_set, PipelineStateID pipeline_state, bool b_use_draw_push_constants = true, bool b_flush = true);
-			void submit_bounds_debug_draws(class GraphicsContext* const gfx_context, void* command_buffer, RenderPassID render_pass);
+			void submit_compute_cull(class GraphicsContext* const gfx_context, void* command_buffer, int32_t buffered_frame_number, ExecutionQueue* deletion_queue = nullptr);
+			void submit_draws(class GraphicsContext* const gfx_context, void* command_buffer, RenderPassID render_pass, DescriptorSet* descriptor_set, PipelineStateID pipeline_state, int32_t buffered_frame_number, bool b_use_draw_push_constants = true, bool b_flush = true);
+			void submit_bounds_debug_draws(class GraphicsContext* const gfx_context, void* command_buffer, RenderPassID render_pass, int32_t buffered_frame_number);
 
 		private:
 			std::vector<IndirectDrawBatch> batch_indirect_draws(class GraphicsContext* const gfx_context);
-			void update_indirect_draw_buffers(class GraphicsContext* const gfx_context, void* command_buffer, ExecutionQueue* deletion_queue = nullptr);
+			void update_indirect_draw_buffers(class GraphicsContext* const gfx_context, void* command_buffer, int32_t buffered_frame_number, ExecutionQueue* deletion_queue = nullptr);
 
 		private:
 			std::vector<class MeshRenderTask*> queue;
-			std::vector<size_t> previous_queue_hashes;
 			MeshRenderTaskExecutor draw_executor;
 			MeshRenderTaskExecutor compute_cull_executor;
-			IndirectDrawData indirect_draw_data;
-			GPUDrawIndirectBuffers indirect_draw_buffers;
+			IndirectDrawData indirect_draw_data{};
+			GPUDrawIndirectBuffers indirect_draw_buffers{};
 			bool b_is_deferred_rendering{ false };
 	};
 }

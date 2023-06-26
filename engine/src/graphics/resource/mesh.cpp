@@ -42,7 +42,7 @@ namespace Sunset
 				}
 			);
 
-			gfx_context->get_command_queue(DeviceQueueType::Graphics)->submit_immediate(gfx_context, [mesh, gfx_context, vertex_staging_buffer, vertex_data_size](void* command_buffer)
+			gfx_context->get_command_queue(DeviceQueueType::Graphics)->submit_immediate(gfx_context, 0, [mesh, gfx_context, vertex_staging_buffer, vertex_data_size](void* command_buffer)
 			{
 				Buffer* const vertex_buffer_obj = CACHE_FETCH(Buffer, mesh->vertex_buffer);
 				vertex_buffer_obj->copy_buffer(gfx_context, command_buffer, vertex_staging_buffer, vertex_data_size);
@@ -83,7 +83,7 @@ namespace Sunset
 				}
 			);
 
-			gfx_context->get_command_queue(DeviceQueueType::Graphics)->submit_immediate(gfx_context, [mesh, gfx_context, index_staging_buffer, index_data_size](void* command_buffer)
+			gfx_context->get_command_queue(DeviceQueueType::Graphics)->submit_immediate(gfx_context, 0, [mesh, gfx_context, index_staging_buffer, index_data_size](void* command_buffer)
 			{
 				Buffer* const index_buffer_obj = CACHE_FETCH(Buffer, mesh->index_buffer);
 				index_buffer_obj->copy_buffer(gfx_context, command_buffer, index_staging_buffer, index_data_size);

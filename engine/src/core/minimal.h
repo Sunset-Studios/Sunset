@@ -8,10 +8,15 @@
 #include <memory>
 #include <vector>
 #include <array>
-#include <unordered_map>
 #include <chrono>
 #include <typeinfo>
 #include <cassert>
+
+#include <phmap.h>
+
+#ifdef _DEBUG
+#include <tracy/Tracy.hpp>
+#endif
 
 namespace Sunset
 {
@@ -223,12 +228,14 @@ namespace Sunset
 	#define SECONDS_TIME std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count() * 0.001
 	#define WORLD_UP glm::vec3(0.0f, 1.0f, 0.0f)
 	#define WORLD_FORWARD glm::vec3(0.0f, 0.0f, -1.0f)
+	#define WORLD_RIGHT glm::vec3(1.0f, 0.0f, 0.0f)
 	#define PI 3.141592653f
 	#define TWOPI 6.28318530718f
 
 	constexpr uint16_t MAX_BUFFERED_FRAMES = 2;
 	constexpr uint16_t MAX_MATERIALS = 16536;
 	constexpr uint16_t MAX_MATERIAL_TEXTURES = 16;
+	constexpr uint32_t MIN_ENTITIES = 2000;
 
 	struct Bounds
 	{

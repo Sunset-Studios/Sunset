@@ -37,7 +37,9 @@ namespace Sunset
 	{
 		for (int16_t frame_number = 0; frame_number < MAX_BUFFERED_FRAMES; ++frame_number)
 		{
-			graphics_context->wait_for_gpu();
+			wait_for_command_list_build();
+			wait_for_gpu();
+
 			graphics_context->advance_frame();
 		}
 
@@ -117,8 +119,24 @@ namespace Sunset
 			0);
 	}
 
+	void Renderer::wait_for_command_list_build()
+	{
+		ZoneScopedN("ScopedRender::wait_for_command_list_build");
+		while (building_command_list[graphics_context->get_buffered_frame_number()].load(std::memory_order_relaxed))
+		{
+			std::this_thread::sleep_for(std::chrono::microseconds(1));
+		}
+	}
+
 	void Renderer::begin_frame()
 	{
+		graphics_context->advance_frame();
+
+		wait_for_command_list_build();
+		wait_for_gpu();
+
+		task_allocator[graphics_context->get_buffered_frame_number()].reset();
+
 		render_graph.begin(graphics_context.get());
 	}
 
@@ -128,6 +146,7 @@ namespace Sunset
 			graphics_context.get(),
 			name,
 			RenderPassFlags::GraphLocal,
+			graphics_context->get_buffered_frame_number(),
 			command_callback
 		);
 	}

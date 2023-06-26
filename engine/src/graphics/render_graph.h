@@ -81,6 +81,7 @@ namespace Sunset
 	{
 		RenderPassID current_pass{ 0 };
 		class GraphicsContext* gfx_context{ nullptr };
+		int32_t buffered_frame_number{ 0 };
 		DescriptorSet* global_descriptor_set{ nullptr };
 		DescriptorSet* pass_descriptor_set{ nullptr };
 		PipelineStateID pass_pipeline_state{ 0 };
@@ -126,9 +127,9 @@ namespace Sunset
 
 	struct RGPassCache
 	{	
-		DescriptorSet* global_descriptor_set{ nullptr };
-		std::unordered_map<Identity, DescriptorDataList> descriptors;
-		std::unordered_map<Identity, PipelineStateID> pipeline_states;
+		DescriptorSet* global_descriptor_set[MAX_BUFFERED_FRAMES];
+		phmap::flat_hash_map<Identity, DescriptorDataList> descriptors[MAX_BUFFERED_FRAMES];
+		phmap::flat_hash_map<Identity, PipelineStateID> pipeline_states[MAX_BUFFERED_FRAMES];
 	};
 
 	class RGPass
@@ -159,7 +160,7 @@ namespace Sunset
 		std::vector<RGBufferResource*> buffer_resources;
 		std::vector<RGPass*> render_passes;
 		std::vector<RGResourceHandle> all_resource_handles;
-		std::unordered_map<RGResourceHandle, RGResourceMetadata> resource_metadata;
+		phmap::flat_hash_map<RGResourceHandle, RGResourceMetadata> resource_metadata;
 		BarrierBatcher barrier_batcher;
 		std::vector<BindingTableHandle> all_bindless_resource_handles;
 		ExecutionQueue resource_deletion_queue;
@@ -179,30 +180,36 @@ namespace Sunset
 
 		RGResourceHandle create_image(
 			class GraphicsContext* const gfx_context,
-			const AttachmentConfig& config);
+			const AttachmentConfig& config,
+			int32_t buffered_frame_number);
 
 		RGResourceHandle register_image(
 			class GraphicsContext* const gfx_context,
-			ImageID image);
+			ImageID image,
+			int32_t buffered_frame_number);
 
 		RGResourceHandle create_buffer(
 			class GraphicsContext* const gfx_context,
-			const BufferConfig& config);
+			const BufferConfig& config,
+			int32_t buffered_frame_number);
 
 		RGResourceHandle register_buffer(
 			class GraphicsContext* const gfx_context,
-			BufferID buffer);
+			BufferID buffer,
+			int32_t buffered_frame_number);
 
 		RGPassHandle add_pass(
 			class GraphicsContext* const gfx_context,
 			Identity name,
 			RenderPassFlags pass_type,
+			int32_t buffered_frame_number,
 			std::function<void(RenderGraph&, RGFrameData&, void*)> execution_callback);
 
 		RGPassHandle add_pass(
 			class GraphicsContext* const gfx_context,
 			Identity name,
 			RenderPassFlags pass_type,
+			int32_t buffered_frame_number,
 			const RGPassParameters& params,
 			std::function<void(RenderGraph&, RGFrameData&, void*)> execution_callback);
 
@@ -210,49 +217,49 @@ namespace Sunset
 			RGResourceHandle resource,
 			RGPassHandle pass,
 			AccessFlags dst_access,
-			ImageLayout dst_layout = ImageLayout::Undefined);
+			ImageLayout dst_layout = ImageLayout::Undefined,
+			int32_t buffered_frame_number = 0);
 
-		void submit(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, bool b_offline = false);
+		void submit(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, int32_t buffered_frame_number, bool b_offline = false);
 
 		void queue_global_descriptor_writes(class GraphicsContext* const gfx_context, uint32_t buffered_frame, const std::initializer_list<DescriptorBufferDesc>& buffers);
 
-		size_t get_physical_resource(RGResourceHandle resource);
+		size_t get_physical_resource(RGResourceHandle resource, int32_t buffered_frame_number);
 
 	protected:
-		void update_reference_counts(RGPass* pass);
-		void update_resource_param_producers_and_consumers(RGPass* pass);
-		void update_present_pass_status(RGPass* pass);
-		void cull_graph_passes(class GraphicsContext* const gfx_context);
-		void compute_resource_first_and_last_users(class GraphicsContext* const gfx_context);
-		void compute_resource_barriers(class GraphicsContext* const gfx_context);
-		void compile(class GraphicsContext* const gfx_context, class Swapchain* const swapchain);
+		void update_reference_counts(RGPass* pass, RenderGraphRegistry& registry);
+		void update_resource_param_producers_and_consumers(RGPass* pass, RenderGraphRegistry& registry);
+		void update_present_pass_status(RGPass* pass, RenderGraphRegistry& registry);
+		void cull_graph_passes(class GraphicsContext* const gfx_context, int32_t buffered_frame_number);
+		void compute_resource_first_and_last_users(class GraphicsContext* const gfx_context, int32_t buffered_frame_number);
+		void compute_resource_barriers(class GraphicsContext* const gfx_context, int32_t buffered_frame_number);
+		void compile(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, int32_t buffered_frame_number);
 
 		void execute_pass(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGPass* pass, RGFrameData& frame_data, void* command_buffer);
 
 		void setup_physical_pass_and_resources(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGPass* pass, RGFrameData& frame_data, void* command_buffer);
-		void setup_physical_resource(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGPass* pass, RGResourceHandle resource, bool b_is_graphics_pass = true, bool b_is_input_resource = false);
-		void tie_resource_to_pass_config_attachments(class GraphicsContext* const gfx_context, RGResourceHandle resource, RGPass* pass, uint32_t resource_params_index, bool b_is_input_resource = false);
-		void setup_pass_input_resource_bindless_type(class GraphicsContext* const gfx_context, RGResourceHandle resource, RGPass* pass);
-		void setup_pass_pipeline_state(class GraphicsContext* const gfx_context, RGPass* pass, void* command_buffer);
+		void setup_physical_resource(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGPass* pass, RGResourceHandle resource, RGFrameData& frame_data, bool b_is_graphics_pass = true, bool b_is_input_resource = false);
+		void tie_resource_to_pass_config_attachments(class GraphicsContext* const gfx_context, RGResourceHandle resource, RGPass* pass, int32_t buffered_frame_number, uint32_t resource_params_index, bool b_is_input_resource = false);
+		void setup_pass_input_resource_bindless_type(class GraphicsContext* const gfx_context, RGResourceHandle resource, RGPass* pass, int32_t buffered_frame_number);
+		void setup_pass_pipeline_state(class GraphicsContext* const gfx_context, RGPass* pass, RGFrameData& frame_data, void* command_buffer);
 		void setup_pass_descriptors(class GraphicsContext* const gfx_context, RGPass* pass, RGFrameData& frame_data, void* command_buffer);
-		void bind_pass_descriptors(class GraphicsContext* const gfx_context, RGPass* pass, void* command_buffer);
+		void bind_pass_descriptors(class GraphicsContext* const gfx_context, RGPass* pass, RGFrameData& frame_data, void* command_buffer);
 		void push_pass_constants(class GraphicsContext* const gfx_context, RGPass* pass, void* command_buffer);
-		void update_transient_resources(class GraphicsContext* const gfx_context, RGPass* pass);
-		void free_physical_resources(class GraphicsContext* const gfx_context);
+		void update_transient_resources(class GraphicsContext* const gfx_context, RGPass* pass, int32_t buffered_frame_number);
+		void free_physical_resources(class GraphicsContext* const gfx_context, int32_t current_buffered_frame);
 
-		void reset(class GraphicsContext* const gfx_context, uint32_t current_buffered_frame);
+		void reset(class GraphicsContext* const gfx_context, int32_t current_buffered_frame);
 
 	protected:
-		ImageResourceFrameAllocator image_resource_allocator;
-		BufferResourceFrameAllocator buffer_resource_allocator;
-		RenderPassFrameAllocator render_pass_allocator;
-
-		RenderGraphRegistry registries[MAX_BUFFERED_FRAMES];
-		RenderGraphRegistry* current_registry;
-
 		RGPassCache pass_cache;
 
-		std::vector<RGPassHandle> nonculled_passes;
+		ImageResourceFrameAllocator image_resource_allocator[MAX_BUFFERED_FRAMES];
+		BufferResourceFrameAllocator buffer_resource_allocator[MAX_BUFFERED_FRAMES];
+		RenderPassFrameAllocator render_pass_allocator[MAX_BUFFERED_FRAMES];
+
+		RenderGraphRegistry registries[MAX_BUFFERED_FRAMES];
+
+		std::vector<RGPassHandle> nonculled_passes[MAX_BUFFERED_FRAMES];
 
 		std::vector<DescriptorBufferDesc> queued_buffer_global_writes[MAX_BUFFERED_FRAMES];
 	};

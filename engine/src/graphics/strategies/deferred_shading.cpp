@@ -31,18 +31,24 @@ namespace Sunset
 	AutoCVar_Int cvar_num_bloom_pass_iterations("ren.bloom.num_pass_iterations", "The number of bloom horizontal and vertical blur iterations. (0 to turn bloom off).", 6);
 	AutoCVar_Float cvar_bloom_intensity("ren.bloom.intensity", "The intensity of the applied final bloom", 0.2f);
 
+	AutoCVar_Bool cvar_taa_enabled("ren.taa.enable", "Whether or not to do temporal anti-aliasing", true);
 	AutoCVar_Int cvar_taa_inverse_luminance_filter("ren.taa.inverse_luminance_filter_enabled", "Whether to do inverse luminance filtering during the history color resolve", 1);
 	AutoCVar_Int cvar_taa_luminance_diff_filter("ren.taa.luminance_diff_enabled", "Whether to do luminance difference filtering during the history color resolve", 1);
 
 	AutoCVar_Float cvar_final_image_exposure("ren.final_image_exposure", "The exposure to apply once HDR color gets resolved down to LDR", 2.0f);
 
-	void DeferredShadingStrategy::render(GraphicsContext* gfx_context, RenderGraph& render_graph, class Swapchain* swapchain, bool b_offline)
+	bool DeferredShadingStrategy::render(GraphicsContext* gfx_context, RenderGraph& render_graph, class Swapchain* swapchain, int32_t buffered_frame_number, bool b_offline)
 	{
+		ZoneScopedN("DeferredShadingStrategy::render");
+
 		DeferredShadingPersistentStorage::get()->initialize();
 
-		const uint16_t buffered_frame_number = gfx_context->get_buffered_frame_number();
+		MeshTaskQueue& mesh_task_queue = Renderer::get()->get_mesh_task_queue(buffered_frame_number);
+		if (mesh_task_queue.get_queue_size() == 0)
+		{
+			return false;
+		}
 
-		MeshTaskQueue& mesh_task_queue = Renderer::get()->get_mesh_task_queue();
 		mesh_task_queue.set_is_deferred_rendering(true);
 		mesh_task_queue.sort_and_batch(gfx_context);
 
@@ -53,7 +59,8 @@ namespace Sunset
 				.buffer_size = mesh_task_queue.get_queue_size() * sizeof(GPUObjectInstance),
 				.type = BufferType::TransferDestination | BufferType::StorageBuffer,
 				.memory_usage = MemoryUsageType::OnlyGPU
-			}
+			},
+			buffered_frame_number
 		);
 
 		RGResourceHandle compacted_object_instance_buffer_desc = render_graph.create_buffer(
@@ -63,7 +70,8 @@ namespace Sunset
 				.buffer_size = mesh_task_queue.get_queue_size() * sizeof(uint32_t),
 				.type = BufferType::TransferDestination | BufferType::StorageBuffer,
 				.memory_usage = MemoryUsageType::OnlyGPU
-			}
+			},
+			buffered_frame_number
 		);
 
 		RGResourceHandle draw_indirect_buffer_desc = render_graph.create_buffer(
@@ -73,42 +81,50 @@ namespace Sunset
 				.buffer_size = mesh_task_queue.get_num_indirect_batches(),
 				.type = BufferType::StorageBuffer | BufferType::Indirect,
 				.memory_usage = MemoryUsageType::CPUToGPU
-			}
+			},
+			buffered_frame_number
 		);
 
 		RGResourceHandle entity_data_buffer_desc = render_graph.register_buffer(
 			gfx_context,
-			EntityGlobals::get()->entity_data.data_buffer[buffered_frame_number]
+			EntityGlobals::get()->entity_data.data_buffer[buffered_frame_number],
+			buffered_frame_number
 		);
 
 		RGResourceHandle material_data_buffer_desc = render_graph.register_buffer(
 			gfx_context,
-			MaterialGlobals::get()->material_data.data_buffer[buffered_frame_number]
+			MaterialGlobals::get()->material_data.data_buffer[buffered_frame_number],
+			buffered_frame_number
 		);
 
 		RGResourceHandle light_data_buffer_desc = render_graph.register_buffer(
 			gfx_context,
-			LightGlobals::get()->light_data.data_buffer[buffered_frame_number]
+			LightGlobals::get()->light_data.data_buffer[buffered_frame_number],
+			buffered_frame_number
 		);
 
 		RGResourceHandle ssao_data_buffer_desc = render_graph.register_buffer(
 			gfx_context,
-			DeferredShadingPersistentStorage::get()->ssao_data_buffer[buffered_frame_number]
+			DeferredShadingPersistentStorage::get()->ssao_data_buffer[buffered_frame_number],
+			buffered_frame_number
 		);
 
 		RGResourceHandle hzb_image_desc = render_graph.register_image(
 			gfx_context,
-			Renderer::get()->get_persistent_image("hi_z", buffered_frame_number)
+			Renderer::get()->get_persistent_image("hi_z", buffered_frame_number),
+			buffered_frame_number
 		);
 
 		RGResourceHandle temporal_color_history = render_graph.register_image(
 			gfx_context,
-			Renderer::get()->get_persistent_image("temporal_color_history", buffered_frame_number)
+			Renderer::get()->get_persistent_image("temporal_color_history"),
+			buffered_frame_number
 		);
 
 		RGResourceHandle ssao_noise_image_desc = render_graph.register_image(
 			gfx_context,
-			Renderer::get()->get_persistent_image("ssao_noise", buffered_frame_number)
+			Renderer::get()->get_persistent_image("ssao_noise"),
+			buffered_frame_number
 		);
 
 		// Mesh cull pass
@@ -117,10 +133,11 @@ namespace Sunset
 				gfx_context,
 				"set_draw_cull_data_draw_count",
 				RenderPassFlags::GraphLocal,
+				buffered_frame_number,
 				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
 				{
-					MeshTaskQueue& mesh_task_queue = Renderer::get()->get_mesh_task_queue();
-					Renderer::get()->get_draw_cull_data().draw_count = mesh_task_queue.get_queue_size();
+					MeshTaskQueue& mesh_task_queue = Renderer::get()->get_mesh_task_queue(frame_data.buffered_frame_number);
+					Renderer::get()->get_draw_cull_data(frame_data.buffered_frame_number).draw_count = mesh_task_queue.get_queue_size();
 				}
 			);
 
@@ -134,13 +151,15 @@ namespace Sunset
 
 			RGResourceHandle entity_data_buffer_desc = render_graph.register_buffer(
 				gfx_context,
-				EntityGlobals::get()->entity_data.data_buffer[buffered_frame_number]
+				EntityGlobals::get()->entity_data.data_buffer[buffered_frame_number],
+				buffered_frame_number
 			);
 
 			render_graph.add_pass(
 				gfx_context,
 				"compute_cull",
 				RenderPassFlags::Compute,
+				buffered_frame_number,
 				{
 					.shader_setup = shader_setup,
 					.inputs = { entity_data_buffer_desc, object_instance_buffer_desc,
@@ -151,27 +170,28 @@ namespace Sunset
 				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
 				{
 					{
-						Image* const hzb_image = CACHE_FETCH(Image, graph.get_physical_resource(hzb_image_desc));
-						DrawCullData& draw_cull_data = Renderer::get()->get_draw_cull_data();
+						Image* const hzb_image = CACHE_FETCH(Image, graph.get_physical_resource(hzb_image_desc, frame_data.buffered_frame_number));
+						DrawCullData& draw_cull_data = Renderer::get()->get_draw_cull_data(frame_data.buffered_frame_number);
 						draw_cull_data.hzb_width = hzb_image->get_attachment_config().extent.x;
 						draw_cull_data.hzb_height = hzb_image->get_attachment_config().extent.y;
 						draw_cull_data.hzb_texture = 0x0000ffff & frame_data.pass_bindless_resources.handles.front();
 					}
 
-					PushConstantPipelineData pass_data = PushConstantPipelineData::create(&Renderer::get()->get_draw_cull_data(), PipelineShaderStageType::Compute);
+					PushConstantPipelineData pass_data = PushConstantPipelineData::create(&Renderer::get()->get_draw_cull_data(frame_data.buffered_frame_number), PipelineShaderStageType::Compute);
 
 					gfx_context->push_constants(command_buffer, frame_data.pass_pipeline_state, pass_data);
 
-					Renderer::get()->get_mesh_task_queue().set_gpu_draw_indirect_buffers(
+					Renderer::get()->get_mesh_task_queue(frame_data.buffered_frame_number).set_gpu_draw_indirect_buffers(
 						{
-							.draw_indirect_buffer = static_cast<BufferID>(graph.get_physical_resource(draw_indirect_buffer_desc)),
-							.object_instance_buffer = static_cast<BufferID>(graph.get_physical_resource(object_instance_buffer_desc)),
-							.compacted_object_instance_buffer = static_cast<BufferID>(graph.get_physical_resource(compacted_object_instance_buffer_desc))
+							.draw_indirect_buffer = static_cast<BufferID>(graph.get_physical_resource(draw_indirect_buffer_desc, frame_data.buffered_frame_number)),
+							.object_instance_buffer = static_cast<BufferID>(graph.get_physical_resource(object_instance_buffer_desc, frame_data.buffered_frame_number)),
+							.compacted_object_instance_buffer = static_cast<BufferID>(graph.get_physical_resource(compacted_object_instance_buffer_desc, frame_data.buffered_frame_number))
 						}
 					);
-					Renderer::get()->get_mesh_task_queue().submit_compute_cull(
+					Renderer::get()->get_mesh_task_queue(frame_data.buffered_frame_number).submit_compute_cull(
 						gfx_context,
 						command_buffer,
+						buffered_frame_number,
 						frame_data.resource_deletion_queue
 					);
 				}
@@ -193,7 +213,8 @@ namespace Sunset
 					.sampler_address_mode = SamplerAddressMode::Repeat,
 					.image_filter = ImageFilter::Linear,
 					.attachment_clear = true
-				}
+				},
+				buffered_frame_number
 			);
 
 			if (cvar_use_skybox.get())
@@ -212,6 +233,7 @@ namespace Sunset
 					gfx_context,
 					"skybox_pass",
 					RenderPassFlags::Graphics,
+					buffered_frame_number,
 					{
 						.shader_setup = shader_setup,
 						.outputs = { sky_image_desc }
@@ -238,6 +260,7 @@ namespace Sunset
 					gfx_context,
 					"skydome_pass",
 					RenderPassFlags::Graphics,
+					buffered_frame_number,
 					{
 						.shader_setup = shader_setup,
 						.outputs = { sky_image_desc }
@@ -281,7 +304,8 @@ namespace Sunset
 					.image_filter = ImageFilter::Linear,
 					.attachment_clear = true,
 					.attachment_stencil_clear = false
-				}
+				},
+				buffered_frame_number
 			);
 			main_depth_image_desc = render_graph.create_image(
 				gfx_context,
@@ -295,7 +319,8 @@ namespace Sunset
 					.image_filter = ImageFilter::Linear,
 					.attachment_clear = true,
 					.attachment_stencil_clear = true
-				}
+				},
+				buffered_frame_number
 			);
 			main_smra_image_desc = render_graph.create_image(
 				gfx_context,
@@ -308,7 +333,8 @@ namespace Sunset
 					.sampler_address_mode = SamplerAddressMode::EdgeClamp,
 					.image_filter = ImageFilter::Linear,
 					.attachment_clear = true,
-				}
+				},
+				buffered_frame_number
 			);
 			main_cc_image_desc = render_graph.create_image(
 				gfx_context,
@@ -321,7 +347,8 @@ namespace Sunset
 					.sampler_address_mode = SamplerAddressMode::EdgeClamp,
 					.image_filter = ImageFilter::Linear,
 					.attachment_clear = true,
-				}
+				},
+				buffered_frame_number
 			);
 			main_normal_image_desc = render_graph.create_image(
 				gfx_context,
@@ -334,7 +361,8 @@ namespace Sunset
 					.sampler_address_mode = SamplerAddressMode::EdgeClamp,
 					.image_filter = ImageFilter::Linear,
 					.attachment_clear = true,
-				}
+				},
+				buffered_frame_number
 			);
 			main_position_image_desc = render_graph.create_image(
 				gfx_context,
@@ -347,13 +375,15 @@ namespace Sunset
 					.sampler_address_mode = SamplerAddressMode::EdgeClamp,
 					.image_filter = ImageFilter::Nearest,
 					.attachment_clear = true,
-				}
+				},
+				buffered_frame_number
 			);
 
 			RGPassHandle base_pass_handle = render_graph.add_pass(
 				gfx_context,
 				"gbuffer_base_pass",
 				RenderPassFlags::Graphics,
+				buffered_frame_number,
 				{
 					.shader_setup = shader_setup,
 					.inputs = { entity_data_buffer_desc, material_data_buffer_desc,
@@ -364,12 +394,13 @@ namespace Sunset
 				},
 				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
 				{
-					Renderer::get()->get_mesh_task_queue().submit_draws(
+					Renderer::get()->get_mesh_task_queue(frame_data.buffered_frame_number).submit_draws(
 						gfx_context,
 						command_buffer,
 						frame_data.current_pass,
 						frame_data.global_descriptor_set,
-						frame_data.pass_pipeline_state
+						frame_data.pass_pipeline_state,
+						frame_data.buffered_frame_number
 					);
 				}
 			);
@@ -398,13 +429,15 @@ namespace Sunset
 					.sampler_address_mode = SamplerAddressMode::EdgeClamp,
 					.image_filter = ImageFilter::Linear,
 					.attachment_clear = true
-				}
+				},
+				buffered_frame_number
 			);
 
 			render_graph.add_pass(
 				gfx_context,
 				"compute_motion_vectors",
 				RenderPassFlags::Compute,
+				buffered_frame_number,
 				{
 					.shader_setup = shader_setup,
 					.inputs = { main_depth_image_desc, motion_vectors_image_desc },
@@ -451,6 +484,7 @@ namespace Sunset
 				gfx_context,
 				"reduce_hzb",
 				RenderPassFlags::Compute,
+				buffered_frame_number,
 				{
 					.shader_setup = shader_setup,
 					.inputs = { main_depth_image_desc, hzb_image_desc },
@@ -459,8 +493,8 @@ namespace Sunset
 				},
 				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
 				{
-					Image* const depth_image = CACHE_FETCH(Image, graph.get_physical_resource(main_depth_image_desc));
-					Image* const hzb_image = CACHE_FETCH(Image, graph.get_physical_resource(hzb_image_desc));
+					Image* const depth_image = CACHE_FETCH(Image, graph.get_physical_resource(main_depth_image_desc, frame_data.buffered_frame_number));
+					Image* const hzb_image = CACHE_FETCH(Image, graph.get_physical_resource(hzb_image_desc, frame_data.buffered_frame_number));
 
 					depth_image->barrier(
 						gfx_context,
@@ -548,7 +582,8 @@ namespace Sunset
 					.sampler_address_mode = SamplerAddressMode::Repeat,
 					.image_filter = ImageFilter::Nearest,
 					.attachment_clear = true
-				}
+				},
+				buffered_frame_number
 			);
 
 			ssao_image_desc = render_graph.create_image(
@@ -562,13 +597,15 @@ namespace Sunset
 					.sampler_address_mode = SamplerAddressMode::Repeat,
 					.image_filter = ImageFilter::Nearest,
 					.attachment_clear = true
-				}
+				},
+				buffered_frame_number
 			);
 
 			render_graph.add_pass(
 				gfx_context,
 				"ssao_pass",
 				RenderPassFlags::Compute,
+				buffered_frame_number,
 				{
 					.shader_setup = ssao_shader_setup,
 					.inputs = { ssao_data_buffer_desc, ssao_noise_image_desc, main_position_image_desc, main_normal_image_desc, ssao_staging_image_desc },
@@ -611,6 +648,7 @@ namespace Sunset
 				gfx_context,
 				"ssao_blur_pass",
 				RenderPassFlags::Compute,
+				buffered_frame_number,
 				{
 					.shader_setup = ssao_blur_shader_setup,
 					.inputs = { ssao_staging_image_desc, ssao_image_desc },
@@ -666,13 +704,15 @@ namespace Sunset
 					.sampler_address_mode = SamplerAddressMode::Repeat,
 					.image_filter = ImageFilter::Linear,
 					.attachment_clear = true
-				}
+				},
+				buffered_frame_number
 			);
 
 			render_graph.add_pass(
 				gfx_context,
 				"lighting_pass",
 				RenderPassFlags::Graphics,
+				buffered_frame_number,
 				{
 					.shader_setup = shader_setup,
 					.inputs = { entity_data_buffer_desc, light_data_buffer_desc,
@@ -714,6 +754,7 @@ namespace Sunset
 		}
 
 		// TAA pass
+		if(cvar_taa_enabled.get())
 		{
 			RGShaderDataSetup shader_setup
 			{
@@ -724,12 +765,12 @@ namespace Sunset
 			};
 
 			const glm::vec2 image_extent = gfx_context->get_surface_resolution();
-			const uint32_t current_frame_number = gfx_context->get_frame_number();
 
 			render_graph.add_pass(
 				gfx_context,
 				"temporal_aa",
 				RenderPassFlags::Compute,
+				buffered_frame_number,
 				{
 					.shader_setup = shader_setup,
 					.inputs = { scene_color_desc, temporal_color_history, motion_vectors_image_desc, main_depth_image_desc },
@@ -820,13 +861,15 @@ namespace Sunset
 					.image_filter = ImageFilter::Linear,
 					.mip_count = num_iterations,
 					.attachment_clear = true
-				}
+				},
+				buffered_frame_number
 			);
 
 			render_graph.add_pass(
 				gfx_context,
 				"bloom_downsample_pass",
 				RenderPassFlags::Compute,
+				buffered_frame_number,
 				{
 					.shader_setup = bloom_downsample_shader_setup,
 					.inputs = { scene_color_desc, bloom_blur_image_desc },
@@ -835,7 +878,7 @@ namespace Sunset
 				},
 				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
 				{
-					Image* const color_image = CACHE_FETCH(Image, graph.get_physical_resource(scene_color_desc));
+					Image* const color_image = CACHE_FETCH(Image, graph.get_physical_resource(scene_color_desc, frame_data.buffered_frame_number));
 
 					color_image->barrier(
 						gfx_context,
@@ -848,7 +891,7 @@ namespace Sunset
 						PipelineStageType::ComputeShader
 					);
 
-					Image* const downsample_image = CACHE_FETCH(Image, graph.get_physical_resource(bloom_blur_image_desc));
+					Image* const downsample_image = CACHE_FETCH(Image, graph.get_physical_resource(bloom_blur_image_desc, frame_data.buffered_frame_number));
 					const uint32_t num_mips = downsample_image->get_num_image_views();
 
 					for (uint32_t i = 0; i < num_mips; ++i)
@@ -904,6 +947,7 @@ namespace Sunset
 				gfx_context,
 				"bloom_upsample_pass",
 				RenderPassFlags::Compute,
+				buffered_frame_number,
 				{
 					.shader_setup = bloom_upsample_shader_setup,
 					.inputs = { bloom_blur_image_desc },
@@ -912,7 +956,7 @@ namespace Sunset
 				},
 				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
 				{
-					Image* const downsample_image = CACHE_FETCH(Image, graph.get_physical_resource(bloom_blur_image_desc));
+					Image* const downsample_image = CACHE_FETCH(Image, graph.get_physical_resource(bloom_blur_image_desc, frame_data.buffered_frame_number));
 					const uint32_t num_mips = downsample_image->get_num_image_views();
 
 					for (int32_t i = num_mips - 1; i > 0; --i)
@@ -976,13 +1020,15 @@ namespace Sunset
 					.sampler_address_mode = SamplerAddressMode::Repeat,
 					.image_filter = ImageFilter::Linear,
 					.attachment_clear = true
-				}
+				},
+				buffered_frame_number
 			);
 
 			render_graph.add_pass(
 				gfx_context,
 				"bloom_resolve_pass",
 				RenderPassFlags::Graphics,
+				buffered_frame_number,
 				{
 					.shader_setup = bloom_resolve_shader_setup,
 					.inputs = { scene_color_desc, bloom_blur_image_desc },
@@ -1052,7 +1098,8 @@ namespace Sunset
 					.sampler_address_mode = SamplerAddressMode::Repeat,
 					.image_filter = ImageFilter::Linear,
 					.attachment_clear = true
-				}
+				},
+				buffered_frame_number
 			);
 
 			RGResourceHandle ssr_blurred_image_desc = render_graph.create_image(
@@ -1066,13 +1113,15 @@ namespace Sunset
 					.sampler_address_mode = SamplerAddressMode::Repeat,
 					.image_filter = ImageFilter::Linear,
 					.attachment_clear = true
-				}
+				},
+				buffered_frame_number
 			);
 
 			render_graph.add_pass(
 				gfx_context,
 				"ssr_pass",
 				RenderPassFlags::Compute,
+				buffered_frame_number,
 				{
 					.shader_setup = ssr_shader_setup,
 					.inputs = { main_position_image_desc, main_normal_image_desc, main_smra_image_desc,
@@ -1116,6 +1165,7 @@ namespace Sunset
 				gfx_context,
 				"ssr_blur_pass",
 				RenderPassFlags::Compute,
+				buffered_frame_number,
 				{
 					.shader_setup = ssr_blur_shader_setup,
 					.inputs = { ssr_image_desc, ssr_blurred_image_desc },
@@ -1157,13 +1207,15 @@ namespace Sunset
 					.sampler_address_mode = SamplerAddressMode::EdgeClamp,
 					.image_filter = ImageFilter::Linear,
 					.attachment_clear = true
-				}
+				},
+				buffered_frame_number
 			);
 
 			render_graph.add_pass(
 				gfx_context,
 				"ssr_resolve_pass",
 				RenderPassFlags::Graphics,
+				buffered_frame_number,
 				{
 					.shader_setup = ssr_resolve_shader_setup,
 					.inputs = { main_smra_image_desc, ssr_image_desc, ssr_blurred_image_desc, post_bloom_color_desc },
@@ -1211,6 +1263,7 @@ namespace Sunset
 				gfx_context,
 				"present_pass",
 				RenderPassFlags::Graphics | RenderPassFlags::Present,
+				buffered_frame_number,
 				{
 					.shader_setup = shader_setup,
 					.inputs = { post_ssr_color_desc }
@@ -1247,13 +1300,17 @@ namespace Sunset
 		//	}
 		//);
 #endif 
-		render_graph.submit(gfx_context, swapchain, b_offline);
+		render_graph.submit(gfx_context, swapchain, buffered_frame_number, b_offline);
+
+		return true;
 	}
 
 	void DeferredShadingPersistentStorage::initialize()
 	{
-		if (!b_initialized)
+		if (!b_initialized.load(std::memory_order_acquire))
 		{
+			b_initialized.store(true, std::memory_order_release);
+
 			GraphicsContext* const gfx_context = Renderer::get()->context();
 			const glm::vec2 image_extent = gfx_context->get_surface_resolution();
 
@@ -1298,7 +1355,7 @@ namespace Sunset
 							.image_filter = ImageFilter::Linear,
 							.attachment_clear = true
 						}
-						)
+					)
 				);
 			}
 
@@ -1347,14 +1404,17 @@ namespace Sunset
 					16 * sizeof(glm::vec4)
 				);
 
-				gfx_context->get_command_queue(DeviceQueueType::Graphics)->submit_immediate(Renderer::get()->context(), [ssao_noise_staging_buffer, gfx_context](void* command_buffer)
+				for (uint32_t i = 0; i < MAX_BUFFERED_FRAMES; ++i)
 				{
-					for (uint32_t i = 0; i < MAX_BUFFERED_FRAMES; ++i)
+					gfx_context->get_command_queue(DeviceQueueType::Graphics)->submit_immediate(Renderer::get()->context(), i, [ssao_noise_staging_buffer, gfx_context](void* command_buffer)
 					{
-						const ImageID ssao_noise_image = Renderer::get()->get_persistent_image("ssao_noise", i);
-						CACHE_FETCH(Image, ssao_noise_image)->copy_from_buffer(gfx_context, command_buffer, ssao_noise_staging_buffer);
-					}
-				});
+						for (uint32_t i = 0; i < MAX_BUFFERED_FRAMES; ++i)
+						{
+							const ImageID ssao_noise_image = Renderer::get()->get_persistent_image("ssao_noise", i);
+							CACHE_FETCH(Image, ssao_noise_image)->copy_from_buffer(gfx_context, command_buffer, ssao_noise_staging_buffer);
+						}
+					});
+				}
 
 				CACHE_DELETE(Buffer, staging_buffer_id, gfx_context);
 			}
@@ -1394,8 +1454,6 @@ namespace Sunset
 					);
 				}
 			}
-
-			b_initialized = true;
 		}
 	}
 }

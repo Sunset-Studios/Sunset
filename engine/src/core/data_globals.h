@@ -18,7 +18,7 @@ namespace Sunset
 
 	public:
 		EntitySceneDataShared entity_data;
-		BitVector entity_transform_dirty_states{ MIN_ENTITIES };
+		BitVector<MIN_ENTITIES> entity_transform_dirty_states;
 	};
 
 	class MaterialGlobals : public Singleton<MaterialGlobals>
@@ -49,6 +49,6 @@ namespace Sunset
 
 	public:
 		LightDataShared light_data;
-		BitVector light_dirty_states{ MAX_LIGHT_COUNT };
+		BitVector<MAX_LIGHT_COUNT> light_dirty_states;
 	};
 }

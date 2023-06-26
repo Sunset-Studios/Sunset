@@ -37,7 +37,7 @@ namespace Sunset
 		glm::vec3 forward{ 0.0f, 0.0f, -1.0f };
 		CameraData gpu_data;
 		bool b_frame_jitter{ true };
-		uint32_t current_jitter_index{ 0 };
+		int32_t current_jitter_index{ -1 };
 	};
 
 	struct CameraInputData
@@ -57,7 +57,7 @@ namespace Sunset
 	void set_near_plane(CameraControlComponent* camera_comp, float new_near_plane);
 	void set_far_plane(CameraControlComponent* camera_comp, float new_far_plane);
 	void set_position(CameraControlComponent* camera_comp, const glm::vec3& new_position);
-	void set_forward(CameraControlComponent* camera_comp, const glm::vec3& new_forward);
+	void set_forward(CameraControlComponent* camera_comp, const glm::vec3& new_forward, bool b_decompose_pitch_yaw = false);
 	void set_move_speed(CameraControlComponent* camera_comp, float new_move_speed);
 	void set_look_speed(CameraControlComponent* camera_comp, float new_look_speed);
 	void set_frame_jitter_enabled(CameraControlComponent* camera_comp, bool b_enabled);
@@ -67,7 +67,7 @@ namespace Sunset
 	void set_camera_near_plane(class Scene* scene, EntityID entity, float new_near_plane);
 	void set_camera_far_plane(class Scene* scene, EntityID entity, float new_far_plane);
 	void set_camera_position(class Scene* scene, EntityID entity, const glm::vec3& new_position);
-	void set_camera_forward(class Scene* scene, EntityID entity, const glm::vec3& new_forward);
+	void set_camera_forward(class Scene* scene, EntityID entity, const glm::vec3& new_forward, bool b_decompose_pitch_yaw = false);
 	void set_camera_move_speed(class Scene* scene, EntityID entity, float new_move_speed);
 	void set_camera_look_speed(class Scene* scene, EntityID entity, float new_look_speed);
 	void set_frame_jitter_enabled(class Scene* scene, EntityID entity, bool b_enabled);

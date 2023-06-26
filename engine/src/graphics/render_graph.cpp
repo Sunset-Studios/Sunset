@@ -9,12 +9,14 @@
 #include <graphics/resource/shader_pipeline_layout.h>
 #include <graphics/pipeline_state.h>
 
-#include <unordered_set>
-
 namespace Sunset
 {
 	void RenderGraph::initialize(GraphicsContext* const gfx_context)
 	{
+		for (uint32_t i = 0; i < MAX_BUFFERED_FRAMES; ++i)
+		{
+			pass_cache.global_descriptor_set[i] = nullptr;
+		}
 	}
 
 	void RenderGraph::destroy(GraphicsContext* const gfx_context)
@@ -27,85 +29,96 @@ namespace Sunset
 
 	void RenderGraph::begin(GraphicsContext* const gfx_context)
 	{
+		ZoneScopedN("RenderGraph::begin");
 		reset(gfx_context, gfx_context->get_buffered_frame_number());
 	}
 
-	Sunset::RGResourceHandle RenderGraph::create_image(class GraphicsContext* const gfx_context, const AttachmentConfig& config)
+	Sunset::RGResourceHandle RenderGraph::create_image(class GraphicsContext* const gfx_context, const AttachmentConfig& config, int32_t buffered_frame_number)
 	{
-		RGImageResource* const new_image_resource = image_resource_allocator.get_new();
+		RGImageResource* const new_image_resource = image_resource_allocator[buffered_frame_number].get_new();
 		new_image_resource->config = config;
 		new_image_resource->config.flags |= ImageFlags::Transient;
 
-		const uint32_t index = current_registry->image_resources.size();
-		current_registry->image_resources.push_back(new_image_resource);
-		new_image_resource->handle = create_graph_resource_handle(index, static_cast<RGResourceType>(ResourceType::Image), 1);
+		{
+			RenderGraphRegistry& registry = registries[buffered_frame_number];
+			const uint32_t index = registry.image_resources.size();
+			registry.image_resources.push_back(new_image_resource);
+			new_image_resource->handle = create_graph_resource_handle(index, static_cast<RGResourceType>(ResourceType::Image), 1);
 
-		current_registry->all_resource_handles.push_back(new_image_resource->handle);
-		current_registry->resource_metadata.insert({ new_image_resource->handle, {} });
-		current_registry->resource_metadata[new_image_resource->handle].b_is_bindless = config.is_bindless;
+			registry.all_resource_handles.push_back(new_image_resource->handle);
+			registry.resource_metadata.insert({ new_image_resource->handle, {} });
+			registry.resource_metadata[new_image_resource->handle].b_is_bindless = config.is_bindless;
+		}
 
 		return new_image_resource->handle;
 	}
 
-	Sunset::RGResourceHandle RenderGraph::register_image(class GraphicsContext* const gfx_context, ImageID image)
+	Sunset::RGResourceHandle RenderGraph::register_image(class GraphicsContext* const gfx_context, ImageID image, int32_t buffered_frame_number)
 	{
 		Image* const image_obj = CACHE_FETCH(Image, image);
-		RGImageResource* const new_image_resource = image_resource_allocator.get_new();
+		RGImageResource* const new_image_resource = image_resource_allocator[buffered_frame_number].get_new();
 		new_image_resource->config = image_obj->get_attachment_config();
 
-		const uint32_t index = current_registry->image_resources.size();
-		current_registry->image_resources.push_back(new_image_resource);
-		new_image_resource->handle = create_graph_resource_handle(index, static_cast<RGResourceType>(ResourceType::Image), 1);
+		{
+			RenderGraphRegistry& registry = registries[buffered_frame_number];
+			const uint32_t index = registry.image_resources.size();
+			registry.image_resources.push_back(new_image_resource);
+			new_image_resource->handle = create_graph_resource_handle(index, static_cast<RGResourceType>(ResourceType::Image), 1);
 
-		current_registry->all_resource_handles.push_back(new_image_resource->handle);
-		current_registry->resource_metadata.insert({ new_image_resource->handle, {} });
-		current_registry->resource_metadata[new_image_resource->handle].physical_id = image;
-		current_registry->resource_metadata[new_image_resource->handle].b_is_persistent = true;
-		current_registry->resource_metadata[new_image_resource->handle].b_is_bindless = new_image_resource->config.is_bindless;
+			registry.all_resource_handles.push_back(new_image_resource->handle);
+			registry.resource_metadata.insert({ new_image_resource->handle, {} });
+			registry.resource_metadata[new_image_resource->handle].physical_id = image;
+			registry.resource_metadata[new_image_resource->handle].b_is_persistent = true;
+			registry.resource_metadata[new_image_resource->handle].b_is_bindless = new_image_resource->config.is_bindless;
+		}
 
 		return new_image_resource->handle;
 	}
 
-	Sunset::RGResourceHandle RenderGraph::create_buffer(class GraphicsContext* const gfx_context, const BufferConfig& config)
+	Sunset::RGResourceHandle RenderGraph::create_buffer(class GraphicsContext* const gfx_context, const BufferConfig& config, int32_t buffered_frame_number)
 	{
-		RGBufferResource* const new_buffer_resource = buffer_resource_allocator.get_new();
+		RGBufferResource* const new_buffer_resource = buffer_resource_allocator[buffered_frame_number].get_new();
 		new_buffer_resource->config = config;
 		new_buffer_resource->config.type |= BufferType::Transient;
 
-		const uint32_t index = current_registry->buffer_resources.size();
-		current_registry->buffer_resources.push_back(new_buffer_resource);
-		new_buffer_resource->handle = create_graph_resource_handle(index, static_cast<RGResourceType>(ResourceType::Buffer), 1);
+		{
+			RenderGraphRegistry& registry = registries[buffered_frame_number];
+			const uint32_t index = registry.buffer_resources.size();
+			registry.buffer_resources.push_back(new_buffer_resource);
+			new_buffer_resource->handle = create_graph_resource_handle(index, static_cast<RGResourceType>(ResourceType::Buffer), 1);
 
-		current_registry->all_resource_handles.push_back(new_buffer_resource->handle);
-		current_registry->resource_metadata.insert({ new_buffer_resource->handle, {} });
-		current_registry->resource_metadata[new_buffer_resource->handle].b_is_bindless = config.b_is_bindless;
+			registry.all_resource_handles.push_back(new_buffer_resource->handle);
+			registry.resource_metadata.insert({ new_buffer_resource->handle, {} });
+			registry.resource_metadata[new_buffer_resource->handle].b_is_bindless = config.b_is_bindless;
+		}
 
 		return new_buffer_resource->handle;
 	}
 
-	Sunset::RGResourceHandle RenderGraph::register_buffer(class GraphicsContext* const gfx_context, BufferID buffer)
+	Sunset::RGResourceHandle RenderGraph::register_buffer(class GraphicsContext* const gfx_context, BufferID buffer, int32_t buffered_frame_number)
 	{
 		Buffer* const buffer_obj = CACHE_FETCH(Buffer, buffer);
-		RGBufferResource* const new_buffer_resource = buffer_resource_allocator.get_new();
+		RGBufferResource* const new_buffer_resource = buffer_resource_allocator[buffered_frame_number].get_new();
 		new_buffer_resource->config = buffer_obj->get_buffer_config();
 
-		const uint32_t index = current_registry->buffer_resources.size();
-		current_registry->buffer_resources.push_back(new_buffer_resource);
-		new_buffer_resource->handle = create_graph_resource_handle(index, static_cast<RGResourceType>(ResourceType::Buffer), 1);
+		{
+			RenderGraphRegistry& registry = registries[buffered_frame_number];
+			const uint32_t index = registry.buffer_resources.size();
+			registry.buffer_resources.push_back(new_buffer_resource);
+			new_buffer_resource->handle = create_graph_resource_handle(index, static_cast<RGResourceType>(ResourceType::Buffer), 1);
 
-		current_registry->all_resource_handles.push_back(new_buffer_resource->handle);
-		current_registry->resource_metadata.insert({ new_buffer_resource->handle, {} });
-		current_registry->resource_metadata[new_buffer_resource->handle].physical_id = buffer;
-		current_registry->resource_metadata[new_buffer_resource->handle].b_is_persistent = true;
-		current_registry->resource_metadata[new_buffer_resource->handle].b_is_bindless = new_buffer_resource->config.b_is_bindless;
+			registry.all_resource_handles.push_back(new_buffer_resource->handle);
+			registry.resource_metadata.insert({ new_buffer_resource->handle, {} });
+			registry.resource_metadata[new_buffer_resource->handle].physical_id = buffer;
+			registry.resource_metadata[new_buffer_resource->handle].b_is_persistent = true;
+			registry.resource_metadata[new_buffer_resource->handle].b_is_bindless = new_buffer_resource->config.b_is_bindless;
+		}
 
 		return new_buffer_resource->handle;
 	}
 
-	Sunset::RGPassHandle RenderGraph::add_pass(class GraphicsContext* const gfx_context, Identity name, RenderPassFlags pass_type, const RGPassParameters& params, std::function<void(RenderGraph&, RGFrameData&, void*)> execution_callback)
+	Sunset::RGPassHandle RenderGraph::add_pass(class GraphicsContext* const gfx_context, Identity name, RenderPassFlags pass_type, int32_t buffered_frame_number, const RGPassParameters& params, std::function<void(RenderGraph&, RGFrameData&, void*)> execution_callback)
 	{
-		const uint32_t buffered_frame_number = gfx_context->get_buffered_frame_number();
-
 		#if READABLE_STRINGS
 		const std::string pass_name_str = name.string + std::to_string(buffered_frame_number);
 		const Identity pass_name = pass_name_str.c_str();
@@ -113,27 +126,29 @@ namespace Sunset
 		const Identity pass_name = name.computed_hash + buffered_frame_number;
 		#endif
 
-		RGPass* const pass = render_pass_allocator.get_new();
+		RGPass* const pass = render_pass_allocator[buffered_frame_number].get_new();
 		pass->pass_config = { .name = pass_name, .flags = pass_type };
 		pass->parameters = params;
 		pass->executor = execution_callback;
 
-		const uint32_t index = current_registry->render_passes.size();
-		current_registry->render_passes.push_back(pass);
-		nonculled_passes.push_back(index);
-		pass->handle = index;
+		uint32_t index{ 0 };
+		{
+			RenderGraphRegistry& registry = registries[buffered_frame_number];
+			index = registry.render_passes.size();
+			registry.render_passes.push_back(pass);
+			nonculled_passes[buffered_frame_number].push_back(index);
+			pass->handle = index;
 
-		update_reference_counts(pass);
-		update_resource_param_producers_and_consumers(pass);
-		update_present_pass_status(pass);
+			update_reference_counts(pass, registry);
+			update_resource_param_producers_and_consumers(pass, registry);
+			update_present_pass_status(pass, registry);
+		}
 
 		return index;
 	}
 
-	Sunset::RGPassHandle RenderGraph::add_pass(class GraphicsContext* const gfx_context, Identity name, RenderPassFlags pass_type, std::function<void(RenderGraph&, RGFrameData&, void*)> execution_callback)
+	Sunset::RGPassHandle RenderGraph::add_pass(class GraphicsContext* const gfx_context, Identity name, RenderPassFlags pass_type, int32_t buffered_frame_number, std::function<void(RenderGraph&, RGFrameData&, void*)> execution_callback)
 	{
-		const uint32_t buffered_frame_number = gfx_context->get_buffered_frame_number();
-
 		#if READABLE_STRINGS
 		const std::string pass_name_str = name.string + std::to_string(buffered_frame_number);
 		const Identity pass_name = pass_name_str.c_str();
@@ -141,13 +156,17 @@ namespace Sunset
 		const Identity pass_name = name.computed_hash + buffered_frame_number;
 		#endif
 
-		RGPass* const pass = render_pass_allocator.get_new();
+		RGPass* const pass = render_pass_allocator[buffered_frame_number].get_new();
 		pass->pass_config = { .name = pass_name, .flags = pass_type };
 		pass->executor = execution_callback;
 
-		const uint32_t index = current_registry->render_passes.size();
-		current_registry->render_passes.push_back(pass);
-		nonculled_passes.push_back(index);
+		uint32_t index{ 0 };
+		{
+			RenderGraphRegistry& registry = registries[buffered_frame_number];
+			index = registry.render_passes.size();
+			registry.render_passes.push_back(pass);
+			nonculled_passes[buffered_frame_number].push_back(index);
+		}
 
 		pass->handle = index;
 		pass->reference_count = 1;
@@ -155,25 +174,27 @@ namespace Sunset
 		return index;
 	}
 
-	void RenderGraph::add_pass_resource_barrier(RGResourceHandle resource, RGPassHandle pass, AccessFlags dst_access, ImageLayout dst_layout /*= ImageLayout::Undefined*/)
+	void RenderGraph::add_pass_resource_barrier(RGResourceHandle resource, RGPassHandle pass, AccessFlags dst_access, ImageLayout dst_layout, int32_t buffered_frame_number)
 	{
-		if (auto it = current_registry->resource_metadata.find(resource); it != current_registry->resource_metadata.end())
+		RenderGraphRegistry& registry = registries[buffered_frame_number];
+
+		if (auto it = registry.resource_metadata.find(resource); it != registry.resource_metadata.end())
 		{
 			RGResourceMetadata& metadata = (*it).second;
 
 			const ResourceType resource_type = static_cast<ResourceType>(get_graph_resource_type(resource));
 
-			if (RGPass* const pass_obj = current_registry->render_passes[pass])
+			if (RGPass* const pass_obj = registry.render_passes[pass])
 			{
-				const size_t num_passes = current_registry->render_passes.size();
+				const size_t num_passes = registry.render_passes.size();
 
 				if (metadata.access_flags.size() < num_passes)
 				{
-					metadata.access_flags.resize(current_registry->render_passes.size(), AccessFlags::None);
+					metadata.access_flags.resize(registry.render_passes.size(), AccessFlags::None);
 				}
 				if (metadata.layouts.size() < num_passes)
 				{
-					metadata.layouts.resize(current_registry->render_passes.size(), ImageLayout::Undefined);
+					metadata.layouts.resize(registry.render_passes.size(), ImageLayout::Undefined);
 				}
 
 				metadata.access_flags[pass] = dst_access;
@@ -182,12 +203,12 @@ namespace Sunset
 		}
 	}
 
-	void RenderGraph::update_reference_counts(RGPass* pass)
+	void RenderGraph::update_reference_counts(RGPass* pass, RenderGraphRegistry& registry)
 	{
 		pass->reference_count += pass->parameters.outputs.size();
 		for (RGResourceHandle resource : pass->parameters.inputs)
 		{
-			if (auto it = current_registry->resource_metadata.find(resource); it != current_registry->resource_metadata.end())
+			if (auto it = registry.resource_metadata.find(resource); it != registry.resource_metadata.end())
 			{
 				RGResourceMetadata& metadata = (*it).second;
 				metadata.reference_count += 1;
@@ -195,11 +216,11 @@ namespace Sunset
 		}
 	}
 
-	void RenderGraph::update_resource_param_producers_and_consumers(RGPass* pass)
+	void RenderGraph::update_resource_param_producers_and_consumers(RGPass* pass, RenderGraphRegistry& registry)
 	{
 		for (RGResourceHandle resource : pass->parameters.inputs)
 		{
-			if (auto it = current_registry->resource_metadata.find(resource); it != current_registry->resource_metadata.end())
+			if (auto it = registry.resource_metadata.find(resource); it != registry.resource_metadata.end())
 			{
 				RGResourceMetadata& metadata = (*it).second;
 				metadata.consumers.push_back(pass->handle);
@@ -207,7 +228,7 @@ namespace Sunset
 		}
 		for (RGResourceHandle resource : pass->parameters.outputs)
 		{
-			if (auto it = current_registry->resource_metadata.find(resource); it != current_registry->resource_metadata.end())
+			if (auto it = registry.resource_metadata.find(resource); it != registry.resource_metadata.end())
 			{
 				RGResourceMetadata& metadata = (*it).second;
 				metadata.producers.push_back(pass->handle);
@@ -215,24 +236,26 @@ namespace Sunset
 		}
 	}
 
-	void RenderGraph::update_present_pass_status(RGPass* pass)
+	void RenderGraph::update_present_pass_status(RGPass* pass, RenderGraphRegistry& registry)
 	{
 		pass->pass_config.b_is_present_pass = (pass->pass_config.flags & RenderPassFlags::Present) != RenderPassFlags::None;
 		// Do not cull present passes as these are usually last and have resources that have no future uses, so would get culled otherwise
 		pass->parameters.b_force_keep_pass = pass->parameters.b_force_keep_pass || pass->pass_config.b_is_present_pass;
 	}
 
-	void RenderGraph::cull_graph_passes(class GraphicsContext* const gfx_context)
+	void RenderGraph::cull_graph_passes(class GraphicsContext* const gfx_context, int32_t buffered_frame_number)
 	{
 		std::unordered_set<RGPassHandle> passes_to_cull;
 		std::vector<RGResourceHandle> unused_stack;
 
+		RenderGraphRegistry& registry = registries[buffered_frame_number];
+
 		// Lambda to cull a producer pass when it is no longer referenced and pop its inputs onto the unused stack
-		auto update_producer_and_subresource_ref_counts = [this, &unused_stack, &passes_to_cull](const std::vector<RGPassHandle> producers)
+		auto update_producer_and_subresource_ref_counts = [this, &registry, &unused_stack, &passes_to_cull](const std::vector<RGPassHandle> producers)
 		{
 			for (RGPassHandle pass_handle : producers)
 			{
-				RGPass* const producer_pass = current_registry->render_passes[pass_handle];
+				RGPass* const producer_pass = registry.render_passes[pass_handle];
 
 				// Do not cull passes marked as "force keep" 
 				if (producer_pass->parameters.b_force_keep_pass)
@@ -250,7 +273,7 @@ namespace Sunset
 
 					for (RGResourceHandle resource : producer_pass->parameters.inputs)
 					{
-						if (auto it = current_registry->resource_metadata.find(resource); it != current_registry->resource_metadata.end())
+						if (auto it = registry.resource_metadata.find(resource); it != registry.resource_metadata.end())
 						{
 							RGResourceMetadata& metadata = (*it).second;
 							metadata.reference_count -= 1;
@@ -265,9 +288,9 @@ namespace Sunset
 		};
 
 		// Go through all resources and push any resources that are not referenced onto the unused stack
-		for (RGResourceHandle resource : current_registry->all_resource_handles)
+		for (RGResourceHandle resource : registry.all_resource_handles)
 		{
-			if (auto it = current_registry->resource_metadata.find(resource); it != current_registry->resource_metadata.end())
+			if (auto it = registry.resource_metadata.find(resource); it != registry.resource_metadata.end())
 			{
 				if ((*it).second.reference_count == 0)
 				{
@@ -282,7 +305,7 @@ namespace Sunset
 			RGResourceHandle unused_resource = unused_stack.back();
 			unused_stack.pop_back();
 
-			if (auto it = current_registry->resource_metadata.find(unused_resource); it != current_registry->resource_metadata.end())
+			if (auto it = registry.resource_metadata.find(unused_resource); it != registry.resource_metadata.end())
 			{
 				update_producer_and_subresource_ref_counts((*it).second.producers);
 			}
@@ -291,21 +314,23 @@ namespace Sunset
 		// Take all the culled passes and remove them from our primary nonculled_passes array.
 		// This may constantly shuffle array items if a lot of passes are culled so maybe think about
 		// using a flag instead to indicate if a pass is active or not.
-		for (int i = nonculled_passes.size() - 1; i >= 0; --i)
+		for (int i = nonculled_passes[buffered_frame_number].size() - 1; i >= 0; --i)
 		{
-			RGPassHandle pass = nonculled_passes[i];
+			RGPassHandle pass = nonculled_passes[buffered_frame_number][i];
 			if (passes_to_cull.find(pass) != passes_to_cull.end())
 			{
-				nonculled_passes.erase(nonculled_passes.begin() + i);
+				nonculled_passes[buffered_frame_number].erase(nonculled_passes[buffered_frame_number].begin() + i);
 			}
 		}
 	}
 
-	void RenderGraph::compute_resource_first_and_last_users(class GraphicsContext* const gfx_context)
+	void RenderGraph::compute_resource_first_and_last_users(class GraphicsContext* const gfx_context, int32_t buffered_frame_number)
 	{
-		for (RGResourceHandle resource : current_registry->all_resource_handles)
+		RenderGraphRegistry& registry = registries[buffered_frame_number];
+
+		for (RGResourceHandle resource : registry.all_resource_handles)
 		{
-			if (auto it = current_registry->resource_metadata.find(resource); it != current_registry->resource_metadata.end())
+			if (auto it = registry.resource_metadata.find(resource); it != registry.resource_metadata.end())
 			{
 				RGResourceMetadata& metadata = (*it).second;
 				if (metadata.reference_count == 0)
@@ -341,12 +366,14 @@ namespace Sunset
 		}
 	}
 
-	void RenderGraph::compute_resource_barriers(class GraphicsContext* const gfx_context)
+	void RenderGraph::compute_resource_barriers(class GraphicsContext* const gfx_context, int32_t buffered_frame_number)
 	{
+		RenderGraphRegistry& registry = registries[buffered_frame_number];
+
 		const auto get_access_flags_for_resource_and_pass_type = [=](RGResourceHandle resource, ResourceType resource_type, RenderPassFlags pass_flags, bool b_input_resource)
 		{
 			const RGResourceIndex resource_index = get_graph_resource_index(resource);
-			RGImageResource* const image_resource = current_registry->image_resources[resource_index];
+			RGImageResource* const image_resource = registry.image_resources[resource_index];
 			const bool b_is_depth_stencil = (image_resource->config.flags & ImageFlags::DepthStencil) != ImageFlags::None;
 			const bool b_is_depth_stencil_load = b_is_depth_stencil && !image_resource->config.attachment_clear;
 
@@ -367,7 +394,7 @@ namespace Sunset
 		const auto get_image_layout_for_resource_and_pass_type = [=](RGResourceHandle resource, ResourceType resource_type, RenderPassFlags pass_flags, bool b_input_resource)
 		{
 			const RGResourceIndex resource_index = get_graph_resource_index(resource);
-			RGImageResource* const image_resource = current_registry->image_resources[resource_index];
+			RGImageResource* const image_resource = registry.image_resources[resource_index];
 			const bool b_is_depth_stencil = (image_resource->config.flags & ImageFlags::DepthStencil) != ImageFlags::None;
 			const bool b_is_depth_stencil_load = b_is_depth_stencil && !image_resource->config.attachment_clear;
 
@@ -385,13 +412,13 @@ namespace Sunset
 			return ImageLayout::ShaderReadOnly;
 		};
 
-		const size_t num_passes = current_registry->render_passes.size();
+		const size_t num_passes = registry.render_passes.size();
 		// For each resource we compute the per-pass access masks and image layouts. We can then diff these
 		// when executing passes based on prev -> current in order to determine whether the resource needs
 		// a memory barrier.
-		for (RGResourceHandle resource : current_registry->all_resource_handles)
+		for (RGResourceHandle resource : registry.all_resource_handles)
 		{
-			if (auto it = current_registry->resource_metadata.find(resource); it != current_registry->resource_metadata.end())
+			if (auto it = registry.resource_metadata.find(resource); it != registry.resource_metadata.end())
 			{
 				RGResourceMetadata& metadata = (*it).second;
 				if (metadata.reference_count == 0)
@@ -413,15 +440,15 @@ namespace Sunset
 						continue;
 					}
 
-					RGPass* const pass_obj = current_registry->render_passes[pass];
+					RGPass* const pass_obj = registry.render_passes[pass];
 
 					if (metadata.access_flags.size() < num_passes)
 					{
-						metadata.access_flags.resize(current_registry->render_passes.size(), AccessFlags::None);
+						metadata.access_flags.resize(registry.render_passes.size(), AccessFlags::None);
 					}
 					if (metadata.layouts.size() < num_passes)
 					{
-						metadata.layouts.resize(current_registry->render_passes.size(), ImageLayout::Undefined);
+						metadata.layouts.resize(registry.render_passes.size(), ImageLayout::Undefined);
 					}
 
 					// Do not touch access/layout metadata that has already been set as this has most likely been done manually via a call to add_pass_resource_barrier
@@ -436,45 +463,48 @@ namespace Sunset
 		}
 	}
 
-	void RenderGraph::compile(class GraphicsContext* const gfx_context, class Swapchain* const swapchain)
+	void RenderGraph::compile(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, int32_t buffered_frame_number)
 	{
-		cull_graph_passes(gfx_context);
-		compute_resource_first_and_last_users(gfx_context);
-		compute_resource_barriers(gfx_context);
+		cull_graph_passes(gfx_context, buffered_frame_number);
+		compute_resource_first_and_last_users(gfx_context, buffered_frame_number);
+		compute_resource_barriers(gfx_context, buffered_frame_number);
 		// TODO: Not entirely sure how to do this yet (with VMA?) but walk resource lifetimes to account for how much GPU memory should be allocated up front for aliasing
 	}
 
-	void RenderGraph::submit(GraphicsContext* const gfx_context, class Swapchain* const swapchain, bool b_offline)
+	void RenderGraph::submit(GraphicsContext* const gfx_context, class Swapchain* const swapchain, int32_t buffered_frame_number, bool b_offline)
 	{
-		compile(gfx_context, swapchain);
+		RenderGraphRegistry& registry = registries[buffered_frame_number];
 
-		if (nonculled_passes.empty())
+		compile(gfx_context, swapchain, buffered_frame_number);
+
+		if (nonculled_passes[buffered_frame_number].empty())
 		{
 			return;
 		}
 
-		current_registry->barrier_batcher.begin(gfx_context, PipelineStageType::AllCommands);
+		registry.barrier_batcher.begin(gfx_context, PipelineStageType::AllCommands);
 
 		// TODO: switch the queue based on the pass type
-		void* cmd_buffer = gfx_context->get_command_queue(DeviceQueueType::Graphics)->begin_one_time_buffer_record(gfx_context);
+		void* cmd_buffer = gfx_context->get_command_queue(DeviceQueueType::Graphics)->begin_one_time_buffer_record(gfx_context, buffered_frame_number);
 
 		{
 			RGFrameData frame_data
 			{
 				.gfx_context = gfx_context,
-				.resource_deletion_queue = &current_registry->resource_deletion_queue
+				.buffered_frame_number = buffered_frame_number,
+				.resource_deletion_queue = &registry.resource_deletion_queue
 			};
 
-			for (RGPassHandle pass_handle : nonculled_passes)
+			for (RGPassHandle pass_handle : nonculled_passes[buffered_frame_number])
 			{
-				execute_pass(gfx_context, swapchain, current_registry->render_passes[pass_handle], frame_data, cmd_buffer);
+				execute_pass(gfx_context, swapchain, registry.render_passes[pass_handle], frame_data, cmd_buffer);
 			}
 		}
 
 		// TODO: switch the queue based on the pass type
-		gfx_context->get_command_queue(DeviceQueueType::Graphics)->end_one_time_buffer_record(gfx_context);
+		gfx_context->get_command_queue(DeviceQueueType::Graphics)->end_one_time_buffer_record(gfx_context, buffered_frame_number);
 		// TODO: switch the queue based on the pass type
-		gfx_context->get_command_queue(DeviceQueueType::Graphics)->submit(gfx_context, b_offline);
+		gfx_context->get_command_queue(DeviceQueueType::Graphics)->submit(gfx_context, buffered_frame_number, b_offline);
 	}
 
 	void RenderGraph::queue_global_descriptor_writes(class GraphicsContext* const gfx_context, uint32_t buffered_frame, const std::initializer_list<DescriptorBufferDesc>& buffers)
@@ -483,34 +513,38 @@ namespace Sunset
 		queued_buffer_global_writes[buffered_frame] = buffers;
 	}
 
-	size_t RenderGraph::get_physical_resource(RGResourceHandle resource)
+	size_t RenderGraph::get_physical_resource(RGResourceHandle resource, int32_t buffered_frame_number)
 	{
-		if (current_registry->resource_metadata.find(resource) != current_registry->resource_metadata.end())
+		RenderGraphRegistry& registry = registries[buffered_frame_number];
+
+		if (registry.resource_metadata.find(resource) != registry.resource_metadata.end())
 		{
-			return current_registry->resource_metadata[resource].physical_id;
+			return registry.resource_metadata[resource].physical_id;
 		}
+
 		return 0;
 	}
 
-	void RenderGraph::reset(class GraphicsContext* const gfx_context, uint32_t current_buffered_frame)
+	void RenderGraph::reset(class GraphicsContext* const gfx_context, int32_t current_buffered_frame)
 	{
-		current_registry = &registries[current_buffered_frame];
+		free_physical_resources(gfx_context, current_buffered_frame);
 
-		free_physical_resources(gfx_context);
+		nonculled_passes[current_buffered_frame].clear();
 
-		nonculled_passes.clear();
+		{
+			RenderGraphRegistry* const registry = &registries[current_buffered_frame];
+			registry->all_resource_handles.clear();
+			registry->buffer_resources.clear();
+			registry->image_resources.clear();
+			registry->all_bindless_resource_handles.clear();
+			registry->render_passes.clear();
+			registry->resource_metadata.clear();
+			registry->b_global_set_bound = false;
+		}
 
-		current_registry->all_resource_handles.clear();
-		current_registry->buffer_resources.clear();
-		current_registry->image_resources.clear();
-		current_registry->all_bindless_resource_handles.clear();
-		current_registry->render_passes.clear();
-		current_registry->resource_metadata.clear();
-		current_registry->b_global_set_bound = false;
-
-		image_resource_allocator.reset();
-		buffer_resource_allocator.reset();
-		render_pass_allocator.reset();
+		image_resource_allocator[current_buffered_frame].reset();
+		buffer_resource_allocator[current_buffered_frame].reset();
+		render_pass_allocator[current_buffered_frame].reset();
 	}
 
 	void RenderGraph::execute_pass(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGPass* pass, RGFrameData& frame_data, void* command_buffer)
@@ -519,7 +553,7 @@ namespace Sunset
 
 		if ((pass->pass_config.flags & RenderPassFlags::GraphLocal) != RenderPassFlags::None)
 		{
-			frame_data.global_descriptor_set = pass_cache.global_descriptor_set;
+			frame_data.global_descriptor_set = pass_cache.global_descriptor_set[frame_data.buffered_frame_number];
 
 			pass->executor(*this, frame_data, command_buffer);
 		}
@@ -530,7 +564,7 @@ namespace Sunset
 			{
 				const uint32_t pass_type_index = static_cast<uint32_t>(DescriptorSetType::Pass);
 
-				DescriptorDataList& descriptor_data_list = pass_cache.descriptors[pass->pass_config.name];
+				DescriptorDataList& descriptor_data_list = pass_cache.descriptors[frame_data.buffered_frame_number][pass->pass_config.name];
 				if (pass_type_index < descriptor_data_list.descriptor_sets.size())
 				{
 					frame_data.pass_descriptor_set = descriptor_data_list.descriptor_sets[pass_type_index];
@@ -550,31 +584,33 @@ namespace Sunset
 
 				frame_data.current_pass = pass->physical_id;
 
-				physical_pass->begin_pass(gfx_context, pass->pass_config.b_is_present_pass ? swapchain->get_current_image_index() : 0, command_buffer);
+				physical_pass->begin_pass(gfx_context, pass->pass_config.b_is_present_pass ? swapchain->get_current_image_index(frame_data.buffered_frame_number) : 0, command_buffer);
 				pass->executor(*this, frame_data, command_buffer);
 				physical_pass->end_pass(gfx_context, command_buffer);
 			}
 
-			update_transient_resources(gfx_context, pass);
+			update_transient_resources(gfx_context, pass, frame_data.buffered_frame_number);
 		}
 	}
 
 	void RenderGraph::setup_physical_pass_and_resources(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGPass* pass, RGFrameData& frame_data, void* command_buffer)
 	{
+		RenderGraphRegistry& registry = registries[frame_data.buffered_frame_number];
+
 		const bool b_is_graphics_pass = (pass->pass_config.flags & RenderPassFlags::Graphics) != RenderPassFlags::None;
 
-		const auto setup_resource = [this, gfx_context, swapchain, pass, b_is_graphics_pass](RGResourceHandle resource, uint32_t resource_params_index, bool b_is_input_resource)
+		const auto setup_resource = [this, gfx_context, swapchain, pass, &frame_data, &registry, b_is_graphics_pass](RGResourceHandle resource, uint32_t resource_params_index, bool b_is_input_resource)
 		{
-			if (auto it = current_registry->resource_metadata.find(resource); it != current_registry->resource_metadata.end())
+			if (auto it = registry.resource_metadata.find(resource); it != registry.resource_metadata.end())
 			{
-				setup_physical_resource(gfx_context, swapchain, pass, resource, b_is_graphics_pass, b_is_input_resource);
+				setup_physical_resource(gfx_context, swapchain, pass, resource, frame_data, b_is_graphics_pass, b_is_input_resource);
 				if (b_is_graphics_pass)
 				{
-					tie_resource_to_pass_config_attachments(gfx_context, resource, pass, resource_params_index, b_is_input_resource);
+					tie_resource_to_pass_config_attachments(gfx_context, resource, pass, frame_data.buffered_frame_number, resource_params_index, b_is_input_resource);
 				}
 				if (b_is_input_resource)
 				{
-					setup_pass_input_resource_bindless_type(gfx_context, resource, pass);
+					setup_pass_input_resource_bindless_type(gfx_context, resource, pass, frame_data.buffered_frame_number);
 				}
 			}	
 		};
@@ -597,11 +633,11 @@ namespace Sunset
 
 		// Setup render pass pipeline state if render pass-level shader stages were provided. Otherwise, pipeline state should be handled
 		// and bound by render pass callbacks.
-		setup_pass_pipeline_state(gfx_context, pass, command_buffer);
+		setup_pass_pipeline_state(gfx_context, pass, frame_data, command_buffer);
 
 		setup_pass_descriptors(gfx_context, pass, frame_data, command_buffer);
 
-		bind_pass_descriptors(gfx_context, pass, command_buffer);
+		bind_pass_descriptors(gfx_context, pass, frame_data, command_buffer);
 
 		push_pass_constants(gfx_context, pass, command_buffer);
 
@@ -611,26 +647,28 @@ namespace Sunset
 		PipelineStageType barrier_execution_stage = (pass->pass_config.flags & RenderPassFlags::Compute) != RenderPassFlags::None
 			? PipelineStageType::AllCommands
 			: PipelineStageType::AllGraphics;
-		current_registry->barrier_batcher.execute(gfx_context, command_buffer, barrier_execution_stage, pass->pass_config.name);
+		registry.barrier_batcher.execute(gfx_context, command_buffer, barrier_execution_stage, pass->pass_config.name);
 	}
 
-	void RenderGraph::setup_physical_resource(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGPass* pass, RGResourceHandle resource, bool b_is_graphics_pass, bool b_is_input_resource)
+	void RenderGraph::setup_physical_resource(class GraphicsContext* const gfx_context, class Swapchain* const swapchain, RGPass* pass, RGResourceHandle resource, RGFrameData& frame_data, bool b_is_graphics_pass, bool b_is_input_resource)
 	{
+		RenderGraphRegistry& registry = registries[frame_data.buffered_frame_number];
+
 		const ResourceType resource_type = static_cast<ResourceType>(get_graph_resource_type(resource));
 		const RGResourceIndex resource_index = get_graph_resource_index(resource);
 		if (resource_type == ResourceType::Buffer)
 		{
-			RGBufferResource* const buffer_resource = current_registry->buffer_resources[resource_index];
+			RGBufferResource* const buffer_resource = registry.buffer_resources[resource_index];
 			// We check for an empty ID first because registered external resources would have already had this field populated
-			if (current_registry->resource_metadata[resource].physical_id == 0)
+			if (registry.resource_metadata[resource].physical_id == 0)
 			{
-				buffer_resource->config.name.computed_hash += gfx_context->get_buffered_frame_number();
+				buffer_resource->config.name.computed_hash += frame_data.buffered_frame_number;
 
-				current_registry->resource_metadata[resource].physical_id = BufferFactory::create(gfx_context, buffer_resource->config, false);
+				registry.resource_metadata[resource].physical_id = BufferFactory::create(gfx_context, buffer_resource->config, false);
 
-				if (!current_registry->resource_metadata[resource].b_is_persistent)
+				if (!registry.resource_metadata[resource].b_is_persistent)
 				{
-					current_registry->resource_deletion_queue.push_execution([gfx_context, physical_id = current_registry->resource_metadata[resource].physical_id]()
+					registry.resource_deletion_queue.push_execution([gfx_context, physical_id = registry.resource_metadata[resource].physical_id]()
 						{
 							CACHE_DELETE(Buffer, physical_id, gfx_context);
 						}
@@ -639,13 +677,13 @@ namespace Sunset
 			}
 
 			// Add a buffer barrier if the requested access flags seem different than the current buffer state
-			if (!current_registry->resource_metadata[resource].access_flags.empty())
+			if (!registry.resource_metadata[resource].access_flags.empty())
 			{
-				Buffer* const buffer = CACHE_FETCH(Buffer, current_registry->resource_metadata[resource].physical_id);
-				const AccessFlags access_flags = current_registry->resource_metadata[resource].access_flags[pass->handle];
+				Buffer* const buffer = CACHE_FETCH(Buffer, registry.resource_metadata[resource].physical_id);
+				const AccessFlags access_flags = registry.resource_metadata[resource].access_flags[pass->handle];
 				if (buffer->get_access_flags() != access_flags)
 				{
-					current_registry->barrier_batcher.add_buffer_barrier(
+					registry.barrier_batcher.add_buffer_barrier(
 						gfx_context,
 						buffer,
 						pass->pass_config.name,
@@ -656,21 +694,21 @@ namespace Sunset
 		}
 		else if (resource_type == ResourceType::Image)
 		{
-			RGImageResource* const image_resource = current_registry->image_resources[resource_index];
+			RGImageResource* const image_resource = registry.image_resources[resource_index];
 			const bool b_is_local_load = (image_resource->config.flags & ImageFlags::LocalLoad) != ImageFlags::None;
 			const bool b_is_persistent = b_is_graphics_pass && (!b_is_input_resource || b_is_local_load);
 			// We check for an empty ID first because registered external resources would have already had this field populated
-			if (current_registry->resource_metadata[resource].physical_id == 0)
+			if (registry.resource_metadata[resource].physical_id == 0)
 			{
-				current_registry->resource_metadata[resource].b_is_persistent = b_is_persistent;
+				registry.resource_metadata[resource].b_is_persistent |= b_is_persistent;
 
-				image_resource->config.name.computed_hash += gfx_context->get_buffered_frame_number();
+				image_resource->config.name.computed_hash += frame_data.buffered_frame_number;
 
-				current_registry->resource_metadata[resource].physical_id = ImageFactory::create(gfx_context, image_resource->config, b_is_persistent);
+				registry.resource_metadata[resource].physical_id = ImageFactory::create(gfx_context, image_resource->config, b_is_persistent);
 
-				if (!current_registry->resource_metadata[resource].b_is_persistent)
+				if (!registry.resource_metadata[resource].b_is_persistent)
 				{
-					current_registry->resource_deletion_queue.push_execution([gfx_context, physical_id = current_registry->resource_metadata[resource].physical_id]()
+					registry.resource_deletion_queue.push_execution([gfx_context, physical_id = registry.resource_metadata[resource].physical_id]()
 						{
 							CACHE_DELETE(Image, physical_id, gfx_context);
 						}
@@ -679,14 +717,14 @@ namespace Sunset
 			}
 
 			// Add an image barrier if the requested access flags and image layout seem different than the current image state
-			if (!current_registry->resource_metadata[resource].access_flags.empty() && !current_registry->resource_metadata[resource].layouts.empty())
+			if (!registry.resource_metadata[resource].access_flags.empty() && !registry.resource_metadata[resource].layouts.empty())
 			{
-				Image* const image = CACHE_FETCH(Image, current_registry->resource_metadata[resource].physical_id);
-				const AccessFlags access_flags = current_registry->resource_metadata[resource].access_flags[pass->handle];
-				const ImageLayout layout = current_registry->resource_metadata[resource].layouts[pass->handle];
+				Image* const image = CACHE_FETCH(Image, registry.resource_metadata[resource].physical_id);
+				const AccessFlags access_flags = registry.resource_metadata[resource].access_flags[pass->handle];
+				const ImageLayout layout = registry.resource_metadata[resource].layouts[pass->handle];
 				if (image->get_access_flags() != access_flags || image->get_layout() != layout)
 				{
-					current_registry->barrier_batcher.add_image_barrier(
+					registry.barrier_batcher.add_image_barrier(
 						gfx_context,
 						image,
 						pass->pass_config.name,
@@ -698,29 +736,33 @@ namespace Sunset
 		}
 	}
 
-	void RenderGraph::tie_resource_to_pass_config_attachments(class GraphicsContext* const gfx_context, RGResourceHandle resource, RGPass* pass, uint32_t resource_params_index, bool b_is_input_resource)
+	void RenderGraph::tie_resource_to_pass_config_attachments(class GraphicsContext* const gfx_context, RGResourceHandle resource, RGPass* pass, int32_t buffered_frame_number, uint32_t resource_params_index, bool b_is_input_resource)
 	{
+		RenderGraphRegistry& registry = registries[buffered_frame_number];
+
 		const ResourceType resource_type = static_cast<ResourceType>(get_graph_resource_type(resource));
 		const RGResourceIndex resource_index = get_graph_resource_index(resource);
 		if (resource_type == ResourceType::Image)
 		{
-			RGImageResource* const image_resource = current_registry->image_resources[resource_index];
+			RGImageResource* const image_resource = registry.image_resources[resource_index];
 			const bool b_is_local_load = (image_resource->config.flags & ImageFlags::LocalLoad) != ImageFlags::None;
 			if (!b_is_input_resource || b_is_local_load)
 			{
 				const uint32_t image_view_index = pass->parameters.output_views.size() > resource_params_index ? pass->parameters.output_views[resource_params_index] : 0;
-				pass->pass_config.attachments.push_back({ .image = current_registry->resource_metadata[resource].physical_id, .image_view_index = image_view_index });
+				pass->pass_config.attachments.push_back({ .image = registry.resource_metadata[resource].physical_id, .image_view_index = image_view_index });
 			}
 		}
 	}
 
-	void RenderGraph::setup_pass_input_resource_bindless_type(class GraphicsContext* const gfx_context, RGResourceHandle resource, RGPass* pass)
+	void RenderGraph::setup_pass_input_resource_bindless_type(class GraphicsContext* const gfx_context, RGResourceHandle resource, RGPass* pass, int32_t buffered_frame_number)
 	{
+		RenderGraphRegistry& registry = registries[buffered_frame_number];
+
 		const ResourceType resource_type = static_cast<ResourceType>(get_graph_resource_type(resource));
 		const RGResourceIndex resource_index = get_graph_resource_index(resource);
 		if (resource_type == ResourceType::Image)
 		{
-			RGImageResource* const image_resource = current_registry->image_resources[resource_index];
+			RGImageResource* const image_resource = registry.image_resources[resource_index];
 			if (image_resource->config.is_bindless)
 			{
 				pass->parameters.bindless_inputs.push_back(resource);
@@ -732,7 +774,7 @@ namespace Sunset
 		}
 		else if (resource_type == ResourceType::Buffer)
 		{
-			RGBufferResource* const buffer_resource = current_registry->buffer_resources[resource_index];
+			RGBufferResource* const buffer_resource = registry.buffer_resources[resource_index];
 			if (buffer_resource->config.b_is_bindless)
 			{
 				pass->parameters.bindless_inputs.push_back(resource);
@@ -744,20 +786,20 @@ namespace Sunset
 		}
 	}
 
-	void RenderGraph::setup_pass_pipeline_state(class GraphicsContext* const gfx_context, RGPass* pass, void* command_buffer)
+	void RenderGraph::setup_pass_pipeline_state(class GraphicsContext* const gfx_context, RGPass* pass, RGFrameData& frame_data, void* command_buffer)
 	{
 		// We don't "need" the additional pipeline state caching here since internally pipeline states are already cached
 		// based on the builder config, but this'll keep us from doing unnecessary per-frame calculations on pipeline state setup
-		if (pass_cache.pipeline_states.find(pass->pass_config.name) != pass_cache.pipeline_states.end())
+		if (pass_cache.pipeline_states[frame_data.buffered_frame_number].find(pass->pass_config.name) != pass_cache.pipeline_states[frame_data.buffered_frame_number].end())
 		{
-			pass->pipeline_state_id = pass_cache.pipeline_states[pass->pass_config.name];
+			pass->pipeline_state_id = pass_cache.pipeline_states[frame_data.buffered_frame_number][pass->pass_config.name];
 			CACHE_FETCH(PipelineState, pass->pipeline_state_id)->bind(gfx_context, command_buffer);
 			return;
 		}
 
-		if (pass_cache.descriptors.find(pass->pass_config.name) == pass_cache.descriptors.end())
+		if (pass_cache.descriptors[frame_data.buffered_frame_number].find(pass->pass_config.name) == pass_cache.descriptors[frame_data.buffered_frame_number].end())
 		{
-			pass_cache.descriptors[pass->pass_config.name] = DescriptorDataList();
+			pass_cache.descriptors[frame_data.buffered_frame_number][pass->pass_config.name] = DescriptorDataList();
 		}
 
 		std::vector<DescriptorLayoutID> descriptor_layouts;
@@ -832,29 +874,29 @@ namespace Sunset
 		if (pass->pipeline_state_id != 0)
 		{
 			CACHE_FETCH(PipelineState, pass->pipeline_state_id)->bind(gfx_context, command_buffer);
-			pass_cache.pipeline_states[pass->pass_config.name] = pass->pipeline_state_id;
+			pass_cache.pipeline_states[frame_data.buffered_frame_number][pass->pass_config.name] = pass->pipeline_state_id;
 		}
 
-		pass_cache.descriptors[pass->pass_config.name].descriptor_layouts = descriptor_layouts;
-		pass_cache.descriptors[pass->pass_config.name].descriptor_sets.resize(descriptor_layouts.size(), nullptr);
+		pass_cache.descriptors[frame_data.buffered_frame_number][pass->pass_config.name].descriptor_layouts = descriptor_layouts;
+		pass_cache.descriptors[frame_data.buffered_frame_number][pass->pass_config.name].descriptor_sets.resize(descriptor_layouts.size(), nullptr);
 	}
 
 	void RenderGraph::setup_pass_descriptors(class GraphicsContext* const gfx_context, RGPass* pass, RGFrameData& frame_data, void* command_buffer)
 	{
-		DescriptorDataList& pass_descriptor_data = pass_cache.descriptors[pass->pass_config.name];
+		RenderGraphRegistry& registry = registries[frame_data.buffered_frame_number];
+
+		DescriptorDataList& pass_descriptor_data = pass_cache.descriptors[frame_data.buffered_frame_number][pass->pass_config.name];
 
 		if (!pass_descriptor_data.descriptor_layouts.empty())
 		{
 			// Update global descriptor set (should happen once, lazily, on startup)
-			if (pass_cache.global_descriptor_set == nullptr)
+			if (pass_cache.global_descriptor_set[frame_data.buffered_frame_number] == nullptr)
 			{
 				const uint32_t global_type_index = static_cast<uint32_t>(DescriptorSetType::Global);
 
 				const DescriptorLayoutID global_descriptor_layout = pass_descriptor_data.descriptor_layouts[global_type_index];
 
-				pass_cache.global_descriptor_set = DescriptorHelpers::new_descriptor_set_with_layout(gfx_context, global_descriptor_layout);
-
-				const uint32_t current_buffered_frame = gfx_context->get_buffered_frame_number();
+				pass_cache.global_descriptor_set[frame_data.buffered_frame_number] = DescriptorHelpers::new_descriptor_set_with_layout(gfx_context, global_descriptor_layout);
 
 				DescriptorLayout* const layout = CACHE_FETCH(DescriptorLayout, global_descriptor_layout);
 				std::vector<DescriptorBinding>& descriptor_bindings = layout->get_bindings();
@@ -862,15 +904,15 @@ namespace Sunset
 				std::vector<DescriptorWrite> descriptor_writes;
 				for (uint32_t j = 0; j < descriptor_bindings.size(); ++j)
 				{
-					assert(j < queued_buffer_global_writes[current_buffered_frame].size());
+					assert(j < queued_buffer_global_writes[frame_data.buffered_frame_number].size());
 					DescriptorWrite& new_write = descriptor_writes.emplace_back();
 					new_write.slot = descriptor_bindings[j].slot;
 					new_write.type = descriptor_bindings[j].type;
 					new_write.count = descriptor_bindings[j].count;
-					new_write.buffer_desc = queued_buffer_global_writes[current_buffered_frame][j];
+					new_write.buffer_desc = queued_buffer_global_writes[frame_data.buffered_frame_number][j];
 				}
 
-				DescriptorHelpers::write_descriptors(gfx_context, pass_cache.global_descriptor_set, descriptor_writes);
+				DescriptorHelpers::write_descriptors(gfx_context, pass_cache.global_descriptor_set[frame_data.buffered_frame_number], descriptor_writes);
 			}
 
 			// Write bindless pass resources
@@ -891,7 +933,7 @@ namespace Sunset
 					const ResourceType resource_type = static_cast<ResourceType>(get_graph_resource_type(resource));
 					if (resource_type == ResourceType::Image)
 					{
-						std::vector<DescriptorBindlessWrite> image_writes = DescriptorHelpers::new_descriptor_image_bindless_writes(pass_cache.global_descriptor_set, current_registry->resource_metadata[resource].physical_id, pass->parameters.b_split_input_image_mips);
+						std::vector<DescriptorBindlessWrite> image_writes = DescriptorHelpers::new_descriptor_image_bindless_writes(pass_cache.global_descriptor_set[frame_data.buffered_frame_number], registry.resource_metadata[resource].physical_id, pass->parameters.b_split_input_image_mips);
 						bindless_writes.insert(
 							bindless_writes.end(),
 							image_writes.begin(),
@@ -909,13 +951,13 @@ namespace Sunset
 
 				DescriptorHelpers::write_bindless_descriptors(gfx_context, bindless_writes, frame_data.pass_bindless_resources.handles.data());
 
-				current_registry->all_bindless_resource_handles.insert(
-					current_registry->all_bindless_resource_handles.end(),
+				registry.all_bindless_resource_handles.insert(
+					registry.all_bindless_resource_handles.end(),
 					frame_data.pass_bindless_resources.handles.begin(),
 					frame_data.pass_bindless_resources.handles.end()
 				);
 
-				frame_data.global_descriptor_set = pass_cache.global_descriptor_set;
+				frame_data.global_descriptor_set = pass_cache.global_descriptor_set[frame_data.buffered_frame_number];
 			}
 
 			{
@@ -939,7 +981,7 @@ namespace Sunset
 							for (uint32_t j = 0; j < descriptor_bindings.size(); ++j)
 							{
 								const RGResourceHandle corresponding_binding_resource = pass->parameters.pass_inputs[j];
-								if (current_registry->resource_metadata[corresponding_binding_resource].b_is_persistent == b_persistent_resources)
+								if (registry.resource_metadata[corresponding_binding_resource].b_is_persistent == b_persistent_resources)
 								{
 									DescriptorWrite& new_write = descriptor_writes.emplace_back();
 									new_write.slot = descriptor_bindings[j].slot;
@@ -948,12 +990,12 @@ namespace Sunset
 
 									if (new_write.type == DescriptorType::Image || new_write.type == DescriptorType::StorageImage)
 									{
-										Image* const image = CACHE_FETCH(Image, current_registry->resource_metadata[corresponding_binding_resource].physical_id);
+										Image* const image = CACHE_FETCH(Image, registry.resource_metadata[corresponding_binding_resource].physical_id);
 										new_write.buffer_desc.buffer = image;
 									}
 									else
 									{
-										Buffer* const buffer = CACHE_FETCH(Buffer, current_registry->resource_metadata[corresponding_binding_resource].physical_id);
+										Buffer* const buffer = CACHE_FETCH(Buffer, registry.resource_metadata[corresponding_binding_resource].physical_id);
 										new_write.buffer_desc.buffer = buffer->get();
 										new_write.buffer_desc.buffer_range = buffer->get_size();
 										new_write.buffer_desc.buffer_size = buffer->get_size();
@@ -987,11 +1029,13 @@ namespace Sunset
 		}
 	}
 
-	void RenderGraph::bind_pass_descriptors(class GraphicsContext* const gfx_context, RGPass* pass, void* command_buffer)
+	void RenderGraph::bind_pass_descriptors(class GraphicsContext* const gfx_context, RGPass* pass, RGFrameData& frame_data, void* command_buffer)
 	{
+		RenderGraphRegistry& registry = registries[frame_data.buffered_frame_number];
+
 		const bool b_is_compute_pass = (pass->pass_config.flags & RenderPassFlags::Compute) != RenderPassFlags::None;
 
-		DescriptorDataList& pass_descriptor_data = pass_cache.descriptors[pass->pass_config.name];
+		DescriptorDataList& pass_descriptor_data = pass_cache.descriptors[frame_data.buffered_frame_number][pass->pass_config.name];
 
 		if (!pass_descriptor_data.descriptor_layouts.empty())
 		{
@@ -1001,16 +1045,16 @@ namespace Sunset
 			// TODO: Can't currently guarantee that two passes will equate in their push constant ranges, which is
 			// required for vulkan pipeline compatibility when trying to share a descriptor set across layouts,
 			// so we bind the global descriptor set per-pass for now
-			//if (pass_cache.global_descriptor_set != nullptr && !current_registry->b_global_set_bound)
+			//if (pass_cache.global_descriptor_set[frame_data.buffered_frame_number] != nullptr && !registries[frame_data.buffered_frame_number].b_global_set_bound)
 			{
-				pass_cache.global_descriptor_set->bind(
+				pass_cache.global_descriptor_set[frame_data.buffered_frame_number]->bind(
 					gfx_context,
 					command_buffer,
 					pass_descriptor_data.pipeline_layout,
 					b_is_compute_pass ? PipelineStateType::Compute : PipelineStateType::Graphics,
 					global_type_index
 				);
-				current_registry->b_global_set_bound = true;
+				registry.b_global_set_bound = true;
 			}
 
 			// Bind pass descriptors
@@ -1042,12 +1086,14 @@ namespace Sunset
 		}
 	}
 
-	void RenderGraph::update_transient_resources(class GraphicsContext* const gfx_context, RGPass* pass)
+	void RenderGraph::update_transient_resources(class GraphicsContext* const gfx_context, RGPass* pass, int32_t buffered_frame_number)
 	{
+		RenderGraphRegistry& registry = registries[buffered_frame_number];
+
 		// TODO: Look into aliasing memory for expired resources as opposed to just flat out deleting them (though that should also be done)
 		for (RGResourceHandle input_resource : pass->parameters.inputs)
 		{
-			RGResourceMetadata& resource_meta = current_registry->resource_metadata[input_resource];
+			RGResourceMetadata& resource_meta = registry.resource_metadata[input_resource];
 			if (resource_meta.physical_id != 0 && resource_meta.last_user == pass->handle && !resource_meta.b_is_persistent)
 			{
 				// TODO: Transient resource memory aliasing
@@ -1055,7 +1101,7 @@ namespace Sunset
 		}
 		for (RGResourceHandle output_resource : pass->parameters.outputs)
 		{
-			RGResourceMetadata& resource_meta = current_registry->resource_metadata[output_resource];
+			RGResourceMetadata& resource_meta = registry.resource_metadata[output_resource];
 			if (resource_meta.physical_id != 0 && resource_meta.last_user == pass->handle && !resource_meta.b_is_persistent)
 			{
 				// TODO: Transient resource memory aliasing
@@ -1063,10 +1109,12 @@ namespace Sunset
 		}
 	}
 
-	void RenderGraph::free_physical_resources(class GraphicsContext* const gfx_context)
+	void RenderGraph::free_physical_resources(class GraphicsContext* const gfx_context, int32_t current_buffered_frame)
 	{
+		ZoneScopedN("RenderGraph::free_physical_resources");
+
 		// TODO: Look into aliasing memory for expired resources as opposed to just flat out deleting them (though that should also be done)
-		current_registry->resource_deletion_queue.flush();
-		DescriptorHelpers::free_bindless_image_descriptors(gfx_context, pass_cache.global_descriptor_set, current_registry->all_bindless_resource_handles);
+		registries[current_buffered_frame].resource_deletion_queue.flush();
+		DescriptorHelpers::free_bindless_image_descriptors(gfx_context, pass_cache.global_descriptor_set[current_buffered_frame], registries[current_buffered_frame].all_bindless_resource_handles);
 	}
 }

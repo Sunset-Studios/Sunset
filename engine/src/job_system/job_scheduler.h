@@ -10,24 +10,49 @@
 
 namespace Sunset
 {
-	struct Job
+	constexpr uint32_t MAX_JOB_QUEUE_SIZE = 4096;
+	constexpr uint32_t MAX_SCHEDULER_THREADS = 32;
+
+	template<int32_t ThreadIndex = -1>
+	struct ThreadedJob
 	{
 		struct promise_type
 		{
-			int32_t thread_index{ -1 };
-
-			Job get_return_object() { return {}; }
+			ThreadedJob get_return_object() { return {}; }
 			std::suspend_always initial_suspend() noexcept;
 			std::suspend_never final_suspend() noexcept { return {}; }
 			void unhandled_exception() {}
 			void return_void() {}
+
+			int32_t thread_index{ ThreadIndex };
 		};
 
 		using Handle = std::coroutine_handle<promise_type>;
 	};
 
-	constexpr uint32_t MAX_JOB_QUEUE_SIZE = 4096;
-	constexpr uint32_t MAX_SCHEDULER_THREADS = 32;
+	struct Job
+	{
+		Job(const std::coroutine_handle<>& handle)
+			: handle(handle)
+		{ }
+
+		struct promise_type
+		{
+			Job get_return_object() { return { handle }; }
+			std::suspend_always initial_suspend() noexcept { return {}; }
+			std::suspend_never final_suspend() noexcept { return {}; }
+			void unhandled_exception() {}
+			void return_void() {}
+
+			std::coroutine_handle<> handle;	
+		};
+
+		std::coroutine_handle<> handle;
+
+		using Handle = std::coroutine_handle<>;
+	};
+
+
 	using JobQueue = atomic_queue::AtomicQueue2<Job::Handle, MAX_JOB_QUEUE_SIZE>;
 
 	class JobScheduler : public Singleton<JobScheduler>
@@ -41,7 +66,7 @@ namespace Sunset
 		JobScheduler& operator=(const JobScheduler&) = delete;
 
 		void initialize();
-		void schedule(Job::Handle ch, bool b_thread_remain = false);
+		int32_t schedule(Job::Handle ch, uint32_t thread_index = -1, bool b_thread_remain = false, bool b_initial_run = false);
 
 		uint32_t get_num_threads() const noexcept
 		{
@@ -67,6 +92,14 @@ namespace Sunset
 		static std::vector<JobQueue> per_thread_queues;		
 	};
 
+	template<int32_t ThreadIndex>
+	std::suspend_always ThreadedJob<ThreadIndex>::promise_type::initial_suspend() noexcept
+	{
+		Job job{ ThreadedJob<ThreadIndex>::Handle::from_promise(*this) };
+		thread_index = JobScheduler::get()->schedule(job.handle, thread_index, false, true);
+		return {};
+	}
+
 	struct suspend
 	{
 		struct awaiter : std::suspend_always
@@ -77,7 +110,7 @@ namespace Sunset
 
 			void await_suspend(Job::Handle ch) const noexcept
 			{
-				JobScheduler::get()->schedule(ch, b_thread_remain);
+				auto _ = JobScheduler::get()->schedule(ch, b_thread_remain);
 			}
 
 			bool b_thread_remain{ false };

@@ -9,7 +9,7 @@ namespace Sunset
 	class DeferredShadingStrategy
 	{
 	public:
-		void render(class GraphicsContext* gfx_context, RenderGraph& render_graph, class Swapchain* swapchain, bool b_offline = false);
+		bool render(class GraphicsContext* gfx_context, RenderGraph& render_graph, class Swapchain* swapchain, int32_t buffered_frame_number, bool b_offline = false);
 	};
 
 	class DeferredShadingPersistentStorage : public Singleton<DeferredShadingPersistentStorage>
@@ -21,7 +21,7 @@ namespace Sunset
 		void initialize();
 
 	protected:
-		bool b_initialized{ false };
+		std::atomic_bool b_initialized{ false };
 		BufferID ssao_data_buffer[MAX_BUFFERED_FRAMES];
 	};
 }

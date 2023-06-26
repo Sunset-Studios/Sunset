@@ -22,7 +22,7 @@ namespace Sunset
 			T* allocate(Args&&... args)
 			{
 				assert(total_free > 0 && "There are no more elements in the pool to allocate from! Try increasing the pool size.");
-				--total_free;
+				total_free.fetch_sub(1);
 				T* obj = allocator.allocate(1);
 				allocator.construct(obj, std::forward<Args>(args)...);
 				return obj;
@@ -31,7 +31,7 @@ namespace Sunset
 			void deallocate(T* element)
 			{
 				assert(total_free < max_items_in_pool && "This deallocate call is returning an element to the pool that will cause a memory overflow! Make sure your alloc/dealloc calls are balanced while using this allocator.");
-				++total_free;
+				total_free.fetch_add(1);
 				std::destroy_at(element);
 				allocator.deallocate(element, 1);
 			}
@@ -39,7 +39,7 @@ namespace Sunset
 		protected:
 			std::pmr::monotonic_buffer_resource buffer_resource{ max_items_in_pool_byte };
 			std::pmr::polymorphic_allocator<T> allocator{ &buffer_resource };
-			uint32_t total_free{ 0 };
+			std::atomic_uint32_t total_free{ 0 };
 	};
 
 	class StaticBytePoolAllocator
@@ -56,7 +56,7 @@ namespace Sunset
 
 		inline void* get(size_t index)
 		{
-			assert(index >= 0 && index < max_item_count && "Trying to get an out-of-range pool alloc'd item! Check you index!");
+			assert(index >= 0 && index < max_item_count && "Trying to get an out-of-range pool alloc'd item! Check your index!");
 			return pool.data() + index * item_size;
 		}
 

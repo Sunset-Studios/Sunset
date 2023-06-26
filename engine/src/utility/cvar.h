@@ -215,7 +215,7 @@ namespace Sunset
 		}
 		
 	public:
-		std::unordered_map<uint32_t, CVarParam> saved_cvar_params;
+		phmap::flat_hash_map<uint32_t, CVarParam> saved_cvar_params;
 
 		CVarArray<int32_t> int_cvars{ MAX_INT_CVARS };
 		CVarArray<double> float_cvars{ MAX_FLOAT_CVARS };

@@ -33,8 +33,6 @@ namespace Sunset
 		}
 
 	public:
-		std::size_t task_hash{ 0 };
-
 		EntityID entity{ 0 };
 		MaterialID material{ 0 };
 		ResourceStateID resource_state{ 0 };
@@ -42,7 +40,7 @@ namespace Sunset
 		PushConstantPipelineData push_constants;
 	};
 
-	using MeshRenderTaskFrameAllocator = StaticFrameAllocator<MeshRenderTask>;
+	using MeshRenderTaskFrameAllocator = StaticFrameAllocator<MeshRenderTask, 65536>;
 }
 
 

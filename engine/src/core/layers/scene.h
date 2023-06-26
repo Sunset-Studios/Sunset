@@ -31,7 +31,7 @@ namespace Sunset
 
 	struct SceneData
 	{
-		SceneLightingData lighting;
+		SceneLightingData lighting[MAX_BUFFERED_FRAMES];
 		ImageID sky_box;
 		ImageID irradiance_map;
 		ImageID prefilter_map;

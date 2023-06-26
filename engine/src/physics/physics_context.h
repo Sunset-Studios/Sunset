@@ -71,6 +71,11 @@ namespace Sunset
 			physics_policy.set_body_gravity_scale(body, gravity_scale);
 		}
 
+		void set_body_restitution(BodyHandle body, float restitution)
+		{
+			physics_policy.set_body_restitution(body, restitution);
+		}
+
 		void set_body_active(BodyHandle body)
 		{
 			physics_policy.set_body_active(body);
@@ -137,6 +142,9 @@ namespace Sunset
 		{ }
 
 		void set_body_gravity_scale(BodyHandle body, float gravity_scale)
+		{ }
+
+		void set_body_restitution(BodyHandle body, float restitution)
 		{ }
 
 		void set_body_active(BodyHandle body)

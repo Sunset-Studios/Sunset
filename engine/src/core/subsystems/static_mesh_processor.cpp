@@ -72,14 +72,14 @@ namespace Sunset
 			Material* const material = CACHE_FETCH(Material, mesh_comp->material);
 			assert(material != nullptr && "Cannot process mesh with a null material");
 
-			entity_data.material_index = material->gpu_data_buffer_offset;
+			entity_data.material_index = material->gpu_data_buffer_offset[current_buffered_frame];
 
 			Renderer::get()
 				->fresh_rendertask()
 				->setup(mesh_comp->material, mesh_comp->resource_state, 0)
 				->set_push_constants(PushConstantPipelineData::create(&mesh_comp->additional_data, PipelineShaderStageType::Vertex | PipelineShaderStageType::Fragment))
 				->set_entity(entity_index)
-				->submit(Renderer::get()->get_mesh_task_queue());
+				->submit(Renderer::get()->get_mesh_task_queue(current_buffered_frame));
 		}
 
 		// TODO: Only update dirtied entities instead of re-uploading the buffer every frame

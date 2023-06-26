@@ -4,7 +4,7 @@
 namespace Sunset
 {
 	// TODO: this is mostly temporary until we get a condition variable setup going in order to signal sleeping threads when they have work
-	AutoCVar_Int cvar_idle_thread_millisecond_sleep("jobs.idle_thread_millisecond_sleep", "Number of millisecondsd to wait between sleeps when job scheduler threads have no work queued", 5);
+	AutoCVar_Int cvar_idle_thread_nanosecond_sleep("jobs.idle_thread_nanosecond_sleep", "Number of nanoseconds to wait between sleeps when job scheduler threads have no work queued", 5);
 
 	std::vector<JobQueue> JobScheduler::per_thread_queues;
 
@@ -33,7 +33,7 @@ namespace Sunset
 						}
 						else
 						{
-							std::this_thread::sleep_for(std::chrono::milliseconds(cvar_idle_thread_millisecond_sleep.get()));
+							std::this_thread::sleep_for(std::chrono::nanoseconds(cvar_idle_thread_nanosecond_sleep.get()));
 						}
 					}
 				}, i, this);
@@ -42,16 +42,16 @@ namespace Sunset
 		}
 	}
 
-	void JobScheduler::schedule(Job::Handle ch, bool b_thread_remain)
+	int32_t JobScheduler::schedule(Job::Handle ch, uint32_t thread_index, bool b_thread_remain, bool b_initial_run)
 	{
 		uint32_t min_queue_size = std::numeric_limits<uint32_t>::max();
 		int32_t smallest_queue{ -1 };
 
-		if (b_thread_remain && ch.promise().thread_index != -1)
+		if ((b_thread_remain || b_initial_run) && thread_index != -1)
 		{
-			assert(ch.promise().thread_index < per_thread_queues.size());
-			per_thread_queues[ch.promise().thread_index].push(ch);
-			return;
+			assert(thread_index < per_thread_queues.size());
+			per_thread_queues[thread_index].push(ch);
+			return thread_index;
 		}
 
 		for (uint32_t i = 0; i < per_thread_queues.size(); ++i)
@@ -66,14 +66,11 @@ namespace Sunset
 
 		if (smallest_queue != -1)
 		{
-			ch.promise().thread_index = smallest_queue;
 			per_thread_queues[smallest_queue].push(ch);
 		}
+
+		return smallest_queue;
 	}
 
-	std::suspend_always Job::promise_type::initial_suspend() noexcept
-	{
-		JobScheduler::get()->schedule(Job::Handle::from_promise(*this));
-		return {};
-	}
+
 }

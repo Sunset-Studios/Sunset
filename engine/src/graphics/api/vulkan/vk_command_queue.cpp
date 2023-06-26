@@ -12,20 +12,32 @@ namespace Sunset
 		switch (queue_type)
 		{
 		case Sunset::DeviceQueueType::Graphics:
-			data.graphics_queue = context_state->device.get_queue(vkb::QueueType::graphics).value();
 			data.graphics_queue_family = context_state->device.get_queue_index(vkb::QueueType::graphics).value();
 			break;
 		case Sunset::DeviceQueueType::Compute:
-			data.graphics_queue = context_state->device.get_queue(vkb::QueueType::compute).value();
 			data.graphics_queue_family = context_state->device.get_queue_index(vkb::QueueType::compute).value();
 			break;
 		case Sunset::DeviceQueueType::Transfer:
-			data.graphics_queue = context_state->device.get_queue(vkb::QueueType::transfer).value();
 			data.graphics_queue_family = context_state->device.get_queue_index(vkb::QueueType::transfer).value();
 			break;
 		default:
-			data.graphics_queue = context_state->device.get_queue(vkb::QueueType::graphics).value();
 			data.graphics_queue_family = context_state->device.get_queue_index(vkb::QueueType::graphics).value();
+			break;
+		}
+
+		switch (queue_type)
+		{
+		case Sunset::DeviceQueueType::Graphics:
+			data.graphics_queue = context_state->device.get_queue(vkb::QueueType::graphics).value();
+			break;
+		case Sunset::DeviceQueueType::Compute:
+			data.graphics_queue = context_state->device.get_queue(vkb::QueueType::compute).value();
+			break;
+		case Sunset::DeviceQueueType::Transfer:
+			data.graphics_queue = context_state->device.get_queue(vkb::QueueType::transfer).value();
+			break;
+		default:
+			data.graphics_queue = context_state->device.get_queue(vkb::QueueType::graphics).value();
 			break;
 		}
 
@@ -33,28 +45,28 @@ namespace Sunset
 		{
 			new_command_pool(gfx_context_state, &data.frame_command_pool_data[frame_number].command_pool, frame_number);
 			new_command_buffers(gfx_context_state, &data.frame_command_pool_data[frame_number].command_buffer, data.frame_command_pool_data[frame_number].command_pool, 1, frame_number);
+
+			new_command_pool(gfx_context_state, &data.immediate_command_data[frame_number].command_pool);
+			new_command_buffers(gfx_context_state, &data.immediate_command_data[frame_number].command_buffer, data.immediate_command_data[frame_number].command_pool);
+
+			data.immediate_command_data[frame_number].fence = context_state->sync_pool.new_fence(context_state);
+
+			VkFence render_fence = context_state->sync_pool.get_fence(data.immediate_command_data[frame_number].fence);
+			vkResetFences(context_state->get_device(), 1, &render_fence);
 		}
-
-		new_command_pool(gfx_context_state, &data.immediate_command_data.command_pool);
-		new_command_buffers(gfx_context_state, &data.immediate_command_data.command_buffer, data.immediate_command_data.command_pool);
-
-		data.immediate_command_data.fence = context_state->sync_pool.new_fence(context_state);
-
-		VkFence render_fence = context_state->sync_pool.get_fence(data.immediate_command_data.fence);
-		vkResetFences(context_state->get_device(), 1, &render_fence);
 	}
 
 	void VulkanCommandQueue::destroy(void* gfx_context_state)
 	{
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context_state);
 
-		vkDestroyCommandPool(context_state->get_device(), data.immediate_command_data.command_pool, nullptr);
-
-		VkFence render_fence = context_state->sync_pool.get_fence(data.immediate_command_data.fence);
-		vkDestroyFence(context_state->get_device(), render_fence, nullptr);
-
 		for (int16_t frame_number = 0; frame_number < MAX_BUFFERED_FRAMES; ++frame_number)
 		{
+			vkDestroyCommandPool(context_state->get_device(), data.immediate_command_data[frame_number].command_pool, nullptr);
+
+			VkFence render_fence = context_state->sync_pool.get_fence(data.immediate_command_data[frame_number].fence);
+			vkDestroyFence(context_state->get_device(), render_fence, nullptr);
+
 			vkDestroyCommandPool(context_state->get_device(), data.frame_command_pool_data[frame_number].command_pool, nullptr);
 		}
 	}
@@ -89,10 +101,10 @@ namespace Sunset
 		VK_CHECK(vkAllocateCommandBuffers(context_state->get_device(), &cmd_allocate_info, static_cast<VkCommandBuffer*>(command_buffer_ptr)));
 	}
 
-	void* VulkanCommandQueue::begin_one_time_buffer_record(class GraphicsContext* const gfx_context)
+	void* VulkanCommandQueue::begin_one_time_buffer_record(class GraphicsContext* const gfx_context, uint32_t buffered_frame_number)
 	{
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
-		VkCommandBuffer& command_buffer = data.frame_command_pool_data[gfx_context->get_buffered_frame_number()].command_buffer;
+		VkCommandBuffer& command_buffer = data.frame_command_pool_data[buffered_frame_number].command_buffer;
 
 		VK_CHECK(vkResetCommandBuffer(command_buffer, 0));
 
@@ -107,30 +119,29 @@ namespace Sunset
 		return command_buffer;
 	}
 
-	void VulkanCommandQueue::end_one_time_buffer_record(class GraphicsContext* const gfx_context)
+	void VulkanCommandQueue::end_one_time_buffer_record(class GraphicsContext* const gfx_context, uint32_t buffered_frame_number)
 	{
-		VkCommandBuffer& command_buffer = data.frame_command_pool_data[gfx_context->get_buffered_frame_number()].command_buffer;
+		VkCommandBuffer& command_buffer = data.frame_command_pool_data[buffered_frame_number].command_buffer;
 		VK_CHECK(vkEndCommandBuffer(command_buffer));
 	}
 
 
-	void VulkanCommandQueue::submit(class GraphicsContext* const gfx_context, bool b_offline)
+	void VulkanCommandQueue::submit(class GraphicsContext* const gfx_context, uint32_t buffered_frame_number, bool b_offline)
 	{
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
 
-		const int16_t current_buffered_frame = gfx_context->get_buffered_frame_number();
-		VkCommandBuffer& command_buffer = data.frame_command_pool_data[current_buffered_frame].command_buffer;
+		context_state->has_pending_work[buffered_frame_number].store(true, std::memory_order_release);
 
-		context_state->has_pending_work[current_buffered_frame].store(true, std::memory_order_release);
+		VkCommandBuffer& command_buffer = data.frame_command_pool_data[buffered_frame_number].command_buffer;
 
 		VkSubmitInfo submit_info = {};
 		submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 		submit_info.pNext = nullptr;
 
 		VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		VkSemaphore present_semaphore = context_state->sync_pool.get_semaphore(context_state->frame_sync_primitives[current_buffered_frame].present_semaphore);
-		VkSemaphore render_semaphore = context_state->sync_pool.get_semaphore(context_state->frame_sync_primitives[current_buffered_frame].render_semaphore);
-		VkFence render_fence = context_state->sync_pool.get_fence(context_state->frame_sync_primitives[current_buffered_frame].render_fence);
+		VkSemaphore present_semaphore = context_state->sync_pool.get_semaphore(context_state->frame_sync_primitives[buffered_frame_number].present_semaphore);
+		VkSemaphore render_semaphore = context_state->sync_pool.get_semaphore(context_state->frame_sync_primitives[buffered_frame_number].render_semaphore);
+		VkFence render_fence = context_state->sync_pool.get_fence(context_state->frame_sync_primitives[buffered_frame_number].render_fence);
 
 		submit_info.pWaitDstStageMask = &wait_stage;
 		submit_info.waitSemaphoreCount = 1 - static_cast<uint32_t>(b_offline);
@@ -143,10 +154,10 @@ namespace Sunset
 		VK_CHECK(vkQueueSubmit(data.graphics_queue, 1, &submit_info, render_fence));
 	}
 
-	void VulkanCommandQueue::submit_immediate(class GraphicsContext* const gfx_context, const std::function<void(void* cmd_buffer)>& buffer_update_fn)
+	void VulkanCommandQueue::submit_immediate(class GraphicsContext* const gfx_context, int32_t buffered_frame_number, const std::function<void(void* cmd_buffer)>& buffer_update_fn)
 	{
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
-		VkCommandBuffer& command_buffer = data.immediate_command_data.command_buffer;
+		VkCommandBuffer& command_buffer = data.immediate_command_data[buffered_frame_number].command_buffer;
 
 		VkCommandBufferBeginInfo cmd_begin_info = {};
 		cmd_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -164,7 +175,7 @@ namespace Sunset
 		submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 		submit_info.pNext = nullptr;
 
-		VkFence render_fence = context_state->sync_pool.get_fence(data.immediate_command_data.fence);
+		VkFence render_fence = context_state->sync_pool.get_fence(data.immediate_command_data[buffered_frame_number].fence);
 
 		submit_info.pWaitDstStageMask = nullptr;
 		submit_info.waitSemaphoreCount = 0;
@@ -179,6 +190,6 @@ namespace Sunset
 		vkWaitForFences(context_state->get_device(), 1, &render_fence, true, 9999999999);
 		vkResetFences(context_state->get_device(), 1, &render_fence);
 
-		vkResetCommandPool(context_state->get_device(), data.immediate_command_data.command_pool, 0);
+		vkResetCommandPool(context_state->get_device(), data.immediate_command_data[buffered_frame_number].command_pool, 0);
 	}
 }

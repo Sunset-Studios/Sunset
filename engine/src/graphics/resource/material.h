@@ -46,18 +46,19 @@ namespace Sunset
 
 		MaterialDescription description;
 		std::vector<ImageID> textures;
-		std::array<BindingTableHandle, MAX_MATERIAL_TEXTURES> bound_texture_handles;
-		MaterialData* gpu_data{ nullptr };
-		uint32_t gpu_data_buffer_offset{ 0 };
-		bool b_dirty{ true };
-		bool b_needs_texture_upload{ false };
+
+		std::array<BindingTableHandle, MAX_MATERIAL_TEXTURES * MAX_BUFFERED_FRAMES> bound_texture_handles;
+		MaterialData* gpu_data[MAX_BUFFERED_FRAMES];
+		uint32_t gpu_data_buffer_offset[MAX_BUFFERED_FRAMES];
+		bool b_dirty[MAX_BUFFERED_FRAMES];
+		bool b_needs_texture_upload[MAX_BUFFERED_FRAMES];
 
 		void destroy(class GraphicsContext* const context) { }
 	};
 
 	void material_load_textures(class GraphicsContext* const gfx_context, MaterialID material);
 	void material_set_gpu_params(class GraphicsContext* const gfx_context, MaterialID material);
-	void material_update(class GraphicsContext* const gfx_context, MaterialID material, class DescriptorSet* descriptor_set);
+	void material_update(class GraphicsContext* const gfx_context, MaterialID material, class DescriptorSet* descriptor_set, int32_t buffered_frame_number);
 	void material_set_texture_tiling(class GraphicsContext* const gfx_context, MaterialID material, uint32_t texture_index, float texture_tiling);
 	void material_set_color(class GraphicsContext* const gfx_context, MaterialID material, glm::vec3 color);
 	void material_set_uniform_roughness(class GraphicsContext* const gfx_context, MaterialID material, float roughness);

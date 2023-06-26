@@ -31,7 +31,7 @@ namespace Sunset
 		GraphicsContext* const gfx_context = Renderer::get()->context();
 		const uint32_t current_buffered_frame = gfx_context->get_buffered_frame_number();
 
-		scene->scene_data.lighting.num_lights = 0;
+		scene->scene_data.lighting[current_buffered_frame].num_lights = 0;
 
 		for (EntityID entity : SceneView<LightComponent, TransformComponent>(*scene))
 		{
@@ -50,7 +50,7 @@ namespace Sunset
 				LightGlobals::get()->light_dirty_states.unset(light_comp->light_data_buffer_offset);
 			}
 
-			scene->scene_data.lighting.num_lights += light_comp->light->color.a > 0.0f;
+			scene->scene_data.lighting[current_buffered_frame].num_lights += light_comp->light->color.a > 0.0f;
 		}
 
 		// TODO: Only update dirtied entities instead of re-uploading the buffer every frame

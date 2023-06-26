@@ -16,7 +16,13 @@ void main()
 	out_frag_position = in_position;
 
 	mat4 rotation_view = mat4(mat3(camera_data.view));
-	vec4 clip_pos = camera_data.proj * rotation_view * vec4(out_frag_position, 1.0);
+
+	// Adjust the projection matrix to remove any jitter, which is used for temporal anti-aliasing.
+	mat4 unjittered_proj = camera_data.proj;
+	unjittered_proj[2][0] -= camera_data.jitter.z;
+	unjittered_proj[2][1] -= camera_data.jitter.w;
+
+	vec4 clip_pos = unjittered_proj * rotation_view * vec4(out_frag_position, 1.0);
 
 	gl_Position = clip_pos.xyww;
 }

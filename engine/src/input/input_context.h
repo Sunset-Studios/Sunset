@@ -3,8 +3,8 @@
 #include <vector>
 #include <set>
 #include <functional>
-#include <unordered_map>
 #include <input_types.h>
+#include <parallel_hashmap/phmap.h>
 
 namespace Sunset
 {
@@ -27,8 +27,8 @@ namespace Sunset
 		std::vector<InputState> input_states;
 
 	protected:
-		std::unordered_map<InputKey, int32_t> raw_to_state_mappings;
-		std::unordered_map<const char*, int32_t> action_to_state_mappings;
+		phmap::flat_hash_map<InputKey, int32_t> raw_to_state_mappings;
+		phmap::flat_hash_map<const char*, int32_t> action_to_state_mappings;
 		std::vector<bool> action_mappings;
 		std::vector<bool> state_mappings;
 		std::vector<float> range_mappings;

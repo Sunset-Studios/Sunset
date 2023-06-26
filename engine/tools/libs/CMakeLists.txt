@@ -17,6 +17,8 @@ target_compile_definitions(AssetSerializer PRIVATE PROJECT_PATH="${CMAKE_SOURCE_
 
 target_include_directories(AssetSerializer PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/asset_serializer
-	${CMAKE_SOURCE_DIR}/engine/src/core)
+	${CMAKE_SOURCE_DIR}/engine/src/core
+	${CMAKE_SOURCE_DIR}/engine/third_party/tracy/public
+	${CMAKE_SOURCE_DIR}/engine/third_party/parallel_hashmap)
 
-target_link_libraries(AssetSerializer PRIVATE json lz4 glm)
+target_link_libraries(AssetSerializer PRIVATE json lz4 glm parallel_hashmap)

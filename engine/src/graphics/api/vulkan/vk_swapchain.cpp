@@ -17,7 +17,7 @@ namespace Sunset
 		const glm::ivec2 window_extent = context_state->surface_resolution;
 		vkb::Swapchain vkb_swapchain = swapchain_builder
 			.use_default_format_selection()
-			.set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
+			.set_desired_present_mode(VK_PRESENT_MODE_MAILBOX_KHR)
 			.set_desired_extent(window_extent.x, window_extent.y)
 			.build()
 			.value();
@@ -54,24 +54,23 @@ namespace Sunset
 		}
 	}
 
-	void VulkanSwapchain::request_next_image(GraphicsContext* const gfx_context)
+	void VulkanSwapchain::request_next_image(GraphicsContext* const gfx_context, int32_t buffered_frame)
 	{
+		ZoneScopedN("VulkanSwapchain::request_next_image");
+
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
 
-		const int16_t current_buffered_frame = gfx_context->get_buffered_frame_number();
-
-		VK_CHECK(vkAcquireNextImageKHR(context_state->get_device(), data.swapchain, 1000000000, context_state->sync_pool.get_semaphore(context_state->frame_sync_primitives[current_buffered_frame].present_semaphore), nullptr, &data.current_image_index));
+		VK_CHECK(vkAcquireNextImageKHR(context_state->get_device(), data.swapchain, 1000000000, context_state->sync_pool.get_semaphore(context_state->frame_sync_primitives[buffered_frame].present_semaphore), nullptr, &data.current_image_index[buffered_frame]));
 	}
 
-
-	void VulkanSwapchain::present(GraphicsContext* const gfx_context, DeviceQueueType queue_type)
+	void VulkanSwapchain::present(GraphicsContext* const gfx_context, DeviceQueueType queue_type, int32_t buffered_frame)
 	{
+		ZoneScopedN("VulkanSwapchain::present");
+
 		VulkanContextState* context_state = static_cast<VulkanContextState*>(gfx_context->get_state());
 		VulkanCommandQueueData* command_queue_data = static_cast<VulkanCommandQueueData*>(gfx_context->get_command_queue(queue_type)->get_data());
 
-		const int16_t current_buffered_frame = gfx_context->get_buffered_frame_number();
-
-		VkSemaphore render_semaphore = context_state->sync_pool.get_semaphore(context_state->frame_sync_primitives[current_buffered_frame].render_semaphore);
+		VkSemaphore render_semaphore = context_state->sync_pool.get_semaphore(context_state->frame_sync_primitives[buffered_frame].render_semaphore);
 
 		VkPresentInfoKHR present_info = {};
 		present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -80,7 +79,7 @@ namespace Sunset
 		present_info.swapchainCount = 1;
 		present_info.pWaitSemaphores = &render_semaphore;
 		present_info.waitSemaphoreCount = 1;
-		present_info.pImageIndices = &data.current_image_index;
+		present_info.pImageIndices = &data.current_image_index[buffered_frame];
 
 		VK_CHECK(vkQueuePresentKHR(command_queue_data->graphics_queue, &present_info));
 	}

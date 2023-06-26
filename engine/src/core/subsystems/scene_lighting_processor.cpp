@@ -16,9 +16,8 @@ namespace Sunset
 	void SceneLightingProcessor::update(class Scene* scene, double delta_time)
 	{
 		const size_t min_ubo_alignment = Renderer::get()->context()->get_min_ubo_offset_alignment();
-		const uint32_t buffered_frame = Renderer::get()->context()->get_buffered_frame_number();
 
-		QUEUE_RENDERGRAPH_COMMAND(SetIrradianceMap, [=](class RenderGraph& render_graph, RGFrameData& frame_data, void* command_buffer)
+		auto set_irradiance_map_callback = [=](class RenderGraph& render_graph, RGFrameData& frame_data, void* command_buffer)
 		{
 			auto write_bindless_lighting_image = [=](ImageID lighting_image, int32_t& bindless_index)
 			{
@@ -32,7 +31,7 @@ namespace Sunset
 					}
 				);
 
-				BindingTableHandle bound_texture_handle;
+				BindingTableHandle bound_texture_handle{ -1 };
 				DescriptorHelpers::write_bindless_descriptors(Renderer::get()->context(), bindless_writes, &bound_texture_handle);
 
 				if (bound_texture_handle >= 0)
@@ -44,30 +43,33 @@ namespace Sunset
 			// Push IBL textures to descriptor set
 			if (frame_data.global_descriptor_set != nullptr)
 			{
-				if (scene->scene_data.lighting.irradiance_map == -1 && scene->scene_data.irradiance_map != 0)
+				const uint32_t buffered_frame_number = frame_data.buffered_frame_number;
+				if (scene->scene_data.lighting[buffered_frame_number].irradiance_map == -1 && scene->scene_data.irradiance_map != 0)
 				{
-					write_bindless_lighting_image(scene->scene_data.irradiance_map, scene->scene_data.lighting.irradiance_map);
+					write_bindless_lighting_image(scene->scene_data.irradiance_map, scene->scene_data.lighting[buffered_frame_number].irradiance_map);
 				}
-				if (scene->scene_data.lighting.sky_box == -1 && scene->scene_data.sky_box != 0)
+				if (scene->scene_data.lighting[buffered_frame_number].sky_box == -1 && scene->scene_data.sky_box != 0)
 				{
-					write_bindless_lighting_image(scene->scene_data.sky_box, scene->scene_data.lighting.sky_box);
+					write_bindless_lighting_image(scene->scene_data.sky_box, scene->scene_data.lighting[buffered_frame_number].sky_box);
 				}
-				if (scene->scene_data.lighting.prefilter_map == -1 && scene->scene_data.prefilter_map != 0)
+				if (scene->scene_data.lighting[buffered_frame_number].prefilter_map == -1 && scene->scene_data.prefilter_map != 0)
 				{
-					write_bindless_lighting_image(scene->scene_data.prefilter_map, scene->scene_data.lighting.prefilter_map);
+					write_bindless_lighting_image(scene->scene_data.prefilter_map, scene->scene_data.lighting[buffered_frame_number].prefilter_map);
 				}
-				if (scene->scene_data.lighting.brdf_lut == -1 && scene->scene_data.brdf_lut != 0)
+				if (scene->scene_data.lighting[buffered_frame_number].brdf_lut == -1 && scene->scene_data.brdf_lut != 0)
 				{
-					write_bindless_lighting_image(scene->scene_data.brdf_lut, scene->scene_data.lighting.brdf_lut);
+					write_bindless_lighting_image(scene->scene_data.brdf_lut, scene->scene_data.lighting[buffered_frame_number].brdf_lut);
 				}
 			}
 
 			CACHE_FETCH(Buffer, scene->scene_data.buffer)->copy_from(
 				Renderer::get()->context(),
-				&scene->scene_data.lighting,
+				&scene->scene_data.lighting[frame_data.buffered_frame_number],
 				sizeof(SceneLightingData),
-				scene->scene_data.lighting_data_buffer_start + BufferHelpers::pad_ubo_size(sizeof(SceneLightingData), min_ubo_alignment) * buffered_frame
+				scene->scene_data.lighting_data_buffer_start + BufferHelpers::pad_ubo_size(sizeof(SceneLightingData), min_ubo_alignment) * frame_data.buffered_frame_number
 			);
-		});
+		};
+
+		QUEUE_RENDERGRAPH_COMMAND(SetIrradianceMap, set_irradiance_map_callback);
 	}
 }

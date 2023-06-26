@@ -69,17 +69,30 @@ namespace Sunset
 		}
 	}
 
-	void set_forward(CameraControlComponent* camera_comp, const glm::vec3& new_forward)
+	void set_forward(CameraControlComponent* camera_comp, const glm::vec3& new_forward, bool b_decompose_pitch_yaw)
 	{
 		camera_comp->data.prev_forward = camera_comp->data.forward;
 		camera_comp->data.forward = new_forward;
+
+		if (b_decompose_pitch_yaw)
+		{
+			glm::vec3 forward = new_forward;
+			camera_comp->data.pitch = glm::degrees(-glm::asin(glm::dot(forward, WORLD_UP)));
+			forward.y = 0.0f;
+			forward = glm::normalize(forward);
+			camera_comp->data.yaw = glm::degrees(glm::acos(glm::dot(forward, WORLD_RIGHT)));
+			if (glm::dot(forward, WORLD_FORWARD) > 0)
+			{
+				camera_comp->data.yaw = 360.0f - camera_comp->data.yaw;
+			}
+		}
 	}
 
-	void set_camera_forward(class Scene* scene, EntityID entity, const glm::vec3& new_forward)
+	void set_camera_forward(class Scene* scene, EntityID entity, const glm::vec3& new_forward, bool b_decompose_pitch_yaw)
 	{
 		if (CameraControlComponent* const camera_comp = scene->get_component<CameraControlComponent>(entity))
 		{
-			set_forward(camera_comp, new_forward);
+			set_forward(camera_comp, new_forward, b_decompose_pitch_yaw);
 		}
 	}
 

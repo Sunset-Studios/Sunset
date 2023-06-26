@@ -27,9 +27,9 @@ namespace Sunset
 		indirect_draw_data.indirect_draws = batch_indirect_draws(gfx_context);
 	}
 
-	void MeshTaskQueue::submit_compute_cull(class GraphicsContext* const gfx_context, void* command_buffer, ExecutionQueue* deletion_queue)
+	void MeshTaskQueue::submit_compute_cull(class GraphicsContext* const gfx_context, void* command_buffer, int32_t buffered_frame_number, ExecutionQueue* deletion_queue)
 	{
-		update_indirect_draw_buffers(gfx_context, command_buffer, deletion_queue);
+		update_indirect_draw_buffers(gfx_context, command_buffer, buffered_frame_number, deletion_queue);
 
 		gfx_context->dispatch_compute(command_buffer, static_cast<uint32_t>(queue.size() + 255) / 256, 1, 1);
 
@@ -44,18 +44,9 @@ namespace Sunset
 				PipelineStageType::DrawIndirect
 			);
 		}
-
-		// Cache off task hashes so we can diff the task queue in the next frame to determine whether we should
-		// recompute or re-upload relevant data
-		previous_queue_hashes.resize(queue.size(), 0);
-		for (int i = 0; i < queue.size(); ++i)
-		{
-			MeshRenderTask* const task = queue[i];
-			previous_queue_hashes[i] = task->task_hash;
-		}
 	}
 
-	void MeshTaskQueue::submit_draws(class GraphicsContext* const gfx_context, void* command_buffer, RenderPassID render_pass, DescriptorSet* descriptor_set, PipelineStateID pipeline_state, bool b_use_draw_push_constants /*= true*/, bool b_flush /*= true*/)
+	void MeshTaskQueue::submit_draws(class GraphicsContext* const gfx_context, void* command_buffer, RenderPassID render_pass, DescriptorSet* descriptor_set, PipelineStateID pipeline_state, int32_t buffered_frame_number, bool b_use_draw_push_constants /*= true*/, bool b_flush /*= true*/)
 	{
 		for (uint32_t i = 0; i < indirect_draw_data.indirect_draws.size(); ++i)
 		{
@@ -70,13 +61,14 @@ namespace Sunset
 				i,
 				CACHE_FETCH(Buffer, indirect_draw_buffers.draw_indirect_buffer),
 				pipeline_state,
+				buffered_frame_number,
 				b_use_draw_push_constants ? draw.push_constants : PushConstantPipelineData()
 			);
 		}
 
 		if (cvar_enable_debug_bounds_draw.get())
 		{
-			submit_bounds_debug_draws(gfx_context, command_buffer, render_pass);
+			submit_bounds_debug_draws(gfx_context, command_buffer, render_pass, buffered_frame_number);
 		}
 
 		if (b_flush)
@@ -86,7 +78,7 @@ namespace Sunset
 		}
 	}
 
-	void MeshTaskQueue::submit_bounds_debug_draws(class GraphicsContext* const gfx_context, void* command_buffer, RenderPassID render_pass)
+	void MeshTaskQueue::submit_bounds_debug_draws(class GraphicsContext* const gfx_context, void* command_buffer, RenderPassID render_pass, int32_t buffered_frame_number)
 	{
 		static MeshID sphere_mesh_id = MeshFactory::create_sphere(gfx_context, glm::ivec2(8, 8), 1.0f);
 		Mesh* const sphere_mesh = CACHE_FETCH(Mesh, sphere_mesh_id);
@@ -142,7 +134,8 @@ namespace Sunset
 				draw,
 				i,
 				CACHE_FETCH(Buffer, indirect_draw_buffers.draw_indirect_buffer),
-				pipeline_state
+				pipeline_state,
+				buffered_frame_number
 			);
 		}
 	}
@@ -151,14 +144,12 @@ namespace Sunset
 	{
 		std::vector<IndirectDrawBatch> indirect_draws;
 
-		const bool b_queue_size_changed = queue.size() != previous_queue_hashes.size();
-
 		for (int i = 0; i < queue.size(); ++i)
 		{
 			MeshRenderTask* const task = queue[i];
 
 			// Indirect draw data buffers are recreated each frame so lets force this refresh for now
-			indirect_draw_data.b_needs_refresh = true; /* b_queue_size_changed || task->task_hash != previous_queue_hashes[i]; */
+			indirect_draw_data.b_needs_refresh = true;
 
 			const bool b_same_resource = !indirect_draws.empty() && task->resource_state == indirect_draws.back().resource_state;
 			const bool b_same_material = !indirect_draws.empty() && task->material == indirect_draws.back().material;
@@ -181,11 +172,9 @@ namespace Sunset
 		return indirect_draws;
 	}
 
-	void MeshTaskQueue::update_indirect_draw_buffers(class GraphicsContext* const gfx_context, void* command_buffer, ExecutionQueue* deletion_queue)
+	void MeshTaskQueue::update_indirect_draw_buffers(class GraphicsContext* const gfx_context, void* command_buffer, int32_t buffered_frame_number, ExecutionQueue* deletion_queue)
 	{
-		// TODO: Batch all barriers in here and only commit them right before pipeline execution
-
-		// A lot of these checks are unnecessary given that we are now recreating these buffers each frame in order to (hopefully) alias some memory
+		// This refresh check is unnecessary given that we are now recreating these buffers each frame in order to (hopefully) alias some memory
 		// later on as part of each render graph run, but leaving them here in case we decide to make these buffers persistent in the future
 		if (indirect_draw_data.b_needs_refresh)
 		{
@@ -222,7 +211,7 @@ namespace Sunset
 				const BufferID staging_buffer = BufferFactory::create(
 					gfx_context,
 					{
-						.name = "staging_object_instance_buffer" + gfx_context->get_buffered_frame_number(),
+						.name = "staging_object_instance_buffer" + buffered_frame_number,
 						.buffer_size = queue.size() * sizeof(GPUObjectInstance),
 						.type = BufferType::TransferSource | BufferType::StorageBuffer,
 						.memory_usage = MemoryUsageType::CPUToGPU
@@ -281,6 +270,7 @@ namespace Sunset
 		RenderPassID render_pass,
 		ResourceStateID resource_state,
 		PipelineStateID pipeline_state,
+		int32_t buffered_frame_number,
 		uint32_t instance_count,
 		const PushConstantPipelineData& push_constants)
 	{
@@ -314,6 +304,7 @@ namespace Sunset
 		uint32_t indirect_draw_index,
 		class Buffer* indirect_buffer,
 		PipelineStateID pipeline_state,
+		int32_t buffered_frame_number,
 		const PushConstantPipelineData& push_constants)
 	{
 		if (cached_material != indirect_draw.material)
@@ -323,7 +314,7 @@ namespace Sunset
 
 		if (descriptor_set != nullptr)
 		{
-			material_update(gfx_context, cached_material, descriptor_set);
+			material_update(gfx_context, cached_material, descriptor_set, buffered_frame_number);
 		}
 
 		// TODO: Given that most of our resources will go through descriptors, this resource state will likely get deprecated.

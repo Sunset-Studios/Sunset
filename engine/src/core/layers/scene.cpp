@@ -71,7 +71,7 @@ namespace Sunset
 			entities[new_index].id = new_id;
 			return entities[new_index].id;
 		}
-		entities.push_back({ create_entity_id(EntityIndex(entities.size()), 0), ComponentMask() });
+		entities.push_back({ create_entity_id(EntityIndex(entities.size()), 0), ComponentMask{} });
 		return entities.back().id;
 	}
 
@@ -95,7 +95,8 @@ namespace Sunset
 			set_aspect_ratio(camera_control_comp, (float)res.x / (float)res.y);
 			set_near_plane(camera_control_comp, 0.01f);
 			set_far_plane(camera_control_comp, 1000.0f);
-			set_position(camera_control_comp, glm::vec3(0.0f, 25.0f, 25.0f));
+			set_position(camera_control_comp, glm::vec3(75.0f, 25.0f, 25.0f));
+			set_forward(camera_control_comp, glm::vec3(-1.0f, 0.0f, 0.0f), true);
 			set_move_speed(camera_control_comp, 50.0f);
 			set_look_speed(camera_control_comp, 100.0f);
 		}
@@ -167,61 +168,91 @@ namespace Sunset
 	void set_scene_fog_color(class Scene* scene, glm::vec4 fog_color)
 	{
 		assert(scene != nullptr && "Cannot set fog color on null scene!");
-		scene->scene_data.lighting.fog_color = fog_color;
+		for (uint32_t i = 0; i < MAX_BUFFERED_FRAMES; ++i)
+		{
+			scene->scene_data.lighting[i].fog_color = fog_color;
+		}
 	}
 
 	void set_scene_fog_distance(class Scene* scene, float fog_distance)
 	{
 		assert(scene != nullptr && "Cannot set fog distance on null scene!");
-		scene->scene_data.lighting.fog_distance = fog_distance;
+		for (uint32_t i = 0; i < MAX_BUFFERED_FRAMES; ++i)
+		{
+			scene->scene_data.lighting[i].fog_distance = fog_distance;
+		}
 	}
 
 	void set_scene_sunlight_direction(class Scene* scene, glm::vec4 sunlight_direction)
 	{
 		assert(scene != nullptr && "Cannot set sunlight direction on null scene!");
-		scene->scene_data.lighting.sunlight_direction = sunlight_direction;
+		for (uint32_t i = 0; i < MAX_BUFFERED_FRAMES; ++i)
+		{
+			scene->scene_data.lighting[i].sunlight_direction = sunlight_direction;
+		}
 	}
 
 	void set_scene_sunlight_color(class Scene* scene, glm::vec4 sunlight_color)
 	{
 		assert(scene != nullptr && "Cannot set sunlight color on null scene!");
-		scene->scene_data.lighting.sunlight_color = sunlight_color;
+		for (uint32_t i = 0; i < MAX_BUFFERED_FRAMES; ++i)
+		{
+			scene->scene_data.lighting[i].sunlight_color = sunlight_color;
+		}
 	}
 
 	void set_scene_sunlight_intensity(class Scene* scene, float sunlight_intensity)
 	{
 		assert(scene != nullptr && "Cannot set sunlight intensity on null scene!");
-		scene->scene_data.lighting.sunlight_intensity = sunlight_intensity;
+		for (uint32_t i = 0; i < MAX_BUFFERED_FRAMES; ++i)
+		{
+			scene->scene_data.lighting[i].sunlight_intensity = sunlight_intensity;
+		}
 	}
 
 	void set_scene_sunlight_angular_radius(class Scene* scene, float angular_radius)
 	{
 		assert(scene != nullptr && "Cannot set sunlight angular radius on null scene!");
-		scene->scene_data.lighting.sunlight_angular_radius = angular_radius;
+		for (uint32_t i = 0; i < MAX_BUFFERED_FRAMES; ++i)
+		{
+			scene->scene_data.lighting[i].sunlight_angular_radius = angular_radius;
+		}
 	}
 
 	void set_scene_atmospheric_turbidity(class Scene* scene, float turbidity)
 	{
 		assert(scene != nullptr && "Cannot set atmospheric turbidity on null scene!");
-		scene->scene_data.lighting.atmospheric_turbidity = turbidity;
+		for (uint32_t i = 0; i < MAX_BUFFERED_FRAMES; ++i)
+		{
+			scene->scene_data.lighting[i].atmospheric_turbidity = turbidity;
+		}
 	}
 
 	void set_scene_atmospheric_rayleigh(class Scene* scene, float rayleigh)
 	{
 		assert(scene != nullptr && "Cannot set atmospheric rayleigh on null scene!");
-		scene->scene_data.lighting.atmospheric_rayleigh = rayleigh;
+		for (uint32_t i = 0; i < MAX_BUFFERED_FRAMES; ++i)
+		{
+			scene->scene_data.lighting[i].atmospheric_rayleigh = rayleigh;
+		}
 	}
 
 	void set_scene_mie_coefficient(class Scene* scene, float coeff)
 	{
 		assert(scene != nullptr && "Cannot set mie coefficient on null scene!");
-		scene->scene_data.lighting.mie_coefficient = coeff;
+		for (uint32_t i = 0; i < MAX_BUFFERED_FRAMES; ++i)
+		{
+			scene->scene_data.lighting[i].mie_coefficient = coeff;
+		}
 	}
 
 	void set_scene_mie_directional_g(class Scene* scene, float g)
 	{
 		assert(scene != nullptr && "Cannot set mie directional G on null scene!");
-		scene->scene_data.lighting.mie_directional_g = g;
+		for (uint32_t i = 0; i < MAX_BUFFERED_FRAMES; ++i)
+		{
+			scene->scene_data.lighting[i].mie_directional_g = g;
+		}
 	}
 
 	void set_scene_sky_box(Scene* scene, const char* sky_box_path)
@@ -240,7 +271,10 @@ namespace Sunset
 		if (scene->scene_data.sky_box != sky_box)
 		{
 			scene->scene_data.sky_box = sky_box;
-			scene->scene_data.lighting.sky_box = -1;
+			for (uint32_t i = 0; i < MAX_BUFFERED_FRAMES; ++i)
+			{
+				scene->scene_data.lighting[i].sky_box = -1;
+			}
 		}
 	}
 
@@ -260,7 +294,10 @@ namespace Sunset
 		if (scene->scene_data.irradiance_map != irradiance_map)
 		{
 			scene->scene_data.irradiance_map = irradiance_map;
-			scene->scene_data.lighting.irradiance_map = -1;
+			for (uint32_t i = 0; i < MAX_BUFFERED_FRAMES; ++i)
+			{
+				scene->scene_data.lighting[i].irradiance_map = -1;
+			}
 		}
 	}
 
@@ -281,7 +318,10 @@ namespace Sunset
 		if (scene->scene_data.prefilter_map != prefilter_map)
 		{
 			scene->scene_data.prefilter_map = prefilter_map;
-			scene->scene_data.lighting.prefilter_map = -1;
+			for (uint32_t i = 0; i < MAX_BUFFERED_FRAMES; ++i)
+			{
+				scene->scene_data.lighting[i].prefilter_map = -1;
+			}
 		}
 	}
 
@@ -301,7 +341,10 @@ namespace Sunset
 		if (scene->scene_data.brdf_lut != brdf_lut)
 		{
 			scene->scene_data.brdf_lut = brdf_lut;
-			scene->scene_data.lighting.brdf_lut = -1;
+			for (uint32_t i = 0; i < MAX_BUFFERED_FRAMES; ++i)
+			{
+				scene->scene_data.lighting[i].brdf_lut = -1;
+			}
 		}
 	}
 }

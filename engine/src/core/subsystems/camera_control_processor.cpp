@@ -20,7 +20,7 @@ namespace Sunset
 	AutoCVar_Int cvar_camera_jitter_period(
 		"ren.camera_jitter_period",
 		"The maximum jitter period for applying jitter to the camera projection matrix. Corresponds to the number of frames before jitter tends to repeat.",
-		4
+		6
 	);
 
 	void CameraControlProcessor::update(class Scene* scene, double delta_time)
@@ -28,12 +28,14 @@ namespace Sunset
 		const size_t min_ubo_alignment = Renderer::get()->context()->get_min_ubo_offset_alignment();
 		const glm::ivec2 res = Renderer::get()->context()->get_surface_resolution();
 		const uint32_t current_frame_number = Renderer::get()->context()->get_frame_number();
+		const uint32_t current_buffered_frame_number = Renderer::get()->context()->get_buffered_frame_number();
 
 		for (EntityID entity : SceneView<CameraControlComponent>(*scene))
 		{
 			CameraControlComponent* const camera_control_comp = scene->get_component<CameraControlComponent>(entity);
 
-			if (current_frame_number > MAX_BUFFERED_FRAMES)
+			// After startup, on any other regular frame, save off the previous projection before we recalculate our VP matrix
+			if (current_frame_number > 0)
 			{
 				camera_control_comp->data.gpu_data.prev_view_projection_matrix = camera_control_comp->data.gpu_data.view_projection_matrix;
 			}
@@ -52,7 +54,6 @@ namespace Sunset
 				camera_control_comp->data.far_plane
 			);
 			camera_control_comp->data.gpu_data.projection_matrix[1][1] *= -1;
-
 
 			camera_control_comp->data.gpu_data.view_projection_matrix = camera_control_comp->data.gpu_data.projection_matrix * camera_control_comp->data.gpu_data.view_matrix;
 			camera_control_comp->data.gpu_data.inverse_view_projection_matrix = glm::inverse(camera_control_comp->data.gpu_data.view_projection_matrix);
@@ -100,7 +101,8 @@ namespace Sunset
 				}
 			}
 
-			if (current_frame_number <= MAX_BUFFERED_FRAMES)
+			// During startup, we don't have valid projection matrices from any past frames, so set the previous VP matrix to the new VP matrix 
+			if (current_frame_number <= 0)
 			{
 				camera_control_comp->data.gpu_data.prev_view_projection_matrix = camera_control_comp->data.gpu_data.view_projection_matrix;
 			}
@@ -146,14 +148,14 @@ namespace Sunset
 			// guarantee as to when this data first gets set for re-use in a later render graph pass
 			QUEUE_RENDERGRAPH_COMMAND(SetDrawCullData, [new_draw_cull_data](class RenderGraph& render_graph, RGFrameData& frame_data, void* command_buffer)
 			{
-				Renderer::get()->set_draw_cull_data(new_draw_cull_data);
+				Renderer::get()->set_draw_cull_data(new_draw_cull_data, frame_data.buffered_frame_number);
 			});
 
 			CACHE_FETCH(Buffer, scene->scene_data.buffer)->copy_from(
 				Renderer::get()->context(),
 				&camera_control_comp->data.gpu_data,
 				sizeof(CameraData),
-				scene->scene_data.cam_data_buffer_start + BufferHelpers::pad_ubo_size(sizeof(CameraData), min_ubo_alignment) * Renderer::get()->context()->get_buffered_frame_number()
+				scene->scene_data.cam_data_buffer_start + BufferHelpers::pad_ubo_size(sizeof(CameraData), min_ubo_alignment) * current_buffered_frame_number
 			);
 		}
 	}

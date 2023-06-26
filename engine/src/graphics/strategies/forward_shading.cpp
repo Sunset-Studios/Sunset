@@ -19,11 +19,14 @@ namespace Sunset
 
 	AutoCVar_Float cvar_forward_final_image_exposure("ren.forward_final_image_exposure", "The exposure to apply once HDR color gets resolved down to LDR", 1.0f);
 
-	void ForwardShadingStrategy::render(GraphicsContext* gfx_context, RenderGraph& render_graph, class Swapchain* swapchain, bool b_offline)
+	bool ForwardShadingStrategy::render(GraphicsContext* gfx_context, RenderGraph& render_graph, class Swapchain* swapchain, int32_t buffered_frame_number, bool b_offline)
 	{
-		const uint16_t buffered_frame_number = gfx_context->get_buffered_frame_number();
+		MeshTaskQueue& mesh_task_queue = Renderer::get()->get_mesh_task_queue(buffered_frame_number);
+		if (mesh_task_queue.get_queue_size() == 0)
+		{
+			return false;
+		}
 
-		MeshTaskQueue& mesh_task_queue = Renderer::get()->get_mesh_task_queue();
 		mesh_task_queue.sort_and_batch(gfx_context); 
 
 		RGResourceHandle object_instance_buffer_desc = render_graph.create_buffer(
@@ -33,7 +36,8 @@ namespace Sunset
 				.buffer_size = mesh_task_queue.get_queue_size() * sizeof(GPUObjectInstance),
 				.type = BufferType::TransferDestination | BufferType::StorageBuffer,
 				.memory_usage = MemoryUsageType::OnlyGPU
-			}
+			},
+			buffered_frame_number
 		);
 
 		RGResourceHandle compacted_object_instance_buffer_desc = render_graph.create_buffer(
@@ -43,7 +47,8 @@ namespace Sunset
 				.buffer_size = mesh_task_queue.get_queue_size() * sizeof(uint32_t),
 				.type = BufferType::TransferDestination | BufferType::StorageBuffer,
 				.memory_usage = MemoryUsageType::OnlyGPU
-			}
+			},
+			buffered_frame_number
 		);
 
 		RGResourceHandle draw_indirect_buffer_desc = render_graph.create_buffer(
@@ -53,27 +58,32 @@ namespace Sunset
 				.buffer_size = mesh_task_queue.get_num_indirect_batches(),
 				.type = BufferType::StorageBuffer | BufferType::Indirect,
 				.memory_usage = MemoryUsageType::CPUToGPU
-			}
+			},
+			buffered_frame_number
 		);
 
 		RGResourceHandle entity_data_buffer_desc = render_graph.register_buffer(
 			gfx_context,
-			EntityGlobals::get()->entity_data.data_buffer[buffered_frame_number]
+			EntityGlobals::get()->entity_data.data_buffer[buffered_frame_number],
+			buffered_frame_number
 		);
 
 		RGResourceHandle material_data_buffer_desc = render_graph.register_buffer(
 			gfx_context,
-			MaterialGlobals::get()->material_data.data_buffer[buffered_frame_number]
+			MaterialGlobals::get()->material_data.data_buffer[buffered_frame_number],
+			buffered_frame_number
 		);
 
 		RGResourceHandle light_data_buffer_desc = render_graph.register_buffer(
 			gfx_context,
-			LightGlobals::get()->light_data.data_buffer[buffered_frame_number]
+			LightGlobals::get()->light_data.data_buffer[buffered_frame_number],
+			buffered_frame_number
 		);
 
 		RGResourceHandle hzb_image_desc = render_graph.register_image(
 			gfx_context,
-			Renderer::get()->get_persistent_image("hi_z", buffered_frame_number)
+			Renderer::get()->get_persistent_image("hi_z", buffered_frame_number),
+			buffered_frame_number
 		);
 
 		// Compute mesh cull pass
@@ -82,10 +92,11 @@ namespace Sunset
 				gfx_context,
 				"set_draw_cull_data_draw_count",
 				RenderPassFlags::GraphLocal,
+				buffered_frame_number,
 				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
 				{
-					MeshTaskQueue& mesh_task_queue = Renderer::get()->get_mesh_task_queue();
-					Renderer::get()->get_draw_cull_data().draw_count = mesh_task_queue.get_queue_size();
+					MeshTaskQueue& mesh_task_queue = Renderer::get()->get_mesh_task_queue(frame_data.buffered_frame_number);
+					Renderer::get()->get_draw_cull_data(frame_data.buffered_frame_number).draw_count = mesh_task_queue.get_queue_size();
 				}
 			);
 
@@ -99,13 +110,15 @@ namespace Sunset
 
 			RGResourceHandle entity_data_buffer_desc = render_graph.register_buffer(
 				gfx_context,
-				EntityGlobals::get()->entity_data.data_buffer[buffered_frame_number]
+				EntityGlobals::get()->entity_data.data_buffer[buffered_frame_number],
+				buffered_frame_number
 			);
 
 			render_graph.add_pass(
 				gfx_context,
 				"compute_cull",
 				RenderPassFlags::Compute,
+				buffered_frame_number,
 				{
 					.shader_setup = shader_setup,
 					.inputs = { entity_data_buffer_desc, object_instance_buffer_desc, 
@@ -116,27 +129,28 @@ namespace Sunset
 				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
 				{
 					{
-						Image* const hzb_image = CACHE_FETCH(Image, graph.get_physical_resource(hzb_image_desc));
-						DrawCullData& draw_cull_data = Renderer::get()->get_draw_cull_data();
+						Image* const hzb_image = CACHE_FETCH(Image, graph.get_physical_resource(hzb_image_desc, frame_data.buffered_frame_number));
+						DrawCullData& draw_cull_data = Renderer::get()->get_draw_cull_data(frame_data.buffered_frame_number);
 						draw_cull_data.hzb_width = hzb_image->get_attachment_config().extent.x;
 						draw_cull_data.hzb_height = hzb_image->get_attachment_config().extent.y;
 						draw_cull_data.hzb_texture = frame_data.pass_bindless_resources.handles.front();
 					}
 
-					PushConstantPipelineData pass_data = PushConstantPipelineData::create(&Renderer::get()->get_draw_cull_data(), PipelineShaderStageType::Compute);
+					PushConstantPipelineData pass_data = PushConstantPipelineData::create(&Renderer::get()->get_draw_cull_data(frame_data.buffered_frame_number), PipelineShaderStageType::Compute);
 
 					gfx_context->push_constants(command_buffer, frame_data.pass_pipeline_state, pass_data);
 
-					Renderer::get()->get_mesh_task_queue().set_gpu_draw_indirect_buffers(
+					Renderer::get()->get_mesh_task_queue(frame_data.buffered_frame_number).set_gpu_draw_indirect_buffers(
 						{
-							.draw_indirect_buffer = static_cast<BufferID>(graph.get_physical_resource(draw_indirect_buffer_desc)),
-							.object_instance_buffer = static_cast<BufferID>(graph.get_physical_resource(object_instance_buffer_desc)),
-							.compacted_object_instance_buffer = static_cast<BufferID>(graph.get_physical_resource(compacted_object_instance_buffer_desc))
+							.draw_indirect_buffer = static_cast<BufferID>(graph.get_physical_resource(draw_indirect_buffer_desc, frame_data.buffered_frame_number)),
+							.object_instance_buffer = static_cast<BufferID>(graph.get_physical_resource(object_instance_buffer_desc, frame_data.buffered_frame_number)),
+							.compacted_object_instance_buffer = static_cast<BufferID>(graph.get_physical_resource(compacted_object_instance_buffer_desc, frame_data.buffered_frame_number))
 						}
 					);
-					Renderer::get()->get_mesh_task_queue().submit_compute_cull(
+					Renderer::get()->get_mesh_task_queue(frame_data.buffered_frame_number).submit_compute_cull(
 						gfx_context,
 						command_buffer,
+						buffered_frame_number,
 						frame_data.resource_deletion_queue
 					);
 				}
@@ -170,7 +184,8 @@ namespace Sunset
 					.image_filter = ImageFilter::Linear,
 					.attachment_clear = true,
 					.attachment_stencil_clear = false
-				}
+				},
+				buffered_frame_number
 			);
 			main_depth_image_desc = render_graph.create_image(
 				gfx_context,
@@ -184,13 +199,15 @@ namespace Sunset
 					.image_filter = ImageFilter::Linear,
 					.attachment_clear = true,
 					.attachment_stencil_clear = true,
-				}
+				},
+				buffered_frame_number
 			);
 
 			render_graph.add_pass(
 				gfx_context,
 				"forward_pass",
 				RenderPassFlags::Graphics,
+				buffered_frame_number,
 				{
 					.shader_setup = shader_setup,
 					.inputs = { entity_data_buffer_desc, material_data_buffer_desc,
@@ -200,12 +217,13 @@ namespace Sunset
 				},
 				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
 				{
-					Renderer::get()->get_mesh_task_queue().submit_draws(
+					Renderer::get()->get_mesh_task_queue(frame_data.buffered_frame_number).submit_draws(
 						gfx_context,
 						command_buffer,
 						frame_data.current_pass,
 						frame_data.global_descriptor_set,
-						frame_data.pass_pipeline_state
+						frame_data.pass_pipeline_state,
+						frame_data.buffered_frame_number
 					);
 				}
 			);
@@ -225,6 +243,7 @@ namespace Sunset
 				gfx_context,
 				"reduce_hzb",
 				RenderPassFlags::Compute,
+				buffered_frame_number,
 				{
 					.shader_setup = shader_setup,
 					.inputs = { main_depth_image_desc, hzb_image_desc },
@@ -233,8 +252,8 @@ namespace Sunset
 				},
 				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
 				{
-					Image* const depth_image = CACHE_FETCH(Image, graph.get_physical_resource(main_depth_image_desc));
-					Image* const hzb_image = CACHE_FETCH(Image, graph.get_physical_resource(hzb_image_desc));
+					Image* const depth_image = CACHE_FETCH(Image, graph.get_physical_resource(main_depth_image_desc, frame_data.buffered_frame_number));
+					Image* const hzb_image = CACHE_FETCH(Image, graph.get_physical_resource(hzb_image_desc, frame_data.buffered_frame_number));
 
 					depth_image->barrier(
 						gfx_context,
@@ -306,7 +325,8 @@ namespace Sunset
 					.image_filter = ImageFilter::Linear,
 					.attachment_clear = true,
 					.attachment_stencil_clear = false
-				}
+				},
+				buffered_frame_number
 			);
 		}
 
@@ -356,13 +376,15 @@ namespace Sunset
 					.image_filter = ImageFilter::Linear,
 					.mip_count = num_iterations,
 					.attachment_clear = true
-				}
+				},
+				buffered_frame_number
 			);
 
 			render_graph.add_pass(
 				gfx_context,
 				"bloom_downsample_pass",
 				RenderPassFlags::Compute,
+				buffered_frame_number,
 				{
 					.shader_setup = bloom_downsample_shader_setup,
 					.inputs = { main_color_image_desc, bloom_blur_image_desc },
@@ -371,7 +393,7 @@ namespace Sunset
 				},
 				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
 				{
-					Image* const color_image = CACHE_FETCH(Image, graph.get_physical_resource(main_color_image_desc));
+					Image* const color_image = CACHE_FETCH(Image, graph.get_physical_resource(main_color_image_desc, frame_data.buffered_frame_number));
 
 					color_image->barrier(
 						gfx_context,
@@ -384,7 +406,7 @@ namespace Sunset
 						PipelineStageType::ComputeShader
 					);
 
-					Image* const downsample_image = CACHE_FETCH(Image, graph.get_physical_resource(bloom_blur_image_desc));
+					Image* const downsample_image = CACHE_FETCH(Image, graph.get_physical_resource(bloom_blur_image_desc, frame_data.buffered_frame_number));
 					const uint32_t num_mips = downsample_image->get_num_image_views();
 
 					for (uint32_t i = 0; i < num_mips; ++i)
@@ -440,6 +462,7 @@ namespace Sunset
 				gfx_context,
 				"bloom_upsample_pass",
 				RenderPassFlags::Compute,
+				buffered_frame_number,
 				{
 					.shader_setup = bloom_upsample_shader_setup,
 					.inputs = { bloom_blur_image_desc },
@@ -448,7 +471,7 @@ namespace Sunset
 				},
 				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
 				{
-					Image* const downsample_image = CACHE_FETCH(Image, graph.get_physical_resource(bloom_blur_image_desc));
+					Image* const downsample_image = CACHE_FETCH(Image, graph.get_physical_resource(bloom_blur_image_desc, frame_data.buffered_frame_number));
 					const uint32_t num_mips = downsample_image->get_num_image_views();
 
 					for (int32_t i = num_mips - 1; i > 0; --i)
@@ -505,6 +528,7 @@ namespace Sunset
 				gfx_context,
 				"bloom_resolve_pass",
 				RenderPassFlags::Graphics,
+				buffered_frame_number,
 				{
 					.shader_setup = bloom_resolve_shader_setup,
 					.inputs = { main_color_image_desc, bloom_blur_image_desc },
@@ -554,6 +578,7 @@ namespace Sunset
 				gfx_context,
 				"present_pass",
 				RenderPassFlags::Graphics | RenderPassFlags::Present,
+				buffered_frame_number,
 				{
 					.shader_setup = shader_setup,
 					.inputs = { final_image_color }
@@ -589,6 +614,8 @@ namespace Sunset
 		//	}
 		//);
 #endif 
-		render_graph.submit(gfx_context, swapchain, b_offline);
+		render_graph.submit(gfx_context, swapchain, buffered_frame_number, b_offline);
+
+		return true;
 	}
 }

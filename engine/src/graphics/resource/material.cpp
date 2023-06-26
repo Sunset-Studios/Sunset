@@ -13,19 +13,27 @@ namespace Sunset
 	Material::Material()
 		: description({})
 	{
-		gpu_data = MaterialGlobals::get()->new_shared_data();
-		gpu_data_buffer_offset = MaterialGlobals::get()->get_shared_data_index(gpu_data);
-		for (uint32_t i = 0; i < MAX_MATERIAL_TEXTURES; ++i)
+		for (uint32_t i = 0; i < MAX_BUFFERED_FRAMES; ++i)
 		{
-			bound_texture_handles[i] = -1;
-			gpu_data->textures[i] = -1;
-			gpu_data->tiling_coeffs[i] = 1;
+			gpu_data[i] = MaterialGlobals::get()->new_shared_data();
+			gpu_data_buffer_offset[i] = MaterialGlobals::get()->get_shared_data_index(gpu_data[i]);
+			for (uint32_t j = 0; j < MAX_MATERIAL_TEXTURES; ++j)
+			{
+				bound_texture_handles[MAX_MATERIAL_TEXTURES * i + j] = -1;
+				gpu_data[i]->textures[j] = -1;
+				gpu_data[i]->tiling_coeffs[j] = 1;
+			}
+			b_needs_texture_upload[i] = false;
+			b_dirty[i] = true;
 		}
 	}
 
 	Material::~Material()
 	{
-		MaterialGlobals::get()->release_shared_data(gpu_data);
+		for (uint32_t i = 0; i < MAX_BUFFERED_FRAMES; ++i)
+		{
+			MaterialGlobals::get()->release_shared_data(gpu_data[i]);
+		}
 	}
 
 	void material_load_textures(class GraphicsContext* const gfx_context, MaterialID material)
@@ -48,7 +56,10 @@ namespace Sunset
 						.image_filter = ImageFilter::Linear
 					}
 				);
-				material_ptr->b_needs_texture_upload = true;
+				for (uint32_t i = 0; i < MAX_BUFFERED_FRAMES; ++i)
+				{
+					material_ptr->b_needs_texture_upload[i] = true;
+				}
 			}
 		}
 	}
@@ -67,14 +78,12 @@ namespace Sunset
 		material_set_uniform_emissive(gfx_context, material, material_ptr->description.uniform_emissive);
 	}
 
-	void material_update(class GraphicsContext* const gfx_context, MaterialID material, class DescriptorSet* descriptor_set)
+	void material_update(class GraphicsContext* const gfx_context, MaterialID material, class DescriptorSet* descriptor_set, int32_t buffered_frame_number)
 	{
 		Material* const material_ptr = CACHE_FETCH(Material, material);
 		assert(material_ptr != nullptr && "Cannot load material textures for a null material!");
 		
-		const uint32_t current_buffered_frame = gfx_context->get_buffered_frame_number();
-
-		if (material_ptr->b_needs_texture_upload)
+		if (material_ptr->b_needs_texture_upload[buffered_frame_number])
 		{
 			std::vector<DescriptorBindlessWrite> bindless_writes;
 			for (int i = 0; i < material_ptr->textures.size(); ++i)
@@ -92,32 +101,35 @@ namespace Sunset
 				}
 			}
 
-			DescriptorHelpers::write_bindless_descriptors(gfx_context, bindless_writes, material_ptr->bound_texture_handles.data());
+			const uint32_t bound_texture_handles_offset = buffered_frame_number * MAX_MATERIAL_TEXTURES;
+
+			DescriptorHelpers::write_bindless_descriptors(gfx_context, bindless_writes, material_ptr->bound_texture_handles.data() + bound_texture_handles_offset);
 
 			for (uint32_t i = 0; i < MAX_MATERIAL_TEXTURES; ++i)
 			{
-				if (material_ptr->bound_texture_handles[i] >= 0)
+				const uint32_t bound_texture_handle_idx = bound_texture_handles_offset + i;
+				if (material_ptr->bound_texture_handles[bound_texture_handle_idx] >= 0)
 				{
-					material_ptr->gpu_data->textures[i] = (int32_t)(0x0000ffff & material_ptr->bound_texture_handles[i]);
+					material_ptr->gpu_data[buffered_frame_number]->textures[i] = (int32_t)(0x0000ffff & material_ptr->bound_texture_handles[bound_texture_handle_idx]);
 				}
 			}
 
-			material_ptr->b_dirty = true;
-			material_ptr->b_needs_texture_upload = false;
+			material_ptr->b_dirty[buffered_frame_number] = true;
+			material_ptr->b_needs_texture_upload[buffered_frame_number] = false;
 		}
 
-		if (material_ptr->b_dirty)
+		if (material_ptr->b_dirty[buffered_frame_number])
 		{
 			// Update mapped SSBO data
-			Buffer* const material_buffer = CACHE_FETCH(Buffer, MaterialGlobals::get()->material_data.data_buffer[current_buffered_frame]);
+			Buffer* const material_buffer = CACHE_FETCH(Buffer, MaterialGlobals::get()->material_data.data_buffer[buffered_frame_number]);
 			material_buffer->copy_from(
 				gfx_context,
-				material_ptr->gpu_data,
+				material_ptr->gpu_data[buffered_frame_number],
 				sizeof(MaterialData),
-				sizeof(MaterialData) * material_ptr->gpu_data_buffer_offset
+				sizeof(MaterialData) * material_ptr->gpu_data_buffer_offset[buffered_frame_number]
 			);
 
-			material_ptr->b_dirty = false;
+			material_ptr->b_dirty[buffered_frame_number] = false;
 		}
 	}
 
@@ -127,8 +139,11 @@ namespace Sunset
 		assert(material_ptr != nullptr && "Cannot set texture tiling for a null material!");
 		assert(texture_index >= 0 && texture_index < MAX_MATERIAL_TEXTURES && "Invalid material texture index provided.");
 
-		material_ptr->gpu_data->tiling_coeffs[texture_index] = texture_tiling;
-		material_ptr->b_dirty = true;
+		for (uint32_t i = 0; i < MAX_BUFFERED_FRAMES; ++i)
+		{
+			material_ptr->gpu_data[i]->tiling_coeffs[texture_index] = texture_tiling;
+			material_ptr->b_dirty[i] = true;
+		}
 	}
 
 	void material_set_color(class GraphicsContext* const gfx_context, MaterialID material, glm::vec3 color)
@@ -136,8 +151,11 @@ namespace Sunset
 		Material* const material_ptr = CACHE_FETCH(Material, material);
 		assert(material_ptr != nullptr && "Cannot set texture tiling for a null material!");
 
-		material_ptr->gpu_data->color = color;
-		material_ptr->b_dirty = true;
+		for (uint32_t i = 0; i < MAX_BUFFERED_FRAMES; ++i)
+		{
+			material_ptr->gpu_data[i]->color = color;
+			material_ptr->b_dirty[i] = true;
+		}
 	}
 
 	void material_set_uniform_roughness(class GraphicsContext* const gfx_context, MaterialID material, float roughness)
@@ -145,8 +163,11 @@ namespace Sunset
 		Material* const material_ptr = CACHE_FETCH(Material, material);
 		assert(material_ptr != nullptr && "Cannot set texture tiling for a null material!");
 
-		material_ptr->gpu_data->uniform_roughness = roughness;
-		material_ptr->b_dirty = true;
+		for (uint32_t i = 0; i < MAX_BUFFERED_FRAMES; ++i)
+		{
+			material_ptr->gpu_data[i]->uniform_roughness = roughness;
+			material_ptr->b_dirty[i] = true;
+		}
 	}
 
 	void material_set_uniform_metallic(class GraphicsContext* const gfx_context, MaterialID material, float metallic)
@@ -154,8 +175,11 @@ namespace Sunset
 		Material* const material_ptr = CACHE_FETCH(Material, material);
 		assert(material_ptr != nullptr && "Cannot set texture tiling for a null material!");
 
-		material_ptr->gpu_data->uniform_metallic = metallic; 
-		material_ptr->b_dirty = true;
+		for (uint32_t i = 0; i < MAX_BUFFERED_FRAMES; ++i)
+		{
+			material_ptr->gpu_data[i]->uniform_metallic = metallic;
+			material_ptr->b_dirty[i] = true;
+		}
 	}
 
 	void material_set_uniform_reflectance(class GraphicsContext* const gfx_context, MaterialID material, float reflectance)
@@ -163,8 +187,11 @@ namespace Sunset
 		Material* const material_ptr = CACHE_FETCH(Material, material);
 		assert(material_ptr != nullptr && "Cannot set texture tiling for a null material!");
 
-		material_ptr->gpu_data->uniform_reflectance = reflectance; 
-		material_ptr->b_dirty = true;
+		for (uint32_t i = 0; i < MAX_BUFFERED_FRAMES; ++i)
+		{
+			material_ptr->gpu_data[i]->uniform_reflectance = reflectance;
+			material_ptr->b_dirty[i] = true;
+		}
 	}
 
 	void material_set_uniform_clearcoat(class GraphicsContext* const gfx_context, MaterialID material, float clearcoat)
@@ -172,8 +199,11 @@ namespace Sunset
 		Material* const material_ptr = CACHE_FETCH(Material, material);
 		assert(material_ptr != nullptr && "Cannot set texture tiling for a null material!");
 
-		material_ptr->gpu_data->uniform_clearcoat = clearcoat; 
-		material_ptr->b_dirty = true;
+		for (uint32_t i = 0; i < MAX_BUFFERED_FRAMES; ++i)
+		{
+			material_ptr->gpu_data[i]->uniform_clearcoat = clearcoat;
+			material_ptr->b_dirty[i] = true;
+		}
 	}
 
 	void material_set_uniform_clearcoat_roughness(class GraphicsContext* const gfx_context, MaterialID material, float clearcoat_roughness)
@@ -181,8 +211,11 @@ namespace Sunset
 		Material* const material_ptr = CACHE_FETCH(Material, material);
 		assert(material_ptr != nullptr && "Cannot set texture tiling for a null material!");
 
-		material_ptr->gpu_data->uniform_clearcoat_roughness = clearcoat_roughness; 
-		material_ptr->b_dirty = true;
+		for (uint32_t i = 0; i < MAX_BUFFERED_FRAMES; ++i)
+		{
+			material_ptr->gpu_data[i]->uniform_clearcoat_roughness = clearcoat_roughness;
+			material_ptr->b_dirty[i] = true;
+		}
 	}
 
 	void material_set_uniform_emissive(GraphicsContext* const gfx_context, MaterialID material, float emissive)
@@ -190,8 +223,11 @@ namespace Sunset
 		Material* const material_ptr = CACHE_FETCH(Material, material);
 		assert(material_ptr != nullptr && "Cannot set texture tiling for a null material!");
 
-		material_ptr->gpu_data->uniform_emissive = emissive; 
-		material_ptr->b_dirty = true;
+		for (uint32_t i = 0; i < MAX_BUFFERED_FRAMES; ++i)
+		{
+			material_ptr->gpu_data[i]->uniform_emissive = emissive;
+			material_ptr->b_dirty[i] = true;
+		}
 	}
 
 	Sunset::MaterialID MaterialFactory::create(class GraphicsContext* const gfx_context, const MaterialDescription& desc)

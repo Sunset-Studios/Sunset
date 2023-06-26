@@ -1,11 +1,11 @@
 #pragma once
 
 #include <bitset>
-#include <unordered_map>
 #include <array>
 
 #include <glm/glm.hpp>
 #include <SDL.h>
+#include <parallel_hashmap/phmap.h>
 
 #include <input_types.h>
 
@@ -13,9 +13,9 @@ namespace Sunset
 {
 	extern bool B_SDL_INITIALIZED;
 	extern SDL_Event sdl_event;
-	extern std::unordered_map<SDL_Keycode, InputKey> SDL_TO_SUNSET_KEY_MAP;
-	extern std::unordered_map<Uint8, InputKey> SDL_TO_SUNSET_BUTTON_MAP;
-	extern std::unordered_map<Uint8, InputRange> SDL_TO_SUNSET_RANGE_MAP;
+	extern phmap::flat_hash_map<SDL_Keycode, InputKey> SDL_TO_SUNSET_KEY_MAP;
+	extern phmap::flat_hash_map<Uint8, InputKey> SDL_TO_SUNSET_BUTTON_MAP;
+	extern phmap::flat_hash_map<Uint8, InputRange> SDL_TO_SUNSET_RANGE_MAP;
 
 	extern void lazy_SDL_init();
 

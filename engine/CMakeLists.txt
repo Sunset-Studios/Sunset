@@ -9,7 +9,7 @@ MACRO(HEADER_DIRECTORIES return_list base_path)
     SET(${return_list} ${dir_list})
 ENDMACRO()
 
-file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS "src/*.h" "src/*.cpp")
+file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS "src/*.h" "src/*.cpp" "shaders/*.vert" "shaders/*.frag" "shaders/*.inc" "shaders/*.comp")
 
 HEADER_DIRECTORIES(INCLUDE_DIRS src)
 
@@ -25,7 +25,7 @@ set_property(TARGET Sunset PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE
 
 target_compile_definitions(Sunset PRIVATE PROJECT_PATH="${CMAKE_SOURCE_DIR}")
 
-target_link_libraries(Sunset vkbootstrap vma glm imgui lz4 json spirv_reflect Vulkan::Vulkan sdl2 AssetSerializer Tracy::TracyClient Jolt atomic_queue)
+target_link_libraries(Sunset vkbootstrap vma glm imgui lz4 json spirv_reflect Vulkan::Vulkan sdl2 AssetSerializer Tracy::TracyClient Jolt atomic_queue parallel_hashmap)
 
 target_include_directories(Sunset PUBLIC ${INCLUDE_DIRS} ${JoltPhysics_SOURCE_DIR}/../Jolt)
 

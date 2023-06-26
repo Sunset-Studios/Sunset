@@ -18,12 +18,15 @@ namespace Sunset
 		{
 			BodyComponent* const body_comp = scene->get_component<BodyComponent>(entity);
 			Physics::get()->context()->destroy_body(body_comp->body_data.body);
+			body_comp->body_data.body = -1;
 		}
 		Physics::get()->destroy();
 	}
 
 	void PhysicsSceneProcessor::update(class Scene* scene, double delta_time)
 	{
+		ZoneScopedN("PhysicsSceneProcessor::update");
+
 		PhysicsContext* const phys_context = Physics::get()->context();
 
 		for (EntityID entity : SceneView<BodyComponent, TransformComponent>(*scene))
@@ -35,7 +38,7 @@ namespace Sunset
 			if ((body_comp->body_data.dirty_flags & PhysicsBodyDirtyFlags::BODY) || EntityGlobals::get()->entity_transform_dirty_states.test(get_entity_index(entity)))
 			{
 				phys_context->set_body_position(body_comp->body_data.body, transform_comp->transform.position);
-				//phys_context->set_body_rotation(body_comp->body_data.body, transform_comp->transform.rotation);
+				phys_context->set_body_rotation(body_comp->body_data.body, transform_comp->transform.rotation);
 				phys_context->set_body_active(body_comp->body_data.body);
 				body_comp->body_data.dirty_flags &= ~(PhysicsBodyDirtyFlags::BODY);
 				continue;
@@ -63,6 +66,12 @@ namespace Sunset
 			{
 				phys_context->set_body_gravity_scale(body_comp->body_data.body, body_comp->body_data.gravity_scale);
 				body_comp->body_data.dirty_flags &= ~(PhysicsBodyDirtyFlags::GRAVITY_SCALE);
+			}
+
+			if (body_comp->body_data.dirty_flags & PhysicsBodyDirtyFlags::RESTITUTION)
+			{
+				phys_context->set_body_restitution(body_comp->body_data.body, body_comp->body_data.restitution);
+				body_comp->body_data.dirty_flags &= ~(PhysicsBodyDirtyFlags::RESTITUTION);
 			}
 
 			if (body_comp->body_data.body_type != PhysicsBodyType::Static)

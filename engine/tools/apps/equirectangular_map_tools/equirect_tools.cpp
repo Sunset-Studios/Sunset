@@ -45,33 +45,38 @@ namespace Sunset
 		};
 
 	public:
-		void render(GraphicsContext* gfx_context, RenderGraph& render_graph, class Swapchain* swapchain, bool b_offline = false)
+		void render(GraphicsContext* gfx_context, RenderGraph& render_graph, class Swapchain* swapchain, int32_t buffered_frame_number, bool b_offline = false)
 		{
 			const glm::vec2 viewport_extent = Renderer::get()->context()->get_surface_resolution();
 
 			RGResourceHandle equirect_image_desc = render_graph.register_image(
 				gfx_context,
-				EquirectToolsApplication::equirect_image
+				EquirectToolsApplication::equirect_image,
+				buffered_frame_number
 			);
 
 			RGResourceHandle equirect_cubemap_image_desc = render_graph.register_image(
 				gfx_context,
-				EquirectToolsApplication::equirect_cubemap_image
+				EquirectToolsApplication::equirect_cubemap_image,
+				buffered_frame_number
 			);
 
 			RGResourceHandle environment_irradiance_image_desc = render_graph.register_image(
 				gfx_context,
-				EquirectToolsApplication::irradiance_map_image
+				EquirectToolsApplication::irradiance_map_image,
+				buffered_frame_number
 			);
 
 			RGResourceHandle environment_prefilter_image_desc = render_graph.register_image(
 				gfx_context,
-				EquirectToolsApplication::prefilter_map_image
+				EquirectToolsApplication::prefilter_map_image,
+				buffered_frame_number
 			);
 
 			RGResourceHandle brdf_lut_image_desc = render_graph.register_image(
 				gfx_context,
-				EquirectToolsApplication::brdf_lut_image
+				EquirectToolsApplication::brdf_lut_image,
+				buffered_frame_number
 			);
 
 			RGShaderDataSetup cubemap_shader_setup
@@ -154,6 +159,7 @@ namespace Sunset
 				gfx_context,
 				"equirect_to_cubemap_pass",
 				RenderPassFlags::Graphics,
+				buffered_frame_number,
 				{
 					.shader_setup = cubemap_shader_setup,
 					.inputs = { equirect_image_desc },
@@ -186,6 +192,7 @@ namespace Sunset
 				gfx_context,
 				"environment_irradiance_pass",
 				RenderPassFlags::Graphics,
+				buffered_frame_number,
 				{
 					.shader_setup = irradiance_shader_setup,
 					.inputs = { equirect_cubemap_image_desc },
@@ -235,6 +242,7 @@ namespace Sunset
 						gfx_context,
 						pass_name.c_str(),
 						RenderPassFlags::Graphics,
+						buffered_frame_number,
 						{
 							.shader_setup = prefilter_shader_setup,
 							.inputs = { equirect_cubemap_image_desc },
@@ -244,7 +252,7 @@ namespace Sunset
 						},
 						[gfx_context, capture_projection, capture_views, equirect_cubemap_image_desc, mip_roughness](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
 						{
-							Image* const equirect_cubemap_image = CACHE_FETCH(Image, graph.get_physical_resource(equirect_cubemap_image_desc));
+							Image* const equirect_cubemap_image = CACHE_FETCH(Image, graph.get_physical_resource(equirect_cubemap_image_desc, frame_data.buffered_frame_number));
 
 							PrefilterCubemapConstants prefilter_cubemap_constants
 							{
@@ -274,6 +282,7 @@ namespace Sunset
 				gfx_context,
 				"brdf_lut_pass",
 				RenderPassFlags::Graphics,
+				buffered_frame_number,
 				{
 					.shader_setup = brdf_shader_setup,
 					.outputs = { brdf_lut_image_desc },
@@ -285,7 +294,7 @@ namespace Sunset
 				}
 			);
 
-			render_graph.submit(gfx_context, swapchain, b_offline);
+			render_graph.submit(gfx_context, swapchain, buffered_frame_number, b_offline);
 		}
 	};
 

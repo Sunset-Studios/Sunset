@@ -10,7 +10,7 @@ namespace Sunset
 {
 	bool B_SDL_INITIALIZED = false;
 	SDL_Event sdl_event{ 0 };
-	std::unordered_map<SDL_Keycode, InputKey> SDL_TO_SUNSET_KEY_MAP
+	phmap::flat_hash_map<SDL_Keycode, InputKey> SDL_TO_SUNSET_KEY_MAP
 	{
 		{ SDLK_RETURN, InputKey::K_Return },
 		{ SDLK_ESCAPE, InputKey::K_Escape },
@@ -83,7 +83,7 @@ namespace Sunset
 		{ SDLK_z, InputKey::K_z },
 	};
 
-	std::unordered_map<Uint8, InputKey> SDL_TO_SUNSET_BUTTON_MAP
+	phmap::flat_hash_map<Uint8, InputKey> SDL_TO_SUNSET_BUTTON_MAP
 	{
 		{ SDL_BUTTON_LEFT, InputKey::B_mouse_left },
 		{ SDL_BUTTON_MIDDLE, InputKey::B_mouse_middle },

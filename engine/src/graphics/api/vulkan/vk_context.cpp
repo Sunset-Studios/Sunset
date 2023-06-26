@@ -93,6 +93,8 @@ namespace Sunset
 			state.frame_sync_primitives[frame_number].present_semaphore = state.sync_pool.new_semaphore(&state);
 			state.frame_sync_primitives[frame_number].render_fence = state.sync_pool.new_fence(&state);
 			state.has_pending_work[frame_number] = false;
+
+			vkResetFences(state.get_device(), 1, &state.sync_pool.get_fence(state.frame_sync_primitives[frame_number].render_fence));
 		}
 
 		for (int16_t queue_num = 0; queue_num < static_cast<int16_t>(DeviceQueueType::Num); ++queue_num)
@@ -269,6 +271,7 @@ namespace Sunset
 		vk_commands[command_index].indirect_command.firstIndex = first_index;
 		vk_commands[command_index].indirect_command.instanceCount = instance_count;
 		vk_commands[command_index].indirect_command.firstInstance = first_instance;
+		vk_commands[command_index].indirect_command.vertexOffset = 0;
 	}
 
 	Sunset::ShaderLayoutID VulkanContext::derive_layout_for_shader_stages(class GraphicsContext* const gfx_context, const std::vector<PipelineShaderStage>& stages, std::vector<DescriptorLayoutID>& out_descriptor_layouts)
@@ -350,7 +353,7 @@ namespace Sunset
 			out_descriptor_layouts.resize(max_total_sets, 0);
 
 			uint32_t previous_set_number{ std::numeric_limits<uint32_t>::max() };
-			std::unordered_map<uint32_t, DescriptorBinding> unique_bindings;
+			phmap::flat_hash_map<uint32_t, DescriptorBinding> unique_bindings;
 
 			auto build_unique_bindings_into_layout = [&](uint32_t set_number)
 			{

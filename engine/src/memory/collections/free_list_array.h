@@ -4,13 +4,14 @@
 
 namespace Sunset
 {
-	template<typename T>
+	template<typename T, uint32_t Size = 0>
 	class FreeListArray
 	{
 	public:
-		explicit FreeListArray(uint32_t size)
+		explicit FreeListArray(uint32_t size = Size)
 			: array_size(size)
 		{
+			assert(size > 0 && "Cannot make a zero sized free list");
 			elements.resize(size);
 			for (int32_t i = size - 1; i >= 0; --i)
 			{
@@ -69,6 +70,6 @@ namespace Sunset
 		size_t array_size;
 		std::vector<T> elements;
 		std::vector<uint32_t> free_indices;
-		std::unordered_map<T*, uint32_t> used_elements;
+		phmap::flat_hash_map<T*, uint32_t> used_elements;
 	};
 }

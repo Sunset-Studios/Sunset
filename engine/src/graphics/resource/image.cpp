@@ -94,7 +94,7 @@ namespace Sunset
 				image_config.extent = glm::vec3(image_info.extent[0], image_info.extent[1], image_info.extent[2]);
 				image->initialize(gfx_context, image_config);
 
-				gfx_context->get_command_queue(DeviceQueueType::Graphics)->submit_immediate(gfx_context, [image, staging_buffer, gfx_context](void* command_buffer)
+				gfx_context->get_command_queue(DeviceQueueType::Graphics)->submit_immediate(gfx_context, 0, [image, staging_buffer, gfx_context](void* command_buffer)
 				{
 					image->copy_from_buffer(gfx_context, command_buffer, staging_buffer);
 				});
@@ -184,7 +184,7 @@ namespace Sunset
 			image_config.array_count = 6;
 			image->initialize(gfx_context, image_config);
 
-			gfx_context->get_command_queue(DeviceQueueType::Graphics)->submit_immediate(gfx_context, [image, staging_buffer, mip_buffer_offsets, image_config, gfx_context](void* command_buffer)
+			gfx_context->get_command_queue(DeviceQueueType::Graphics)->submit_immediate(gfx_context, 0, [image, staging_buffer, mip_buffer_offsets, image_config, gfx_context](void* command_buffer)
 			{
 				for (uint32_t i = 0; i < image_config.mip_count; ++i)
 				{

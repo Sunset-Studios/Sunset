@@ -18,7 +18,7 @@ namespace Sunset
 
 	private:
 		PipelineStageType current_stage;
-		std::unordered_map<Identity, std::vector<VkBufferMemoryBarrier>> buffer_barriers;
-		std::unordered_map<Identity, std::vector<VkImageMemoryBarrier>> image_barriers;
+		phmap::flat_hash_map<Identity, std::vector<VkBufferMemoryBarrier>> buffer_barriers;
+		phmap::flat_hash_map<Identity, std::vector<VkImageMemoryBarrier>> image_barriers;
 	};
 }

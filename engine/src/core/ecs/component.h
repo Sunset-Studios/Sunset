@@ -1,13 +1,13 @@
 #pragma once
 
 #include <minimal.h>
-#include <bitset>
+#include <bit_vector.h>
 
 namespace Sunset
 {
-	const int MAX_COMPONENTS = 32;
+	constexpr int MAX_COMPONENTS = 32;
 
-	using ComponentMask = std::bitset<MAX_COMPONENTS>;
+	using ComponentMask = BitVector<MAX_COMPONENTS>;
 
 	extern int g_component_counter;
 

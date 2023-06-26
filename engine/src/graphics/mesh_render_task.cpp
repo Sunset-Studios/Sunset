@@ -19,7 +19,6 @@ namespace Sunset
 
 	void MeshRenderTask::submit(MeshTaskQueue& queue)
 	{
-		task_hash = std::hash<MeshRenderTask>{}(*this);
 		queue.add(this);
 	}
 

@@ -54,8 +54,9 @@ namespace Sunset
 		mJobs.DestructObject(inJob);
 	}
 
-	Sunset::Job JoltJobSystem::QueueSuspendableJob_Internal(Job* inJob)
+	Sunset::ThreadedJob<> JoltJobSystem::QueueSuspendableJob_Internal(Job* inJob)
 	{
+		ZoneScopedN("Jolt Job");
 		// Sunset job scheduler will queue up this work on initial suspend (as a coroutine), before the call to Execute below.
 		inJob->Execute();
 		inJob->Release();

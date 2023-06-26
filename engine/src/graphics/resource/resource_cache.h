@@ -77,7 +77,7 @@ namespace Sunset
 		}
 
 	protected:
-		std::unordered_map<ResourceIDType, ResourceType*> cache;
+		phmap::parallel_flat_hash_map<ResourceIDType, ResourceType*> cache;
 
 	private:
 		ResourceCache() = default;

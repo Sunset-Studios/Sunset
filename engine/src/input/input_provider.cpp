@@ -35,6 +35,7 @@ namespace Sunset
 
 	void InputProvider::update(class Window* window)
 	{
+		ZoneScopedN("InputProvider::update");
 		if (!contexts.empty())
 		{
 			InputContext* context = contexts.back();

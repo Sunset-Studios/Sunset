@@ -1,16 +1,22 @@
 #pragma once
 
 #include <vector>
+#include <stack_allocator.h>
 
 namespace Sunset
 {
+	template<size_t Size = 0>
 	class BitVector
 	{
 	public:
-		BitVector() = default;
-		BitVector(size_t size)
-			: bits(size, 0)
+		BitVector()
+		{
+			bits.fill(0);
+		}
+		BitVector(bool b_no_fill)
 		{ }
+
+		~BitVector() = default;
 
 		bool test(size_t bit)
 		{
@@ -35,11 +41,43 @@ namespace Sunset
 
 		void reset()
 		{
-			bits.clear();
-			bits.resize(bits.capacity(), 0);
+			bits.fill(0);
+		}
+
+		BitVector operator&(const BitVector& rhs) const
+		{
+			assert(rhs.size <= size && "Cannot use & bit-wise operator with right hand side BitVector that is smaller in size!");
+			BitVector<Size> result(true);
+			for (uint32_t i = 0; i < size; ++i)
+			{
+				result.bits[i] = rhs.bits[i] & bits[i];
+			}
+			return result;
+		}
+
+		BitVector operator|(const BitVector& rhs) const
+		{
+			assert(rhs.size <= size && "Cannot use | bit-wise operator with right hand side BitVector that is smaller in size!");
+			BitVector<Size> result(true);
+			for (uint32_t i = 0; i < size; ++i)
+			{
+				result.bits[i] = rhs.bits[i] | bits[i];
+			}
+			return result;
+		}
+
+		bool operator!=(const BitVector& rhs) const
+		{
+			return rhs.bits != bits;
+		}
+
+		bool operator==(const BitVector& rhs) const
+		{
+			return rhs.bits == bits;
 		}
 
 	private:
-		std::vector<size_t> bits;
+		size_t size = Size;
+		std::array<size_t, Size> bits;
 	};
 }

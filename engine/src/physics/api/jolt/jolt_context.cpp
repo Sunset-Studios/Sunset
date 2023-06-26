@@ -24,7 +24,6 @@ namespace Sunset
 	AutoCVar_Int cvar_max_physics_body_pairs("phys.max_physics_body_pairs", "Maximum number of body pairs that can be queued at any given time during broadphase update.", 65536);
 	AutoCVar_Int cvar_max_physics_contact_constraints("phys.max_physics_contact_constraints", "Maximum size of the contact constraint buffer used for contact resolution between bodies.", 10240);
 	AutoCVar_Int cvar_num_collision_steps("phys.num_collision_steps", "Number of collision steps to do when updating the physics simulation", 1);
-	AutoCVar_Int cvar_num_integration_substeps("phys.num_integration_substeps", "Number of substeps to do during integration when updating the physics simulation", 1);
 
 	void JoltContext::initialize()
 	{
@@ -82,7 +81,7 @@ namespace Sunset
 	void JoltContext::step_simulation()
 	{
 		static const float fixed_delta_time = 1.0f / 60.0f;
-		system_data->physics_system.Update(fixed_delta_time, cvar_num_collision_steps.get(), cvar_num_integration_substeps.get(), &system_data->temp_allocator, &system_data->job_system);
+		system_data->physics_system.Update(fixed_delta_time, cvar_num_collision_steps.get(), &system_data->temp_allocator, &system_data->job_system);
 	}
 
 	BodyHandle JoltContext::create_body(const SphereShapeDescription& shape_desc, const glm::vec3& position, const glm::quat& rotation, PhysicsBodyType body_type)
@@ -201,6 +200,17 @@ namespace Sunset
 
 			const JPH::BodyID jolt_body(body);
 			body_interface.SetGravityFactor(jolt_body, gravity_scale);
+		}
+	}
+
+	void JoltContext::set_body_restitution(BodyHandle body, float restitution)
+	{
+		if (body >= 0)
+		{
+			JPH::BodyInterface& body_interface = system_data->physics_system.GetBodyInterface();
+
+			const JPH::BodyID jolt_body(body);
+			body_interface.SetRestitution(jolt_body, restitution);
 		}
 	}
 

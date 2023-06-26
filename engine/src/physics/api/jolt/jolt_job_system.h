@@ -38,7 +38,7 @@ namespace Sunset
 
 	private:
 		/// Internal helper function to queue a job
-		inline Sunset::Job QueueSuspendableJob_Internal(Job* inJob);
+		inline Sunset::ThreadedJob<> QueueSuspendableJob_Internal(Job* inJob);
 
 		/// Array of jobs (fixed size)
 		using AvailableJobs = JPH::FixedSizeFreeList<Job>;

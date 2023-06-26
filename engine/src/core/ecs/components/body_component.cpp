@@ -12,12 +12,12 @@ namespace Sunset
         }
     }
 
-    void set_body_rotation(BodyComponent* body_comp, const glm::quat& rotation)
+    void set_body_rotation(BodyComponent* body_comp, const glm::vec3& rotation)
     {
         assert(body_comp != nullptr && "Cannot set body rotation on a null body component!");
         if (body_comp->body_data.body >= 0)
         {
-            body_comp->body_data.rotation = rotation;
+            body_comp->body_data.rotation = glm::quat(rotation);
             body_comp->body_data.dirty_flags |= PhysicsBodyDirtyFlags::ROTATION;
         }
     }
@@ -34,11 +34,21 @@ namespace Sunset
 
     void set_body_gravity_scale(BodyComponent* body_comp, float gravity_scale)
     {
-        assert(body_comp != nullptr && "Cannot set body type on a null body component!");
+        assert(body_comp != nullptr && "Cannot set body gravity scale on a null body component!");
         if (body_comp->body_data.body >= 0)
         {
             body_comp->body_data.gravity_scale = gravity_scale;
             body_comp->body_data.dirty_flags |= PhysicsBodyDirtyFlags::GRAVITY_SCALE;
+        }
+    }
+
+    void set_body_restitution(BodyComponent* body_comp, float restitution)
+    {
+        assert(body_comp != nullptr && "Cannot set body restitution on a null body component!");
+        if (body_comp->body_data.body >= 0)
+        {
+            body_comp->body_data.restitution = restitution;
+            body_comp->body_data.dirty_flags |= PhysicsBodyDirtyFlags::RESTITUTION;
         }
     }
 
@@ -50,7 +60,7 @@ namespace Sunset
         }
     }
 
-    void set_body_rotation(Scene* scene, EntityID entity, const glm::quat& rotation)
+    void set_body_rotation(Scene* scene, EntityID entity, const glm::vec3& rotation)
     {
         if (BodyComponent* const body_comp = scene->get_component<BodyComponent>(entity))
         {
@@ -72,5 +82,8 @@ namespace Sunset
         {
             set_body_gravity_scale(body_comp, gravity_scale);
         }
+    }
+    void set_body_restitution(Scene* scene, EntityID entity, float restitution)
+    {
     }
 }

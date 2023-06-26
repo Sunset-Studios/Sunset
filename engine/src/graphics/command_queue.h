@@ -36,24 +36,24 @@ namespace Sunset
 			queue_policy.new_command_buffers(gfx_context_state, command_buffer_ptr, command_pool_ptr, count);
 		}
 
-		void* begin_one_time_buffer_record(class GraphicsContext* const gfx_context)
+		void* begin_one_time_buffer_record(class GraphicsContext* const gfx_context, uint16_t buffered_frame_number)
 		{
-			return queue_policy.begin_one_time_buffer_record(gfx_context);
+			return queue_policy.begin_one_time_buffer_record(gfx_context, buffered_frame_number);
 		}
 
-		void end_one_time_buffer_record(class GraphicsContext* const gfx_context)
+		void end_one_time_buffer_record(class GraphicsContext* const gfx_context, uint16_t buffered_frame_number)
 		{
-			queue_policy.end_one_time_buffer_record(gfx_context);
+			queue_policy.end_one_time_buffer_record(gfx_context, buffered_frame_number);
 		}
 
-		void submit(class GraphicsContext* const gfx_context, bool b_offline = false)
+		void submit(class GraphicsContext* const gfx_context, uint16_t buffered_frame_number, bool b_offline = false)
 		{
-			queue_policy.submit(gfx_context, b_offline);
+			queue_policy.submit(gfx_context, buffered_frame_number, b_offline);
 		}
 
-		void submit_immediate(class GraphicsContext* const gfx_context, const std::function<void(void* cmd_buffer)>& buffer_update_fn)
+		void submit_immediate(class GraphicsContext* const gfx_context, int32_t buffered_frame_number, const std::function<void(void* cmd_buffer)>& buffer_update_fn)
 		{
-			queue_policy.submit_immediate(gfx_context, buffer_update_fn);
+			queue_policy.submit_immediate(gfx_context, buffered_frame_number, buffer_update_fn);
 		}
 
 	private:
@@ -86,18 +86,18 @@ namespace Sunset
 			command_buffer_ptr = nullptr;
 		}
 
-		void* begin_one_time_buffer_record(class GraphicsContext* const gfx_context)
+		void* begin_one_time_buffer_record(class GraphicsContext* const gfx_context, uint16_t buffered_frame_number)
 		{
 			return nullptr;
 		}
 
-		void end_one_time_buffer_record(class GraphicsContext* const gfx_context)
+		void end_one_time_buffer_record(class GraphicsContext* const gfx_context, uint16_t buffered_frame_number)
 		{ }
 
-		void submit(class GraphicsContext* const gfx_context, bool b_offline = false)
+		void submit(class GraphicsContext* const gfx_context, uint16_t buffered_frame_number, bool b_offline = false)
 		{ }
 
-		void submit_immediate(class GraphicsContext* const gfx_context, const std::function<void(void* cmd_buffer)>& buffer_update_fn)
+		void submit_immediate(class GraphicsContext* const gfx_context, int32_t buffered_frame_number, const std::function<void(void* cmd_buffer)>& buffer_update_fn)
 		{ }
 	};
 
