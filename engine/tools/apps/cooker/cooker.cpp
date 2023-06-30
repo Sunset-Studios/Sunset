@@ -10,6 +10,7 @@
 #include <stb_image.h>
 #include <tiny_obj_loader.h>
 #include <shaderc/shaderc.hpp>
+#include <ofbx.h>
 
 namespace Sunset
 {
@@ -43,7 +44,7 @@ namespace Sunset
 		return true;
 	}
 
-	bool Cooker::cook_mesh(const std::filesystem::path& input_path, const std::filesystem::path& output_path)
+	bool Cooker::cook_mesh_obj(const std::filesystem::path& input_path, const std::filesystem::path& output_path)
 	{
 		tinyobj::attrib_t attrib;
 		std::vector<tinyobj::shape_t> shapes;
@@ -206,11 +207,35 @@ namespace Sunset
 		mesh_info.index_size = sizeof(uint32_t);
 		mesh_info.file_path = input_path.string();
 		mesh_info.bounds = calculate_mesh_bounds(vertices.data(), vertices.size());
+		mesh_info.mesh_section_infos.emplace_back(indices.size(), 0);
 
 		SerializedAsset asset = pack_mesh(&mesh_info, (char*)vertices.data(), (char*)indices.data());
 
 		serialize_asset(output_path.string().c_str(), asset);
 
+		return true;
+	}
+
+	bool Cooker::cook_mesh_fbx(const std::filesystem::path& input_path, const std::filesystem::path& output_path)
+	{
+		std::string shader_string = read_mesh_file(input_path);
+
+		ofbx::LoadFlags flags =
+			ofbx::LoadFlags::TRIANGULATE |
+			ofbx::LoadFlags::IGNORE_BLEND_SHAPES |
+			ofbx::LoadFlags::IGNORE_CAMERAS |
+			ofbx::LoadFlags::IGNORE_LIGHTS |
+			ofbx::LoadFlags::IGNORE_SKIN |
+			ofbx::LoadFlags::IGNORE_BONES |
+			ofbx::LoadFlags::IGNORE_PIVOTS |
+			ofbx::LoadFlags::IGNORE_POSES |
+			ofbx::LoadFlags::IGNORE_VIDEOS |
+			ofbx::LoadFlags::IGNORE_LIMBS |
+			ofbx::LoadFlags::IGNORE_ANIMATIONS;
+
+		ofbx::IScene* scene = ofbx::load((ofbx::u8*)shader_string.c_str(), shader_string.size(), (ofbx::u16)flags);
+
+		// TODO:
 		return true;
 	}
 

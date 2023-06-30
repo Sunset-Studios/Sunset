@@ -85,9 +85,9 @@ namespace Sunset
 
 		static ResourceStateID sphere_resource_state = ResourceStateBuilder::create()
 			.set_vertex_buffer(sphere_mesh->vertex_buffer)
-			.set_index_buffer(sphere_mesh->index_buffer)
+			.set_index_buffer(sphere_mesh->sections[0].index_buffer)
 			.set_vertex_count(sphere_mesh->vertices.size())
-			.set_index_count(sphere_mesh->indices.size())
+			.set_index_count(sphere_mesh->sections[0].indices.size())
 			.finish();
 
 		static PipelineStateID pipeline_state;
@@ -160,12 +160,16 @@ namespace Sunset
 			}
 			else
 			{
+				ResourceState* const resource_state = CACHE_FETCH(ResourceState, task->resource_state);
+
 				IndirectDrawBatch& new_draw_batch = indirect_draws.emplace_back();
 				new_draw_batch.resource_state = task->resource_state;
 				new_draw_batch.material = task->material;
 				new_draw_batch.push_constants = task->push_constants;
 				new_draw_batch.first = i;
 				new_draw_batch.count = 1;
+				new_draw_batch.section_index_count = resource_state->state_data.index_count;
+				new_draw_batch.section_index_start = 0;
 			}
 		}
 
@@ -185,12 +189,11 @@ namespace Sunset
 				
 				for (int i = 0; i < indirect_draw_data.indirect_draws.size(); ++i)
 				{
-					ResourceState* const resource_state = CACHE_FETCH(ResourceState, indirect_draw_data.indirect_draws[i].resource_state);
 					gfx_context->update_indirect_draw_command(
 						scoped_mapping.mapped_memory,
 						i,
-						resource_state->state_data.index_count,
-						0,
+						indirect_draw_data.indirect_draws[i].section_index_count,
+						indirect_draw_data.indirect_draws[i].section_index_start,
 						0,
 						indirect_draw_data.indirect_draws[i].first
 					);
@@ -240,6 +243,7 @@ namespace Sunset
 						for (int b = 0; b < batch.count; ++b)
 						{
 							object_data[object_data_idx].object_id = queue[batch.first + b]->entity;
+							object_data[object_data_idx].material_id = queue[batch.first + b]->material_index;
 							object_data[object_data_idx].batch_id = i;
 							++object_data_idx;
 						}

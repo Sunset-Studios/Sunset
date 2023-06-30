@@ -9,7 +9,6 @@ struct EntitySceneData
 	mat4 transform;
 	vec4 bounds_pos_radius;
 	vec4 bounds_extent;
-	int material_index;
 };
 
 layout (std430, set = 1, binding = 0) readonly buffer EntitySceneDataBuffer
@@ -21,6 +20,13 @@ struct ObjectInstance
 {
 	uint object_id;
 	uint batch_id;
+	uint material_id;
+};
+
+struct CompactedObjectInstance
+{
+	uint object_id;
+	uint material_id;
 };
 
 layout (std430, set = 1, binding = 1) readonly buffer ObjectInstanceBuffer
@@ -30,7 +36,7 @@ layout (std430, set = 1, binding = 1) readonly buffer ObjectInstanceBuffer
 
 layout (std430, set = 1, binding = 2) buffer CompactedObjectInstanceBuffer
 {
-	uint ids[];
+	CompactedObjectInstance instances[];
 } compacted_object_instance_buffer;
 
 struct DrawCommand
@@ -144,6 +150,7 @@ void main()
 	if (g_id < draw_cull_constants.draw_count)
 	{
 		const uint object_id = object_instance_buffer.instances[g_id].object_id;
+		const uint material_id = object_instance_buffer.instances[g_id].material_id; 
 
 		const vec4 sphere_bounds = entity_data.entities[object_id].bounds_pos_radius;
 		const vec4 center = vec4(sphere_bounds.xyz, 1.0f);
@@ -159,7 +166,8 @@ void main()
 			const uint batch_index = object_instance_buffer.instances[g_id].batch_id;
 			const uint count_index = atomicAdd(draw_indirect_buffer.commands[batch_index].instance_count, 1);
 			const uint instance_index = draw_indirect_buffer.commands[batch_index].first_instance + count_index;
-			compacted_object_instance_buffer.ids[instance_index] = object_id;
+			compacted_object_instance_buffer.instances[instance_index].object_id = object_id;
+			compacted_object_instance_buffer.instances[instance_index].material_id = material_id;
 		}
 	}
 }

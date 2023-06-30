@@ -18,8 +18,8 @@
 
 namespace Sunset
 {
-	AutoCVar_Int cvar_max_physics_jobs("phys.max_physics_jobs", "The maximum number of physics jobs that are allowed to be created and queued up at any one time.", 1024);
-	AutoCVar_Int cvar_max_physics_barriers("phys.max_physics_barriers", "Jolt uses barriers to batch parallel work and wait on all the batched jobs to complete.", 8);
+	AutoCVar_Int cvar_max_physics_jobs("phys.max_physics_jobs", "The maximum number of physics jobs that are allowed to be created and queued up at any one time.", 2048);
+	AutoCVar_Int cvar_max_physics_barriers("phys.max_physics_barriers", "Jolt uses barriers to batch parallel work and wait on all the batched jobs to complete.", 24);
 	AutoCVar_Int cvar_max_physics_bodies("phys.max_physics_bodies", "Maximum number of bodies the system is allowed to create and keep track of.", MAX_PHYSICS_BODIES);
 	AutoCVar_Int cvar_max_physics_body_pairs("phys.max_physics_body_pairs", "Maximum number of body pairs that can be queued at any given time during broadphase update.", 65536);
 	AutoCVar_Int cvar_max_physics_contact_constraints("phys.max_physics_contact_constraints", "Maximum size of the contact constraint buffer used for contact resolution between bodies.", 10240);

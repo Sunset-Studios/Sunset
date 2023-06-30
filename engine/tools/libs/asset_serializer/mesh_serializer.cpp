@@ -18,6 +18,11 @@ namespace Sunset
 		mesh_info.index_size = (uint8_t) metadata["index_size"];
 		mesh_info.file_path = metadata["file_path"];
 
+		for (nlohmann::json::iterator it = metadata["sections"].begin(); it != metadata["sections"].end(); ++it)
+		{
+			mesh_info.mesh_section_infos.emplace_back((*it)["index_buffer_count"], (*it)["index_buffer_start"]);
+		}
+
 		std::string compression_mode_str = metadata["compression"];
 		mesh_info.compression_mode = SUNSET_COMPRESSION_MODE_FROM_STRING(compression_mode_str.c_str());
 
@@ -67,6 +72,13 @@ namespace Sunset
 		mesh_metadata["index_buffer_size"] = serialized_mesh_info->index_buffer_size;
 		mesh_metadata["index_size"] = serialized_mesh_info->index_size;
 		mesh_metadata["file_path"] = serialized_mesh_info->file_path;
+		for (MeshSectionInfo& section_info : serialized_mesh_info->mesh_section_infos)
+		{
+			mesh_metadata["sections"].push_back({
+				{"index_buffer_count", section_info.index_buffer_count},
+				{"index_buffer_start", section_info.index_buffer_start}
+			});
+		}
 
 		SerializedAsset asset;
 		asset.type[0] = 'M';
@@ -159,5 +171,30 @@ namespace Sunset
 		bounds.radius = std::sqrt(radius_squared);
 
 		return bounds;
+	}
+	std::string read_mesh_file(const std::filesystem::path& input_path)
+	{
+		std::ifstream file(input_path, std::ios::ate | std::ios::binary);
+
+		if (!file.is_open())
+		{
+			return std::string();
+		}
+
+		size_t file_size = static_cast<size_t>(file.tellg());
+
+		std::vector<char> buffer(file_size + 1);
+
+		file.seekg(0);
+
+		file.read(buffer.data(), file_size);
+
+		file.close();
+
+		buffer.push_back('\0');
+
+		std::string shader_string(buffer.data());
+
+		return shader_string;
 	}
 }

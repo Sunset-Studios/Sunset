@@ -67,7 +67,7 @@ namespace Sunset
 			gfx_context,
 			{
 				.name = "compacted_object_instance_buffer",
-				.buffer_size = mesh_task_queue.get_queue_size() * sizeof(uint32_t),
+				.buffer_size = mesh_task_queue.get_queue_size() * sizeof(CompactedGPUObjectInstance),
 				.type = BufferType::TransferDestination | BufferType::StorageBuffer,
 				.memory_usage = MemoryUsageType::OnlyGPU
 			},
@@ -1406,13 +1406,10 @@ namespace Sunset
 
 				for (uint32_t i = 0; i < MAX_BUFFERED_FRAMES; ++i)
 				{
-					gfx_context->get_command_queue(DeviceQueueType::Graphics)->submit_immediate(Renderer::get()->context(), i, [ssao_noise_staging_buffer, gfx_context](void* command_buffer)
+					gfx_context->get_command_queue(DeviceQueueType::Graphics)->submit_immediate(Renderer::get()->context(), i, [ssao_noise_staging_buffer, gfx_context, i](void* command_buffer)
 					{
-						for (uint32_t i = 0; i < MAX_BUFFERED_FRAMES; ++i)
-						{
-							const ImageID ssao_noise_image = Renderer::get()->get_persistent_image("ssao_noise", i);
-							CACHE_FETCH(Image, ssao_noise_image)->copy_from_buffer(gfx_context, command_buffer, ssao_noise_staging_buffer);
-						}
+						const ImageID ssao_noise_image = Renderer::get()->get_persistent_image("ssao_noise", i);
+						CACHE_FETCH(Image, ssao_noise_image)->copy_from_buffer(gfx_context, command_buffer, ssao_noise_staging_buffer);
 					});
 				}
 

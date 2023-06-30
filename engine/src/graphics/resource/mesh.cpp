@@ -51,9 +51,10 @@ namespace Sunset
 			CACHE_DELETE(Buffer, vertex_staging_buffer_id, gfx_context);
 		}
 
+		for (MeshSection& section : mesh->sections)
 		{
 			// Upload index buffer
-			const size_t index_data_size = mesh->indices.size() * sizeof(uint32_t);
+			const size_t index_data_size = section.indices.size() * sizeof(uint32_t);
 
 			std::string buffer_name = std::to_string(mesh->name.computed_hash);
 			buffer_name += "_index_staging";
@@ -69,11 +70,11 @@ namespace Sunset
 			);
 			Buffer* const index_staging_buffer = CACHE_FETCH(Buffer, index_staging_buffer_id);
 
-			index_staging_buffer->copy_from(gfx_context, mesh->indices.data(), index_data_size);
+			index_staging_buffer->copy_from(gfx_context, section.indices.data(), index_data_size);
 
 			buffer_name = std::to_string(mesh->name.computed_hash);
 			buffer_name += "_index";
-			mesh->index_buffer = BufferFactory::create(
+			section.index_buffer = BufferFactory::create(
 				gfx_context,
 				{
 					.name = buffer_name.c_str(),
@@ -83,9 +84,9 @@ namespace Sunset
 				}
 			);
 
-			gfx_context->get_command_queue(DeviceQueueType::Graphics)->submit_immediate(gfx_context, 0, [mesh, gfx_context, index_staging_buffer, index_data_size](void* command_buffer)
+			gfx_context->get_command_queue(DeviceQueueType::Graphics)->submit_immediate(gfx_context, 0, [&section, gfx_context, index_staging_buffer, index_data_size](void* command_buffer)
 			{
-				Buffer* const index_buffer_obj = CACHE_FETCH(Buffer, mesh->index_buffer);
+				Buffer* const index_buffer_obj = CACHE_FETCH(Buffer, section.index_buffer);
 				index_buffer_obj->copy_buffer(gfx_context, command_buffer, index_staging_buffer, index_data_size);
 			});
 
@@ -117,32 +118,35 @@ namespace Sunset
 
 	void update_mesh_tangent_bitangents(Mesh* mesh)
 	{
-		for (uint32_t i = 0; i < mesh->indices.size(); i += 3)
+		for (MeshSection& section : mesh->sections)
 		{
-			// Get the vertices of the triangle
-			Vertex& v1 = mesh->vertices[mesh->indices[i]];
-			Vertex& v2 = mesh->vertices[mesh->indices[i + 1]];
-			Vertex& v3 = mesh->vertices[mesh->indices[i + 2]];
+			for (uint32_t i = 0; i < section.indices.size(); i += 3)
+			{
+				// Get the vertices of the triangle
+				Vertex& v1 = mesh->vertices[section.indices[i]];
+				Vertex& v2 = mesh->vertices[section.indices[i + 1]];
+				Vertex& v3 = mesh->vertices[section.indices[i + 2]];
 
-			// Calculate edge and delta vectors
-			const glm::vec3 e1 = v2.position - v1.position;
-			const glm::vec3 e2 = v3.position - v1.position;
+				// Calculate edge and delta vectors
+				const glm::vec3 e1 = v2.position - v1.position;
+				const glm::vec3 e2 = v3.position - v1.position;
 
-			const glm::vec2 delta_uv1 = v2.uv - v1.uv;
-			const glm::vec2 delta_uv2 = v3.uv - v1.uv;
+				const glm::vec2 delta_uv1 = v2.uv - v1.uv;
+				const glm::vec2 delta_uv2 = v3.uv - v1.uv;
 
-			// Compute the tangent and bitangent vectors
-			const float f = 1.0f / (delta_uv1.x * delta_uv2.y - delta_uv2.x * delta_uv1.y);
+				// Compute the tangent and bitangent vectors
+				const float f = 1.0f / (delta_uv1.x * delta_uv2.y - delta_uv2.x * delta_uv1.y);
 
-			glm::vec3 tangent;
-			tangent.x = f * (delta_uv2.y * e1.x - delta_uv1.y * e2.x);
-			tangent.y = f * (delta_uv2.y * e1.y - delta_uv1.y * e2.y);
-			tangent.z = f * (delta_uv2.y * e1.z - delta_uv1.y * e2.z);
+				glm::vec3 tangent;
+				tangent.x = f * (delta_uv2.y * e1.x - delta_uv1.y * e2.x);
+				tangent.y = f * (delta_uv2.y * e1.y - delta_uv1.y * e2.y);
+				tangent.z = f * (delta_uv2.y * e1.z - delta_uv1.y * e2.z);
 
-			// Accumulate tangents and bitangents for every vertex of the triangle
-			v1.tangent += tangent;
-			v2.tangent += tangent;
-			v3.tangent += tangent;
+				// Accumulate tangents and bitangents for every vertex of the triangle
+				v1.tangent += tangent;
+				v2.tangent += tangent;
+				v3.tangent += tangent;
+			}
 		}
 
 		for (uint32_t i = 0; i < mesh->vertices.size(); ++i)
@@ -188,6 +192,7 @@ namespace Sunset
 		if (b_added)
 		{
 			mesh->vertices.resize(3);
+			MeshSection& section = mesh->sections.emplace_back();
 
 			mesh->vertices[0].position = { 1.0f, 1.0f, 0.0f };
 			mesh->vertices[1].position = { -1.0f, 1.0f, 0.0f };
@@ -201,7 +206,7 @@ namespace Sunset
 			mesh->vertices[1].color = { 0.0f, 1.0f, 0.0f };
 			mesh->vertices[2].color = { 0.0f, 1.0f, 0.0f };
 
-			mesh->indices.insert(mesh->indices.end(), { 0, 1, 2 });
+			section.indices.insert(section.indices.end(), { 0, 1, 2 });
 
 			update_mesh_tangent_bitangents(mesh);
 
@@ -229,6 +234,7 @@ namespace Sunset
 		if (b_added)
 		{
 			mesh->vertices.resize(4);
+			MeshSection& section = mesh->sections.emplace_back();
 
 			mesh->vertices[0].position = { -1.0f, 1.0f, 0.0f };
 			mesh->vertices[1].position = { -1.0f, -1.0f, 0.0f };
@@ -245,7 +251,7 @@ namespace Sunset
 			mesh->vertices[2].uv = { 1.0f, 0.0f };
 			mesh->vertices[3].uv = { 1.0f, 1.0f };
 
-			mesh->indices.insert(mesh->indices.end(), { 0, 1, 2, 0, 2, 3 });
+			section.indices.insert(section.indices.end(), { 0, 1, 2, 0, 2, 3 });
 
 			update_mesh_tangent_bitangents(mesh);
 
@@ -286,6 +292,8 @@ namespace Sunset
 
 			float sectorAngle, stackAngle;
 
+			MeshSection& section = mesh->sections.emplace_back();
+
 			for (uint32_t i = 0; i <= stackCount; ++i)
 			{
 				stackAngle = PI * 0.5f - i * stackStep;
@@ -318,14 +326,14 @@ namespace Sunset
 				{
 					if (i != 0)
 					{
-						mesh->indices.insert(mesh->indices.end(),
+						section.indices.insert(section.indices.end(),
 							{ k1, k2, k1 + 1 }
 						);
 					}
 
 					if (i != (stackCount - 1))
 					{
-						mesh->indices.insert(mesh->indices.end(),
+						section.indices.insert(section.indices.end(),
 							{ k1 + 1, k2, k2 + 1 }
 						);
 					}
@@ -358,6 +366,7 @@ namespace Sunset
 		if (b_added)
 		{
 			mesh->vertices.resize(24);
+			MeshSection& section = mesh->sections.emplace_back();
 
 			// Front face
 			mesh->vertices[0].position = { -0.5f, -0.5f, 0.5f }; mesh->vertices[0].normal = { 0.0f, 0.0f, 1.0f }; mesh->vertices[0].uv = { 0.0f, 0.0f };
@@ -413,7 +422,7 @@ namespace Sunset
 
 			mesh->vertices[23].position = { -0.5f, 0.5f, 0.5f }; mesh->vertices[23].normal = { 0.0f, 1.0f, 0.0f }; mesh->vertices[23].uv = { 1.0f, 1.0f };
 
-			mesh->indices.insert(mesh->indices.end(),
+			section.indices.insert(section.indices.end(),
 				{   
 					// Front face
 					0, 1, 2, 0, 2, 3,
@@ -552,14 +561,19 @@ namespace Sunset
 				}
 			}
 
-			mesh->indices.clear();
-
 			uint32_t* unpacked_indices = (uint32_t*)index_buffer.data();
-			mesh->indices.resize(index_buffer.size() / sizeof(uint32_t));
 
-			for (int i = 0; i < mesh->indices.size(); ++i)
+			mesh->sections.reserve(serialized_mesh_info.mesh_section_infos.size());
+			for (MeshSectionInfo& section_info : serialized_mesh_info.mesh_section_infos)
 			{
-				mesh->indices[i] = unpacked_indices[i];
+				MeshSection& section = mesh->sections.emplace_back();
+
+				section.indices.clear();
+				section.indices.resize(section_info.index_buffer_count);
+				for (int i = 0; i < section.indices.size(); ++i)
+				{
+					section.indices[i] = unpacked_indices[section_info.index_buffer_start + i];
+				}
 			}
 
 			mesh->name = id;

@@ -59,27 +59,28 @@ namespace Sunset
 				entity_data.local_transform = transform_comp->transform.local_matrix;
 			}
 
-			if (mesh_comp->resource_state == 0)
+			for (uint32_t section_idx = 0; section_idx < mesh_comp->section_count; ++section_idx)
 			{
-				mesh_comp->resource_state = ResourceStateBuilder::create()
-					.set_vertex_buffer(mesh_vertex_buffer(mesh_comp))
-					.set_index_buffer(mesh_index_buffer(mesh_comp))
-					.set_vertex_count(mesh_vertex_count(mesh_comp))
-					.set_index_count(mesh_index_count(mesh_comp))
-					.finish();
+				if (mesh_comp->resource_states[section_idx] == 0)
+				{
+					mesh_comp->resource_states[section_idx]  = ResourceStateBuilder::create()
+						.set_vertex_buffer(mesh_vertex_buffer(mesh_comp))
+						.set_vertex_count(mesh_vertex_count(mesh_comp))
+						.set_index_buffer(mesh_index_buffer(mesh_comp, section_idx))
+						.set_index_count(mesh_index_count(mesh_comp, section_idx))
+						.finish();
+				}
+
+				Material* const material = CACHE_FETCH(Material, mesh_comp->materials[section_idx]);
+				assert(material != nullptr && "Cannot process mesh with a null material");
+
+				Renderer::get()
+					->fresh_rendertask()
+					->setup(mesh_comp->materials[section_idx], mesh_comp->resource_states[section_idx], 0)
+					->set_entity(entity_index)
+					->set_material_index(material->gpu_data_buffer_offset[current_buffered_frame])
+					->submit(Renderer::get()->get_mesh_task_queue(current_buffered_frame));
 			}
-
-			Material* const material = CACHE_FETCH(Material, mesh_comp->material);
-			assert(material != nullptr && "Cannot process mesh with a null material");
-
-			entity_data.material_index = material->gpu_data_buffer_offset[current_buffered_frame];
-
-			Renderer::get()
-				->fresh_rendertask()
-				->setup(mesh_comp->material, mesh_comp->resource_state, 0)
-				->set_push_constants(PushConstantPipelineData::create(&mesh_comp->additional_data, PipelineShaderStageType::Vertex | PipelineShaderStageType::Fragment))
-				->set_entity(entity_index)
-				->submit(Renderer::get()->get_mesh_task_queue(current_buffered_frame));
 		}
 
 		// TODO: Only update dirtied entities instead of re-uploading the buffer every frame

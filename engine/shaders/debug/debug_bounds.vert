@@ -18,7 +18,12 @@ struct EntitySceneData
 	mat4 transform;
 	vec4 bounds_pos_radius;
 	vec4 bounds_extent;
-	int material_index;
+};
+
+struct CompactedObjectInstance
+{
+	uint object_id;
+	uint material_id;
 };
 
 layout (std430, set = 1, binding = 0) readonly buffer EntitySceneDataBuffer
@@ -28,17 +33,12 @@ layout (std430, set = 1, binding = 0) readonly buffer EntitySceneDataBuffer
 
 layout (std430, set = 1, binding = 2) buffer CompactedObjectInstanceBuffer
 {
-	uint ids[];
+	CompactedObjectInstance instances[];
 } compacted_object_instance_buffer;
-
-layout (push_constant) uniform constants
-{
-	vec4 user_data;
-} push_constant_uniforms;
 
 void main()
 {
-	uint entity_index = compacted_object_instance_buffer.ids[gl_InstanceIndex];
+	uint entity_index = compacted_object_instance_buffer.instances[gl_InstanceIndex].object_id;
 	vec4 pos_radius = entity_data.entities[entity_index].bounds_pos_radius;
 	mat4 model_matrix = mat4(
 	    vec4(pos_radius.w, 0.0, 0.0, 0.0),

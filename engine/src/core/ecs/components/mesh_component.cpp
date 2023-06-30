@@ -11,12 +11,13 @@ namespace Sunset
 	{
 		assert(mesh_comp != nullptr && "Cannot set mesh on null mesh component");
 		mesh_comp->mesh = mesh;
+		mesh_comp->section_count = CACHE_FETCH(Mesh, mesh)->sections.size();
 	}
 
-	void set_material(MeshComponent* mesh_comp, MaterialID material)
+	void set_material(MeshComponent* mesh_comp, MaterialID material, uint32_t section)
 	{
 		assert(mesh_comp != nullptr && "Cannot set material on null mesh component");
-		mesh_comp->material = material;
+		mesh_comp->materials[section] = material;
 	}
 
 	size_t mesh_vertex_count(MeshComponent* mesh_comp)
@@ -30,13 +31,14 @@ namespace Sunset
 		return 0;
 	}
 
-	size_t mesh_index_count(MeshComponent* mesh_comp)
+	size_t mesh_index_count(MeshComponent* mesh_comp, uint32_t section)
 	{
 		assert(mesh_comp != nullptr && "Cannot get index count via null mesh component");
 		Mesh* const mesh = CACHE_FETCH(Mesh, mesh_comp->mesh);
 		if (mesh != nullptr)
 		{
-			return mesh->indices.size();
+			assert(section < mesh->sections.size() && "Out of bounds access on mesh sections array");
+			return mesh->sections[section].indices.size();
 		}
 		return 0;
 	}
@@ -52,13 +54,14 @@ namespace Sunset
 		return 0;
 	}
 
-	BufferID mesh_index_buffer(MeshComponent* mesh_comp)
+	BufferID mesh_index_buffer(MeshComponent* mesh_comp, uint32_t section)
 	{
 		assert(mesh_comp != nullptr && "Cannot get index buffer via null mesh component");
 		Mesh* const mesh = CACHE_FETCH(Mesh, mesh_comp->mesh);
 		if (mesh != nullptr)
 		{
-			return mesh->index_buffer;
+			assert(section < mesh->sections.size() && "Out of bounds access on mesh sections array");
+			return mesh->sections[section].index_buffer;
 		}
 		return 0;
 	}

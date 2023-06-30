@@ -21,8 +21,6 @@ namespace Sunset
 		glm::mat4 local_transform;
 		glm::vec4 bounds_pos_radius;
 		glm::vec4 bounds_extent;
-		int32_t material_index{ -1 };
-		int32_t padding[3];
 	};
 
 	DECLARE_GPU_SHARED_DATA(EntitySceneData, MIN_ENTITIES);

@@ -17,17 +17,22 @@ namespace Sunset
 		static PipelineVertexInputDescription get_description();
 	};
 
+	struct MeshSection
+	{
+		std::vector<uint32_t> indices;
+		BufferID index_buffer;
+	};
+
 	struct Mesh
 	{
 		Mesh() = default;
 		~Mesh() = default;
 
 		Identity name;
-		std::vector<Vertex> vertices;
-		std::vector<uint32_t> indices;
-		BufferID vertex_buffer;
-		BufferID index_buffer;
 		Bounds local_bounds;
+		BufferID vertex_buffer;
+		std::vector<Vertex> vertices;
+		std::vector<MeshSection> sections;
 
 		void destroy(class GraphicsContext* gfx_context) { }
 	};

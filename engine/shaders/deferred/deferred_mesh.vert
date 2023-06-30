@@ -14,14 +14,20 @@ layout (location = 1) out vec2 out_tex_coord;
 layout (location = 2) out vec3 out_normal;
 layout (location = 3) out vec3 out_position;
 layout (location = 4) out uint out_instance_index;
-layout (location = 5) out mat3 out_tbn_matrix;
+layout (location = 5) out uint out_material_index;
+layout (location = 6) out mat3 out_tbn_matrix;
 
 struct EntitySceneData
 {
 	mat4 transform;
 	vec4 bounds_pos_radius;
 	vec4 bounds_extent;
-	int material_index;
+};
+
+struct CompactedObjectInstance
+{
+	uint object_id;
+	uint material_id;
 };
 
 layout (std430, set = 1, binding = 0) readonly buffer EntitySceneDataBuffer
@@ -31,17 +37,13 @@ layout (std430, set = 1, binding = 0) readonly buffer EntitySceneDataBuffer
 
 layout (std430, set = 1, binding = 2) buffer CompactedObjectInstanceBuffer
 {
-	uint ids[];
+	CompactedObjectInstance instances[];
 } compacted_object_instance_buffer;
-
-layout (push_constant) uniform constants
-{
-	vec4 user_data;
-} push_constant_uniforms;
 
 void main()
 {
-	const uint entity_index = compacted_object_instance_buffer.ids[gl_InstanceIndex];
+	const uint entity_index = compacted_object_instance_buffer.instances[gl_InstanceIndex].object_id;
+	const uint material_index = compacted_object_instance_buffer.instances[gl_InstanceIndex].material_id; 
 	const mat4 model_matrix = entity_data.entities[entity_index].transform;
 	const mat3 transpose_inverse_model_matrix = mat3(transpose(inverse(model_matrix)));
 	const vec4 world_position = model_matrix * vec4(in_position, 1.0f);
@@ -56,5 +58,6 @@ void main()
 	out_normal = transpose_inverse_model_matrix * in_normal;
 	out_position = world_position.xyz;
 	out_instance_index = entity_index;
+	out_material_index = material_index;
 	out_tbn_matrix = mat3(t, b, n);
 }

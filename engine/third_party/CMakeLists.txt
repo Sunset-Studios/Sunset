@@ -35,6 +35,7 @@ add_library(imgui STATIC)
 add_library(spirv_reflect STATIC)
 add_library(atomic_queue INTERFACE)
 add_library(parallel_hashmap INTERFACE)
+add_library(open_fbx STATIC)
 
 set_target_third_party(TracyClient)
 set_target_third_party(vkbootstrap)
@@ -44,6 +45,7 @@ set_target_third_party(imgui)
 set_target_third_party(spirv_reflect)
 set_target_third_party(atomic_queue)
 set_target_third_party(parallel_hashmap)
+set_target_third_party(open_fbx)
 
 target_sources(vkbootstrap PRIVATE 
     ${CMAKE_CURRENT_SOURCE_DIR}/vkbootstrap/VkBootstrap.h
@@ -102,6 +104,14 @@ target_sources(spirv_reflect PRIVATE
 target_include_directories(atomic_queue INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/atomic_queue)
 target_include_directories(parallel_hashmap INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/parallel_hashmap)
 
+target_include_directories(open_fbx PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/openfbx)
+target_sources(open_fbx PRIVATE 
+    ${CMAKE_CURRENT_SOURCE_DIR}/openfbx/ofbx.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/openfbx/ofbx.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/openfbx/miniz.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/openfbx/miniz.h
+)
+
 list(APPEND INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR})
 
 HEADER_DIRECTORIES_APPEND(INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/tracy/public")
@@ -117,4 +127,5 @@ HEADER_DIRECTORIES_APPEND(INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/spirv")
 HEADER_DIRECTORIES_APPEND(INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/volk")
 HEADER_DIRECTORIES_APPEND(INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/atomic_queue")
 HEADER_DIRECTORIES_APPEND(INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/parallel_hashmap")
+HEADER_DIRECTORIES_APPEND(INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/openfbx")
 HEADER_DIRECTORIES_APPEND(INCLUDE_DIRS "${sdl2_DIR}/include")

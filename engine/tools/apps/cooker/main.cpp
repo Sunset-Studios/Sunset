@@ -24,7 +24,7 @@ int main(int argc, char* argv[])
 				std::cout << "Cooking mesh: " << p << std::endl;
 				auto new_path = p.path();
 				new_path.replace_extension(".sun");
-				Sunset::Cooker::cook_mesh(p.path(), new_path);
+				Sunset::Cooker::cook_mesh_obj(p.path(), new_path);
 			}
 			else if (extension == ".frag" || extension == ".vert" || extension == ".comp")
 			{

@@ -49,7 +49,7 @@ namespace Sunset
 
 		std::array<BindingTableHandle, MAX_MATERIAL_TEXTURES * MAX_BUFFERED_FRAMES> bound_texture_handles;
 		MaterialData* gpu_data[MAX_BUFFERED_FRAMES];
-		uint32_t gpu_data_buffer_offset[MAX_BUFFERED_FRAMES];
+		int32_t gpu_data_buffer_offset[MAX_BUFFERED_FRAMES];
 		bool b_dirty[MAX_BUFFERED_FRAMES];
 		bool b_needs_texture_upload[MAX_BUFFERED_FRAMES];
 

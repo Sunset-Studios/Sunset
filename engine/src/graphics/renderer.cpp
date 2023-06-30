@@ -63,9 +63,9 @@ namespace Sunset
 
 		static ResourceStateID fullscreen_quad_resource_state = ResourceStateBuilder::create()
 			.set_vertex_buffer(fullscreen_quad->vertex_buffer)
-			.set_index_buffer(fullscreen_quad->index_buffer)
+			.set_index_buffer(fullscreen_quad->sections[0].index_buffer)
 			.set_vertex_count(fullscreen_quad->vertices.size())
-			.set_index_count(fullscreen_quad->indices.size())
+			.set_index_count(fullscreen_quad->sections[0].indices.size())
 			.finish();
 
 		CACHE_FETCH(ResourceState, fullscreen_quad_resource_state)->bind(graphics_context.get(), command_buffer);
@@ -84,9 +84,9 @@ namespace Sunset
 
 		static ResourceStateID unit_sphere_resource_state = ResourceStateBuilder::create()
 			.set_vertex_buffer(unit_sphere->vertex_buffer)
-			.set_index_buffer(unit_sphere->index_buffer)
+			.set_index_buffer(unit_sphere->sections[0].index_buffer)
 			.set_vertex_count(unit_sphere->vertices.size())
-			.set_index_count(unit_sphere->indices.size())
+			.set_index_count(unit_sphere->sections[0].indices.size())
 			.finish();
 
 		CACHE_FETCH(ResourceState, unit_sphere_resource_state)->bind(graphics_context.get(), command_buffer);
@@ -105,9 +105,9 @@ namespace Sunset
 
 		static ResourceStateID unit_cube_resource_state = ResourceStateBuilder::create()
 			.set_vertex_buffer(unit_cube->vertex_buffer)
-			.set_index_buffer(unit_cube->index_buffer)
+			.set_index_buffer(unit_cube->sections[0].index_buffer)
 			.set_vertex_count(unit_cube->vertices.size())
-			.set_index_count(unit_cube->indices.size())
+			.set_index_count(unit_cube->sections[0].indices.size())
 			.finish();
 
 		CACHE_FETCH(ResourceState, unit_cube_resource_state)->bind(graphics_context.get(), command_buffer);

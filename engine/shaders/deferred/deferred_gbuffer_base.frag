@@ -7,7 +7,8 @@ layout (location = 1) in vec2 in_tex_coord;
 layout (location = 2) in vec3 in_normal;
 layout (location = 3) in vec3 in_position;
 layout (location = 4) flat in uint in_instance_index;
-layout (location = 5) in mat3 in_tbn_matrix;
+layout (location = 5) flat in uint in_material_index;
+layout (location = 6) in mat3 in_tbn_matrix;
 
 layout (location = 0) out vec4 out_frag_color;
 layout (location = 1) out vec4 out_smra;
@@ -20,7 +21,12 @@ struct EntitySceneData
 	mat4 transform;
 	vec4 bounds_pos_radius;
 	vec4 bounds_extent;
-	int material_index;
+};
+
+struct CompactedObjectInstance
+{
+	uint object_id;
+	uint material_id;
 };
 
 struct MaterialData
@@ -49,18 +55,12 @@ layout (std430, set = 1, binding = 1) readonly buffer MaterialDataBuffer
 
 layout (std430, set = 1, binding = 2) buffer CompactedObjectInstanceBuffer
 {
-	uint ids[];
+	CompactedObjectInstance instances[];
 } compacted_object_instance_buffer;
-
-layout (push_constant) uniform constants
-{
-	vec4 user_data;
-} push_constant_uniforms;
 
 void main()
 {
-	EntitySceneData entity = entity_data.entities[in_instance_index];
-	MaterialData material = material_data.materials[entity.material_index];
+	MaterialData material = material_data.materials[in_material_index];
 
 	const int albedo_tex_index = material.textures[0];
 	const int normal_tex_index = material.textures[1];

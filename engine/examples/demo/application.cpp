@@ -133,7 +133,7 @@ namespace Sunset
 			}
 
 			// Add test meshes
-			for (uint32_t i = 0; i < 1000; ++i)
+			for (uint32_t i = 0; i < 100; ++i)
 			{
 				EntityID mesh_ent = scene->make_entity();
 
@@ -158,16 +158,16 @@ namespace Sunset
 					}
 				);
 
-				set_mesh(mesh_comp, MeshFactory::create_sphere(Renderer::get()->context(), glm::ivec2(32.0f, 32.0f), 1.0f));
+				set_mesh(mesh_comp, MeshFactory::load(Renderer::get()->context(), "../../assets/drone.sun"));
 				set_material(mesh_comp, mesh_material);
 
 				BodyComponent* const body_comp = scene->assign_component<BodyComponent>(mesh_ent);
 
-				SphereShapeDescription sphere_shape
+				BoxShapeDescription box_shape
 				{
-					.radius = 1.0f	
+					.half_extent = glm::vec3(0.5f, 0.5f, 0.5f)
 				};
-				set_body_shape(body_comp, sphere_shape);
+				set_body_shape(body_comp, box_shape);
 				set_body_type(body_comp, PhysicsBodyType::Dynamic);
 				set_body_gravity_scale(body_comp, 1.0f);
 				set_body_restitution(body_comp, 0.5f);

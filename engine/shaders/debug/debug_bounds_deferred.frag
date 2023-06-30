@@ -16,7 +16,12 @@ struct EntitySceneData
 	mat4 transform;
 	vec4 bounds_pos_radius;
 	vec4 bounds_extent;
-	int material_index;
+};
+
+struct CompactedObjectInstance
+{
+	uint object_id;
+	uint material_id;
 };
 
 struct MaterialData
@@ -49,13 +54,8 @@ layout (std430, set = 1, binding = 1) readonly buffer MaterialDataBuffer
 
 layout (std430, set = 1, binding = 2) buffer CompactedObjectInstanceBuffer
 {
-	uint ids[];
+	CompactedObjectInstance instances[];
 } compacted_object_instance_buffer;
-
-layout (push_constant) uniform constants
-{
-	vec4 user_data;
-} push_constant_uniforms;
 
 void main()
 {

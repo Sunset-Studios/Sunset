@@ -32,9 +32,16 @@ namespace Sunset
 			return this;
 		}
 
+		MeshRenderTask* set_material_index(uint32_t material)
+		{
+			material_index = material;
+			return this;
+		}
+
 	public:
 		EntityID entity{ 0 };
 		MaterialID material{ 0 };
+		uint32_t material_index{ 0 };
 		ResourceStateID resource_state{ 0 };
 		uint32_t render_depth{ 0 };
 		PushConstantPipelineData push_constants;

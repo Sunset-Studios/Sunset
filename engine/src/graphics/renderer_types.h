@@ -13,6 +13,8 @@ namespace Sunset
 		PushConstantPipelineData push_constants;
 		uint32_t first;
 		uint32_t count;
+		uint32_t section_index_start;
+		uint32_t section_index_count;
 	};
 
 	struct IndirectDrawData
@@ -32,6 +34,13 @@ namespace Sunset
 	{
 		uint32_t object_id;
 		uint32_t batch_id;
+		uint32_t material_id;
+	};
+
+	struct CompactedGPUObjectInstance
+	{
+		uint32_t object_id;
+		uint32_t material_id;
 	};
 
 	struct DrawCullData

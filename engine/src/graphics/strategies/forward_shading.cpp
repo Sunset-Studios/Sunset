@@ -44,7 +44,7 @@ namespace Sunset
 			gfx_context,
 			{
 				.name = "compacted_object_instance_buffer",
-				.buffer_size = mesh_task_queue.get_queue_size() * sizeof(uint32_t),
+				.buffer_size = mesh_task_queue.get_queue_size() * sizeof(CompactedGPUObjectInstance),
 				.type = BufferType::TransferDestination | BufferType::StorageBuffer,
 				.memory_usage = MemoryUsageType::OnlyGPU
 			},

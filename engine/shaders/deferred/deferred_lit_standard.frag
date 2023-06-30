@@ -15,7 +15,6 @@ struct EntitySceneData
 	mat4 transform;
 	vec4 bounds_pos_radius;
 	vec4 bounds_extent;
-	int material_index;
 };
 
 layout (std430, set = 1, binding = 0) readonly buffer EntitySceneDataBuffer
