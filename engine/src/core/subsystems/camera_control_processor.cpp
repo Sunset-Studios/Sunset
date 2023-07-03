@@ -20,7 +20,7 @@ namespace Sunset
 	AutoCVar_Int cvar_camera_jitter_period(
 		"ren.camera_jitter_period",
 		"The maximum jitter period for applying jitter to the camera projection matrix. Corresponds to the number of frames before jitter tends to repeat.",
-		6
+		8	
 	);
 
 	void CameraControlProcessor::update(class Scene* scene, double delta_time)
@@ -120,8 +120,8 @@ namespace Sunset
 				camera_control_comp->data.gpu_data.jitter.w = y_jitter / static_cast<float>(res.y);
 
 				// TODO: What we really want here is the current viewport size
-				camera_control_comp->data.gpu_data.projection_matrix[2][0] += camera_control_comp->data.gpu_data.jitter.z;
-				camera_control_comp->data.gpu_data.projection_matrix[2][1] += camera_control_comp->data.gpu_data.jitter.w;
+				camera_control_comp->data.gpu_data.projection_matrix[3][0] += camera_control_comp->data.gpu_data.jitter.z;
+				camera_control_comp->data.gpu_data.projection_matrix[3][1] += camera_control_comp->data.gpu_data.jitter.w;
 
 				camera_control_comp->data.current_jitter_index = (camera_control_comp->data.current_jitter_index + 1) % cvar_camera_jitter_period.get();
 			}
@@ -151,8 +151,7 @@ namespace Sunset
 				Renderer::get()->set_draw_cull_data(new_draw_cull_data, frame_data.buffered_frame_number);
 			});
 
-			CameraData copied_camera_data = camera_control_comp->data.gpu_data;
-			QUEUE_RENDERGRAPH_COMMAND(CopySceneCameraData, ([copied_camera_data, min_ubo_alignment, scene_data = scene->scene_data](class RenderGraph& render_graph, RGFrameData& frame_data, void* command_buffer)
+			QUEUE_RENDERGRAPH_COMMAND(CopySceneCameraData, ([min_ubo_alignment, copied_camera_data = camera_control_comp->data.gpu_data, scene_data = scene->scene_data](class RenderGraph& render_graph, RGFrameData& frame_data, void* command_buffer)
 			{
 				CACHE_FETCH(Buffer, scene_data.buffer)->copy_from(
 					frame_data.gfx_context,

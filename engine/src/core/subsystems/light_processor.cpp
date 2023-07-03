@@ -53,12 +53,15 @@ namespace Sunset
 			scene->scene_data.lighting[current_buffered_frame].num_lights += light_comp->light->color.a > 0.0f;
 		}
 
-		// TODO: Only update dirtied entities instead of re-uploading the buffer every frame
-		Buffer* const lights_buffer = CACHE_FETCH(Buffer, LightGlobals::get()->light_data.data_buffer[current_buffered_frame]);
-		lights_buffer->copy_from(
-			gfx_context,
-			LightGlobals::get()->light_data.data.data(),
-			LightGlobals::get()->light_data.data.size() * sizeof(LightData)
-		);
+		QUEUE_RENDERGRAPH_COMMAND(CopyLightData, ([](class RenderGraph& render_graph, RGFrameData& frame_data, void* command_buffer)
+		{
+			// TODO: Only update dirtied entities instead of re-uploading the buffer every frame
+			Buffer* const lights_buffer = CACHE_FETCH(Buffer, LightGlobals::get()->light_data.data_buffer[frame_data.buffered_frame_number]);
+			lights_buffer->copy_from(
+				frame_data.gfx_context,
+				LightGlobals::get()->light_data.data.data(),
+				LightGlobals::get()->light_data.data.size() * sizeof(LightData)
+			);
+		}));
 	}
 }

@@ -84,8 +84,8 @@ namespace Sunset
 		}
 
 		// TODO: Only update dirtied entities instead of re-uploading the buffer every frame
-		Buffer* const transform_buffer = CACHE_FETCH(Buffer, EntityGlobals::get()->entity_data.data_buffer[current_buffered_frame]);
-		transform_buffer->copy_from(
+		Buffer* const entity_buffer = CACHE_FETCH(Buffer, EntityGlobals::get()->entity_data.data_buffer[current_buffered_frame]);
+		entity_buffer->copy_from(
 			gfx_context,
 			EntityGlobals::get()->entity_data.data.data(),
 			EntityGlobals::get()->entity_data.data.size() * sizeof(EntitySceneData)

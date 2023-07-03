@@ -19,8 +19,8 @@ void main()
 
 	// Adjust the projection matrix to remove any jitter, which is used for temporal anti-aliasing.
 	mat4 unjittered_proj = camera_data.proj;
-	unjittered_proj[2][0] -= camera_data.jitter.z;
-	unjittered_proj[2][1] -= camera_data.jitter.w;
+	unjittered_proj[3][0] -= camera_data.jitter.z;
+	unjittered_proj[3][1] -= camera_data.jitter.w;
 
 	vec4 clip_pos = unjittered_proj * rotation_view * vec4(out_frag_position, 1.0);
 

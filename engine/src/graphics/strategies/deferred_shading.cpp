@@ -9,6 +9,7 @@
 #include <core/data_globals.h>
 #include <utility/maths.h>
 #include <utility/cvar.h>
+#include <input/input_provider.h>
 #ifndef NDEBUG
 #include <utility/gui/gui_core.h>
 #endif
@@ -115,15 +116,21 @@ namespace Sunset
 			buffered_frame_number
 		);
 
+		RGResourceHandle readonly_temporal_color_history = render_graph.register_image(
+			gfx_context,
+			Renderer::get()->get_persistent_image("readonly_temporal_color_history", buffered_frame_number),
+			buffered_frame_number
+		);
+
 		RGResourceHandle temporal_color_history = render_graph.register_image(
 			gfx_context,
-			Renderer::get()->get_persistent_image("temporal_color_history"),
+			Renderer::get()->get_persistent_image("temporal_color_history", buffered_frame_number),
 			buffered_frame_number
 		);
 
 		RGResourceHandle ssao_noise_image_desc = render_graph.register_image(
 			gfx_context,
-			Renderer::get()->get_persistent_image("ssao_noise"),
+			Renderer::get()->get_persistent_image("ssao_noise", buffered_frame_number),
 			buffered_frame_number
 		);
 
@@ -773,7 +780,7 @@ namespace Sunset
 				buffered_frame_number,
 				{
 					.shader_setup = shader_setup,
-					.inputs = { scene_color_desc, temporal_color_history, motion_vectors_image_desc, main_depth_image_desc },
+					.inputs = { scene_color_desc, readonly_temporal_color_history, motion_vectors_image_desc, main_depth_image_desc },
 					.outputs = { scene_color_desc, temporal_color_history }
 				},
 				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
@@ -808,6 +815,40 @@ namespace Sunset
 						static_cast<uint32_t>((image_extent.y + 15) / 16),
 						1
 					);
+				}
+			);
+
+			render_graph.add_pass(
+				gfx_context,
+				"copy_to_readonly_color_history",
+				RenderPassFlags::GraphLocal,
+				buffered_frame_number,
+				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
+				{
+					Image* const r_color_history = CACHE_FETCH(Image, graph.get_physical_resource(readonly_temporal_color_history, frame_data.buffered_frame_number));
+					Image* const color_history = CACHE_FETCH(Image, graph.get_physical_resource(temporal_color_history, frame_data.buffered_frame_number));
+
+					r_color_history->barrier(
+						frame_data.gfx_context,
+						command_buffer,
+						r_color_history->get_access_flags(),
+						AccessFlags::TransferWrite,
+						r_color_history->get_layout(),
+						ImageLayout::TransferDestination,
+						PipelineStageType::AllGraphics,
+						PipelineStageType::Transfer);
+
+					color_history->barrier(
+						frame_data.gfx_context,
+						command_buffer,
+						color_history->get_access_flags(),
+						AccessFlags::TransferRead,
+						color_history->get_layout(),
+						ImageLayout::TransferSource,
+						PipelineStageType::AllGraphics,
+						PipelineStageType::Transfer);
+
+					r_color_history->blit(frame_data.gfx_context, command_buffer, color_history, color_history->get_attachment_config().extent, color_history->get_attachment_config().extent);
 				}
 			);
 		}
@@ -1342,6 +1383,23 @@ namespace Sunset
 
 			{
 				Renderer::get()->register_persistent_image(
+					"readonly_temporal_color_history",
+					ImageFactory::create(
+						gfx_context,
+						{
+							.name = "readonly_temporal_color_history",
+							.format = Format::Float4x32,
+							.extent = glm::vec3(image_extent.x, image_extent.y, 1.0f),
+							.flags = ImageFlags::Color | ImageFlags::Sampled | ImageFlags::Storage | ImageFlags::TransferDst,
+							.usage_type = MemoryUsageType::OnlyGPU,
+							.sampler_address_mode = SamplerAddressMode::EdgeClamp,
+							.image_filter = ImageFilter::Linear,
+							.attachment_clear = true
+						}
+					)
+				);
+
+				Renderer::get()->register_persistent_image(
 					"temporal_color_history",
 					ImageFactory::create(
 						gfx_context,
@@ -1349,7 +1407,7 @@ namespace Sunset
 							.name = "temporal_color_history",
 							.format = Format::Float4x32,
 							.extent = glm::vec3(image_extent.x, image_extent.y, 1.0f),
-							.flags = ImageFlags::Color | ImageFlags::Sampled | ImageFlags::Storage,
+							.flags = ImageFlags::Color | ImageFlags::Sampled | ImageFlags::Storage | ImageFlags::TransferSrc,
 							.usage_type = MemoryUsageType::OnlyGPU,
 							.sampler_address_mode = SamplerAddressMode::EdgeClamp,
 							.image_filter = ImageFilter::Linear,
