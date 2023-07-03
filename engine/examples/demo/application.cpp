@@ -57,7 +57,7 @@ namespace Sunset
 			set_scene_prefilter_map(scene.get(), "../../assets/sky/prefilter/sky_prefilter");
 			set_scene_brdf_lut(scene.get(), "../../assets/sky/brdf_lut/sky_brdf_lut_mip_0_layer_0.sun");
 
-			// Add light 1
+			// Add directional light
 			{
 				EntityID light_entity = scene->make_entity();
 
@@ -72,20 +72,20 @@ namespace Sunset
 				set_light_should_use_sun_direction(light_comp, true);
 			}
 
-			// Add light 2
+			// Add point light
 			{
 				EntityID light_entity = scene->make_entity();
 
 				TransformComponent* const transform_comp = scene->assign_component<TransformComponent>(light_entity);
 
-				set_position(transform_comp, glm::vec3(-20.0f, 8.5f, 0.0f));
+				set_position(transform_comp, glm::vec3(-75.0f, 25.0f, 0.0f));
 
 				LightComponent* const light_comp = scene->assign_component<LightComponent>(light_entity);
 
 				set_light_color(light_comp, glm::vec3(1.0f, 1.0f, 1.0f));
 				set_light_type(light_comp, LightType::Point);
-				set_light_radius(light_comp, 35.0f);
-				set_light_intensity(light_comp, 200.0f);
+				set_light_radius(light_comp, 75.0f);
+				set_light_intensity(light_comp, 100.0f);
 				set_light_entity_index(light_comp, get_entity_index(light_entity));
 			}
 
@@ -105,11 +105,11 @@ namespace Sunset
 					{
 						.textures =
 						{
-							"../../assets/panels_albedo.sun",
-							"../../assets/panels_normal.sun",
-							"../../assets/panels_roughness.sun",
-							"../../assets/panels_metallic.sun",
-							"../../assets/panels_ao.sun"
+							"../../assets/foam-grip-albedo.sun",
+							"../../assets/foam-grip-normal.sun",
+							"../../assets/foam-grip-roughness.sun",
+							"../../assets/foam-grip-metallic.sun",
+							"../../assets/foam-grip-ao.sun"
 						}
 					}
 				);
@@ -132,45 +132,129 @@ namespace Sunset
 				set_body_rotation(body_comp, glm::vec3(0.0f, glm::radians(-90.0f), 0.0f));
 			}
 
-			// Add test meshes
-			for (uint32_t i = 0; i < 100; ++i)
+			// Add drones
+			for (uint32_t i = 0; i < 3; ++i)
 			{
 				EntityID mesh_ent = scene->make_entity();
 
 				TransformComponent* const transform_comp = scene->assign_component<TransformComponent>(mesh_ent);
 
-				set_position(transform_comp, glm::vec3((i % 10) * 2.0f, 10.0f + (i % 40) * 2.0f, (i / 10) * 2.0f));
-				set_scale(transform_comp, glm::vec3(1.0f));
+				set_rotation(transform_comp, glm::vec3(0.0f, glm::radians(180.0f), 0.0f));
+				set_position(transform_comp, glm::vec3(0.0f, 30.0f, i * 25.0f - 17.0f));
+				set_scale(transform_comp, glm::vec3(0.1f));
 
 				MeshComponent* const mesh_comp = scene->assign_component<MeshComponent>(mesh_ent);
 
-				MaterialID mesh_material = MaterialFactory::create(
+				MaterialID drone_material = MaterialFactory::create(
 					Renderer::get()->context(),
 					{
+						.uniform_emissive{ 25.0f },
 						.textures =
 						{
-							"../../assets/metal-albedo.sun",
-							"../../assets/metal-normal.sun",
-							"../../assets/metal-roughness.sun",
-							"../../assets/metal-metallic.sun",
-							"../../assets/metal-ao.sun"
+							"../../assets/drone_color.sun",
+							"../../assets/drone_normal.sun",
+							"../../assets/drone_roughness.sun",
+							"../../assets/default_black.sun",
+							"../../assets/default_white.sun",
+							"../../assets/drone_emissive.sun"
 						}
 					}
 				);
 
 				set_mesh(mesh_comp, MeshFactory::load(Renderer::get()->context(), "../../assets/drone.sun"));
-				set_material(mesh_comp, mesh_material);
+				set_material(mesh_comp, drone_material);
 
 				BodyComponent* const body_comp = scene->assign_component<BodyComponent>(mesh_ent);
 
 				BoxShapeDescription box_shape
 				{
-					.half_extent = glm::vec3(0.5f, 0.5f, 0.5f)
+					.half_extent = glm::vec3(2.5f, 2.5f, 2.5f)
 				};
 				set_body_shape(body_comp, box_shape);
 				set_body_type(body_comp, PhysicsBodyType::Dynamic);
 				set_body_gravity_scale(body_comp, 1.0f);
 				set_body_restitution(body_comp, 0.5f);
+			}
+
+			// Add containers
+			{
+				MaterialID container_material = MaterialFactory::create(
+					Renderer::get()->context(),
+					{
+						.textures =
+						{
+							"../../assets/container_albedo.sun",
+							"../../assets/container_normal.sun",
+							"../../assets/container_roughness.sun",
+							"../../assets/container_metallic.sun",
+							"../../assets/default_white.sun",
+							"../../assets/default_black.sun"
+						}
+					}
+				);
+				MaterialID container_bar_material = MaterialFactory::create(
+					Renderer::get()->context(),
+					{
+						.textures =
+						{
+							"../../assets/container_bar_albedo.sun",
+							"../../assets/container_bar_normal.sun",
+							"../../assets/container_bar_roughness.sun",
+							"../../assets/container_bar_metallic.sun",
+							"../../assets/default_white.sun",
+							"../../assets/default_black.sun"
+						}
+					}
+				);
+
+				const MeshID container_mesh = MeshFactory::load(Renderer::get()->context(), "../../assets/container.sun");
+
+				{
+					EntityID mesh_ent = scene->make_entity();
+
+					TransformComponent* const transform_comp = scene->assign_component<TransformComponent>(mesh_ent);
+
+					set_position(transform_comp, glm::vec3(0.0f, 1.0f, 75.0f));
+					set_scale(transform_comp, glm::vec3(0.1f));
+
+					MeshComponent* const mesh_comp = scene->assign_component<MeshComponent>(mesh_ent);
+
+					set_mesh(mesh_comp, container_mesh);
+					set_material(mesh_comp, container_material);
+					set_material(mesh_comp, container_bar_material, 1);
+					set_material(mesh_comp, container_bar_material, 3);
+				}
+				{
+					EntityID mesh_ent = scene->make_entity();
+
+					TransformComponent* const transform_comp = scene->assign_component<TransformComponent>(mesh_ent);
+
+					set_position(transform_comp, glm::vec3(0.0f, 1.0f, -75.0f));
+					set_scale(transform_comp, glm::vec3(0.1f));
+
+					MeshComponent* const mesh_comp = scene->assign_component<MeshComponent>(mesh_ent);
+
+					set_mesh(mesh_comp, container_mesh);
+					set_material(mesh_comp, container_material);
+					set_material(mesh_comp, container_bar_material, 1);
+					set_material(mesh_comp, container_bar_material, 3);
+				}
+				{
+					EntityID mesh_ent = scene->make_entity();
+
+					TransformComponent* const transform_comp = scene->assign_component<TransformComponent>(mesh_ent);
+
+					set_rotation(transform_comp, glm::vec3(0.0f, glm::radians(90.0f), 0.0f));
+					set_position(transform_comp, glm::vec3(-75.0f, 1.0f, 0.0f));
+					set_scale(transform_comp, glm::vec3(0.1f));
+
+					MeshComponent* const mesh_comp = scene->assign_component<MeshComponent>(mesh_ent);
+
+					set_mesh(mesh_comp, container_mesh);
+					set_material(mesh_comp, container_material);
+					set_material(mesh_comp, container_bar_material, 1);
+					set_material(mesh_comp, container_bar_material, 3);
+				}
 			}
 
 			SimulationCore::get()->register_layer(std::move(scene));

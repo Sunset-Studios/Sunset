@@ -67,6 +67,7 @@ void main()
 	const int roughness_tex_index = material.textures[2];
 	const int metallic_tex_index = material.textures[3];
 	const int ao_tex_index = material.textures[4];
+	const int emissive_tex_index = material.textures[5];
 
 	const vec3 albedo = 
 		albedo_tex_index == -1
@@ -93,9 +94,14 @@ void main()
 		? 1.0f
 		: texture(textures_2D[nonuniformEXT(ao_tex_index)], in_tex_coord * material.tiling_coeffs[4]).r;
 
+	const float emissive =
+		emissive_tex_index == -1
+		? material.uniform_emissive
+		: texture(textures_2D[nonuniformEXT(emissive_tex_index)], in_tex_coord * material.tiling_coeffs[5]).r * material.uniform_emissive;
+
 	const float specular = material.uniform_reflectance > 0.0f ? material.uniform_reflectance : pow(2.0f, 10.0f * (1.0f - roughness));
 
-	out_frag_color = vec4(albedo, material.uniform_emissive);
+	out_frag_color = vec4(albedo, emissive);
 	out_smra.r = specular;
 	out_smra.g = metallic;
 	out_smra.b = roughness;

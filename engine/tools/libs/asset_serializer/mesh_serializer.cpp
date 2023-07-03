@@ -172,13 +172,14 @@ namespace Sunset
 
 		return bounds;
 	}
-	std::string read_mesh_file(const std::filesystem::path& input_path)
+
+	std::vector<char> read_mesh_file(const std::filesystem::path& input_path)
 	{
 		std::ifstream file(input_path, std::ios::ate | std::ios::binary);
 
 		if (!file.is_open())
 		{
-			return std::string();
+			return {};
 		}
 
 		size_t file_size = static_cast<size_t>(file.tellg());
@@ -193,8 +194,6 @@ namespace Sunset
 
 		buffer.push_back('\0');
 
-		std::string shader_string(buffer.data());
-
-		return shader_string;
+		return buffer;
 	}
 }

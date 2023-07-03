@@ -151,12 +151,16 @@ namespace Sunset
 				Renderer::get()->set_draw_cull_data(new_draw_cull_data, frame_data.buffered_frame_number);
 			});
 
-			CACHE_FETCH(Buffer, scene->scene_data.buffer)->copy_from(
-				Renderer::get()->context(),
-				&camera_control_comp->data.gpu_data,
-				sizeof(CameraData),
-				scene->scene_data.cam_data_buffer_start + BufferHelpers::pad_ubo_size(sizeof(CameraData), min_ubo_alignment) * current_buffered_frame_number
-			);
+			CameraData copied_camera_data = camera_control_comp->data.gpu_data;
+			QUEUE_RENDERGRAPH_COMMAND(CopySceneCameraData, ([copied_camera_data, min_ubo_alignment, scene_data = scene->scene_data](class RenderGraph& render_graph, RGFrameData& frame_data, void* command_buffer)
+			{
+				CACHE_FETCH(Buffer, scene_data.buffer)->copy_from(
+					frame_data.gfx_context,
+					(void*)&copied_camera_data,
+					sizeof(CameraData),
+					scene_data.cam_data_buffer_start + BufferHelpers::pad_ubo_size(sizeof(CameraData), min_ubo_alignment) * frame_data.buffered_frame_number
+				);
+			}));
 		}
 	}
 }

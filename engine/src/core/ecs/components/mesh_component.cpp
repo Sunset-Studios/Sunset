@@ -14,10 +14,17 @@ namespace Sunset
 		mesh_comp->section_count = CACHE_FETCH(Mesh, mesh)->sections.size();
 	}
 
-	void set_material(MeshComponent* mesh_comp, MaterialID material, uint32_t section)
+	void set_material(MeshComponent* mesh_comp, MaterialID material, int32_t section)
 	{
 		assert(mesh_comp != nullptr && "Cannot set material on null mesh component");
-		mesh_comp->materials[section] = material;
+		if (section >= 0)
+		{
+			mesh_comp->materials[section] = material;
+		}
+		else
+		{
+			mesh_comp->materials.fill(material);
+		}
 	}
 
 	size_t mesh_vertex_count(MeshComponent* mesh_comp)

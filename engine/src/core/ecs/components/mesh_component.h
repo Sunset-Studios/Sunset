@@ -11,12 +11,12 @@ namespace Sunset
 	{
 		MeshID mesh;
 		uint32_t section_count{ 0 };
-		MaterialID materials[MAX_MESH_MATERIALS];
-		ResourceStateID resource_states[MAX_MESH_RESOURCE_STATES];
+		std::array<MaterialID, MAX_MESH_MATERIALS> materials;
+		std::array<ResourceStateID, MAX_MESH_RESOURCE_STATES> resource_states;
 	};
 
 	void set_mesh(MeshComponent* mesh_comp, MeshID mesh);
-	void set_material(MeshComponent* mesh_comp, MaterialID material, uint32_t section = 0);
+	void set_material(MeshComponent* mesh_comp, MaterialID material, int32_t section = -1);
 
 	size_t mesh_vertex_count(MeshComponent* mesh_comp);
 	size_t mesh_index_count(MeshComponent* mesh_comp, uint32_t section = 0);

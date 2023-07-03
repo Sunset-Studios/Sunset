@@ -70,7 +70,7 @@ namespace Sunset
 	void unpack_mesh(SerializedMeshInfo* serialized_image_info, const char* source_buffer, size_t source_buffer_size, char* destination_vertex_buffer, char* destination_index_buffer);
 	SerializedAsset pack_mesh(SerializedMeshInfo* serialized_image_info, void* vertex_data, void* index_data);
 	MeshBounds calculate_mesh_bounds(VertexPNCUTB32* vertices, size_t vertex_count);
-	std::string read_mesh_file(const std::filesystem::path& input_path);
+	std::vector<char> read_mesh_file(const std::filesystem::path& input_path);
 
 	inline VertexFormat SUNSET_VERTEX_FORMAT_FROM_STRING(const char* format_str)
 	{

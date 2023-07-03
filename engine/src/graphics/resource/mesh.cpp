@@ -51,13 +51,15 @@ namespace Sunset
 			CACHE_DELETE(Buffer, vertex_staging_buffer_id, gfx_context);
 		}
 
-		for (MeshSection& section : mesh->sections)
+		for (uint32_t i = 0; i < mesh->sections.size(); ++i)
 		{
+			MeshSection& section = mesh->sections[i];
+
 			// Upload index buffer
 			const size_t index_data_size = section.indices.size() * sizeof(uint32_t);
 
 			std::string buffer_name = std::to_string(mesh->name.computed_hash);
-			buffer_name += "_index_staging";
+			buffer_name += "_index_staging" + std::to_string(i);
 			const BufferID index_staging_buffer_id = BufferFactory::create(
 				gfx_context,
 				{
@@ -73,7 +75,7 @@ namespace Sunset
 			index_staging_buffer->copy_from(gfx_context, section.indices.data(), index_data_size);
 
 			buffer_name = std::to_string(mesh->name.computed_hash);
-			buffer_name += "_index";
+			buffer_name += "_index" + std::to_string(i);
 			section.index_buffer = BufferFactory::create(
 				gfx_context,
 				{

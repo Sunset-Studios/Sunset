@@ -26,6 +26,13 @@ int main(int argc, char* argv[])
 				new_path.replace_extension(".sun");
 				Sunset::Cooker::cook_mesh_obj(p.path(), new_path);
 			}
+			else if (extension == ".fbx")
+			{
+				std::cout << "Cooking mesh: " << p << std::endl;
+				auto new_path = p.path();
+				new_path.replace_extension(".sun");
+				Sunset::Cooker::cook_mesh_fbx(p.path(), new_path);
+			}
 			else if (extension == ".frag" || extension == ".vert" || extension == ".comp")
 			{
 				std::cout << "Cooking shader: " << p << std::endl;

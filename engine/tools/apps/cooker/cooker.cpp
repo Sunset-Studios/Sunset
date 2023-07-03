@@ -218,7 +218,7 @@ namespace Sunset
 
 	bool Cooker::cook_mesh_fbx(const std::filesystem::path& input_path, const std::filesystem::path& output_path)
 	{
-		std::string shader_string = read_mesh_file(input_path);
+		std::vector<char> fbx_buffer{ read_mesh_file(input_path) };
 
 		ofbx::LoadFlags flags =
 			ofbx::LoadFlags::TRIANGULATE |
@@ -233,10 +233,201 @@ namespace Sunset
 			ofbx::LoadFlags::IGNORE_LIMBS |
 			ofbx::LoadFlags::IGNORE_ANIMATIONS;
 
-		ofbx::IScene* scene = ofbx::load((ofbx::u8*)shader_string.c_str(), shader_string.size(), (ofbx::u16)flags);
 
-		// TODO:
-		return true;
+		if (ofbx::IScene* scene = ofbx::load((ofbx::u8*)fbx_buffer.data(), fbx_buffer.size(), (ofbx::u16)flags))
+		{
+			SerializedMeshInfo mesh_info;
+			mesh_info.format = VertexFormat::PNCUTB32;
+			mesh_info.index_size = sizeof(uint32_t);
+			mesh_info.file_path = input_path.string();
+
+			uint32_t num_vertices{ 0 };
+			uint32_t num_indices{ 0 };
+			for (uint32_t g = 0; g < scene->getGeometryCount(); ++g)
+			{
+				num_vertices += scene->getGeometry(g)->getVertexCount();
+				num_indices += scene->getGeometry(g)->getIndexCount();
+			}
+
+			std::vector<VertexPNCUTB32> vertices;
+			std::vector<uint32_t> indices;
+
+			vertices.reserve(num_vertices);
+			indices.reserve(num_indices);
+
+			uint32_t mesh_section_index_start{ 0 };
+			uint32_t mesh_section_index_count{ 0 };
+
+			for (uint32_t i = 0; i < scene->getMeshCount(); ++i)
+			{
+				const ofbx::Mesh* mesh = scene->getMesh(i);
+
+				const ofbx::Matrix fbx_gm = mesh->getGlobalTransform();
+				const glm::mat4 world_matrix(
+					fbx_gm.m[0], fbx_gm.m[1], fbx_gm.m[2], fbx_gm.m[3],
+					fbx_gm.m[4], fbx_gm.m[5], fbx_gm.m[6], fbx_gm.m[7],
+					fbx_gm.m[8], fbx_gm.m[9], fbx_gm.m[10], fbx_gm.m[11],
+					fbx_gm.m[12], fbx_gm.m[13], fbx_gm.m[14], fbx_gm.m[15]
+				);
+				const ofbx::Matrix fbx_gmm = mesh->getGeometricMatrix();
+				const glm::mat4 geometric_matrix(
+					fbx_gmm.m[0], fbx_gmm.m[1], fbx_gmm.m[2], fbx_gmm.m[3],
+					fbx_gmm.m[4], fbx_gmm.m[5], fbx_gmm.m[6], fbx_gmm.m[7],
+					fbx_gmm.m[8], fbx_gmm.m[9], fbx_gmm.m[10], fbx_gmm.m[11],
+					fbx_gmm.m[12], fbx_gmm.m[13], fbx_gmm.m[14], fbx_gmm.m[15]
+				);
+
+				const ofbx::Geometry* mesh_geo = mesh->getGeometry();
+
+				const uint32_t vertex_count = mesh_geo->getVertexCount();
+				const uint32_t index_count = mesh_geo->getIndexCount();
+
+				const ofbx::Vec3* fbx_vertices = mesh_geo->getVertices();
+				const ofbx::Vec3* fbx_normals = mesh_geo->getNormals();
+				const ofbx::Vec4* fbx_colors = mesh_geo->getColors();
+				const ofbx::Vec2* fbx_uvs = mesh_geo->getUVs();
+
+				mesh_section_index_count = vertex_count;
+				mesh_section_index_start = indices.size();
+
+				for (uint32_t v = 0; v < vertex_count; ++v)
+				{
+					VertexPNCUTB32 new_vertex;
+
+					glm::vec4 vertex_pos(fbx_vertices[v].x, fbx_vertices[v].y, fbx_vertices[v].z, 1.0f);
+					vertex_pos = world_matrix * vertex_pos;
+					
+					new_vertex.position[0] = vertex_pos.x;
+					new_vertex.position[1] = vertex_pos.y;
+					new_vertex.position[2] = vertex_pos.z;
+
+					if (fbx_normals != nullptr)
+					{
+						glm::vec4 vertex_normal(fbx_normals[v].x, fbx_normals[v].y, fbx_normals[v].z, 1.0f);
+						vertex_normal = glm::normalize(glm::inverse(glm::transpose(world_matrix)) * vertex_normal);
+
+						new_vertex.normal[0] = vertex_normal.x;
+						new_vertex.normal[1] = vertex_normal.y;
+						new_vertex.normal[2] = vertex_normal.z;
+					}
+
+					if (fbx_colors != nullptr)
+					{
+						new_vertex.color[0] = fbx_colors[v].x;
+						new_vertex.color[1] = fbx_colors[v].y;
+						new_vertex.color[2] = fbx_colors[v].z;
+					}
+
+					if (fbx_uvs != nullptr)
+					{
+						new_vertex.uv[0] = fbx_uvs[v].x;
+						new_vertex.uv[1] = 1.0f - fbx_uvs[v].y;
+					}
+
+					indices.push_back(vertices.size());
+					vertices.push_back(new_vertex);
+				}
+
+				mesh_info.mesh_section_infos.emplace_back(mesh_section_index_count, mesh_section_index_start);
+			}
+
+			for (uint32_t i = 0; i < indices.size(); i += 3)
+			{
+				// Get the vertices of the triangle
+				VertexPNCUTB32& v1 = vertices[indices[i]];
+				VertexPNCUTB32& v2 = vertices[indices[i + 1]];
+				VertexPNCUTB32& v3 = vertices[indices[i + 2]];
+
+				// Calculate edge and delta vectors
+				const float e1_x = v2.position[0] - v1.position[0];
+				const float e1_y = v2.position[1] - v1.position[1];
+				const float e1_z = v2.position[2] - v1.position[2];
+
+				const float e2_x = v3.position[0] - v1.position[0];
+				const float e2_y = v3.position[1] - v1.position[1];
+				const float e2_z = v3.position[2] - v1.position[2];
+
+				const float delta_uv1_x = v2.uv[0] - v1.uv[0];
+				const float delta_uv1_y = v2.uv[1] - v1.uv[1];
+				const float delta_uv1_z = v2.uv[2] - v1.uv[2];
+
+				const float delta_uv2_x = v3.uv[0] - v1.uv[0];
+				const float delta_uv2_y = v3.uv[1] - v1.uv[1];
+				const float delta_uv2_z = v3.uv[2] - v1.uv[2];
+
+				// Compute the tangent and bitangent vectors
+				const float f = 1.0f / (delta_uv1_x * delta_uv2_y - delta_uv2_x * delta_uv1_y);
+
+				glm::vec3 tangent;
+				tangent.x = f * (delta_uv2_y * e1_x - delta_uv1_y * e2_x);
+				tangent.y = f * (delta_uv2_y * e1_y - delta_uv1_y * e2_y);
+				tangent.z = f * (delta_uv2_y * e1_z - delta_uv1_y * e2_z);
+
+				glm::vec3 bitangent;
+				bitangent.x = f * (-delta_uv2_x * e1_x + delta_uv1_x * e2_x);
+				bitangent.y = f * (-delta_uv2_x * e1_y + delta_uv1_x * e2_y);
+				bitangent.z = f * (-delta_uv2_x * e1_z + delta_uv1_x * e2_z);
+
+				// Accumulate tangents and bitangents for every vertex of the triangle
+				v1.tangent[0] += tangent.x;
+				v1.tangent[1] += tangent.y;
+				v1.tangent[2] += tangent.z;
+
+				v2.tangent[0] += tangent.x;
+				v2.tangent[1] += tangent.y;
+				v2.tangent[2] += tangent.z;
+
+				v3.tangent[0] += tangent.x;
+				v3.tangent[1] += tangent.y;
+				v3.tangent[2] += tangent.z;
+
+				v1.bitangent[0] += bitangent.x;
+				v1.bitangent[1] += bitangent.y;
+				v1.bitangent[2] += bitangent.z;
+
+				v2.bitangent[0] += bitangent.x;
+				v2.bitangent[1] += bitangent.y;
+				v2.bitangent[2] += bitangent.z;
+
+				v3.bitangent[0] += bitangent.x;
+				v3.bitangent[1] += bitangent.y;
+				v3.bitangent[2] += bitangent.z;
+			}
+
+			for (uint32_t i = 0; i < vertices.size(); ++i)
+			{
+				VertexPNCUTB32& vertex = vertices[i];
+
+				glm::vec3 tangent(vertex.tangent[0], vertex.tangent[1], vertex.tangent[2]);
+				glm::vec3 bitangent(vertex.bitangent[0], vertex.bitangent[1], vertex.bitangent[2]);
+				glm::vec3 normal(vertex.normal[0], vertex.normal[1], vertex.normal[2]);
+
+				tangent = glm::normalize(tangent);
+				bitangent = glm::normalize(bitangent);
+
+				// Orthogonalize and normalize the tangent vector using the Gram-Schmidt process
+				tangent = glm::normalize(tangent - glm::dot(tangent, normal) * normal);
+
+				vertex.tangent[0] = tangent.x;
+				vertex.tangent[1] = tangent.y;
+				vertex.tangent[2] = tangent.z;
+
+				vertex.bitangent[0] = bitangent.x;
+				vertex.bitangent[1] = bitangent.y;
+				vertex.bitangent[2] = bitangent.z;
+			}
+
+			mesh_info.vertex_buffer_size = vertices.size() * sizeof(VertexPNCUTB32);
+			mesh_info.index_buffer_size = indices.size() * sizeof(uint32_t);
+			mesh_info.bounds = calculate_mesh_bounds(vertices.data(), vertices.size());
+
+			SerializedAsset asset = pack_mesh(&mesh_info, (char*)vertices.data(), (char*)indices.data());
+
+			serialize_asset(output_path.string().c_str(), asset);
+
+			return true;
+		}
+		return false;
 	}
 
 	bool Cooker::cook_shader(const std::filesystem::path& input_path, const std::filesystem::path& output_path)
