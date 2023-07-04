@@ -36,6 +36,8 @@ namespace Sunset
 	AutoCVar_Int cvar_taa_inverse_luminance_filter("ren.taa.inverse_luminance_filter_enabled", "Whether to do inverse luminance filtering during the history color resolve", 1);
 	AutoCVar_Int cvar_taa_luminance_diff_filter("ren.taa.luminance_diff_enabled", "Whether to do luminance difference filtering during the history color resolve", 1);
 
+	AutoCVar_Bool cvar_fxaa_enabled("ren.fxaa.enable", "Whether or not to do fast approximate anti-aliasing", true);
+
 	AutoCVar_Float cvar_final_image_exposure("ren.final_image_exposure", "The exposure to apply once HDR color gets resolved down to LDR", 2.0f);
 
 	bool DeferredShadingStrategy::render(GraphicsContext* gfx_context, RenderGraph& render_graph, class Swapchain* swapchain, int32_t buffered_frame_number, bool b_offline)
@@ -760,6 +762,76 @@ namespace Sunset
 			);
 		}
 
+		RGResourceHandle antialiased_scene_color_desc = scene_color_desc;
+
+		// FXAA pass
+		if (cvar_fxaa_enabled.get())
+		{
+			RGShaderDataSetup shader_setup
+			{
+				.pipeline_shaders =
+				{
+					{ PipelineShaderStageType::Compute, "../../shaders/effects/fxaa.comp.sun" }
+				}
+			};
+
+			const glm::vec2 image_extent = gfx_context->get_surface_resolution();
+
+			antialiased_scene_color_desc = render_graph.create_image(
+				gfx_context,
+				{
+					.name = "fxaa_output_color",
+					.format = Format::Float4x32,
+					.extent = glm::vec3(image_extent.x, image_extent.y, 1.0f),
+					.flags = ImageFlags::Color | ImageFlags::Image2D | ImageFlags::Sampled | ImageFlags::Storage,
+					.usage_type = MemoryUsageType::OnlyGPU,
+					.sampler_address_mode = SamplerAddressMode::Repeat,
+					.image_filter = ImageFilter::Linear,
+					.attachment_clear = true
+				},
+				buffered_frame_number
+			);
+
+			render_graph.add_pass(
+				gfx_context,
+				"fast_approximate_aa",
+				RenderPassFlags::Compute,
+				buffered_frame_number,
+				{
+					.shader_setup = shader_setup,
+					.inputs = { scene_color_desc, antialiased_scene_color_desc },
+					.outputs = { antialiased_scene_color_desc }
+				},
+				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
+				{
+					const BindingTableHandle scene_color_index = frame_data.pass_bindless_resources.handles[0];
+					const BindingTableHandle out_scene_color_index = frame_data.pass_bindless_resources.handles[3];
+
+					{
+						FXAAData fxaa_data
+						{
+							.input_scene_color = (0x0000ffff & scene_color_index),
+							.output_scene_color = (0x0000ffff & out_scene_color_index),
+							.min_edge_threshold = 0.0312f,
+							.max_edge_threshold = 0.125,
+							.resolution = image_extent,
+							.inv_resolution = 1.0f / image_extent,
+							.max_iterations = 12
+						};
+						PushConstantPipelineData pc_data = PushConstantPipelineData::create(&fxaa_data, PipelineShaderStageType::Compute);
+						gfx_context->push_constants(command_buffer, frame_data.pass_pipeline_state, pc_data);
+					}
+
+					gfx_context->dispatch_compute(
+						command_buffer,
+						static_cast<uint32_t>((image_extent.x + 31) / 32),
+						static_cast<uint32_t>((image_extent.y + 31) / 32),
+						1
+					);
+				}
+			);
+		}
+
 		// TAA pass
 		if(cvar_taa_enabled.get())
 		{
@@ -780,8 +852,8 @@ namespace Sunset
 				buffered_frame_number,
 				{
 					.shader_setup = shader_setup,
-					.inputs = { scene_color_desc, readonly_temporal_color_history, motion_vectors_image_desc, main_depth_image_desc },
-					.outputs = { scene_color_desc, temporal_color_history }
+					.inputs = { antialiased_scene_color_desc, readonly_temporal_color_history, motion_vectors_image_desc, main_depth_image_desc },
+					.outputs = { antialiased_scene_color_desc, temporal_color_history }
 				},
 				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
 				{
@@ -853,7 +925,7 @@ namespace Sunset
 			);
 		}
 
-		RGResourceHandle post_bloom_color_desc = scene_color_desc;
+		RGResourceHandle post_bloom_color_desc = antialiased_scene_color_desc;
 
 		// Bloom pass
 		const uint32_t num_iterations = cvar_num_bloom_pass_iterations.get();
@@ -913,13 +985,13 @@ namespace Sunset
 				buffered_frame_number,
 				{
 					.shader_setup = bloom_downsample_shader_setup,
-					.inputs = { scene_color_desc, bloom_blur_image_desc },
+					.inputs = { antialiased_scene_color_desc, bloom_blur_image_desc },
 					.outputs = { bloom_blur_image_desc },
 					.b_split_input_image_mips = true
 				},
 				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
 				{
-					Image* const color_image = CACHE_FETCH(Image, graph.get_physical_resource(scene_color_desc, frame_data.buffered_frame_number));
+					Image* const color_image = CACHE_FETCH(Image, graph.get_physical_resource(antialiased_scene_color_desc, frame_data.buffered_frame_number));
 
 					color_image->barrier(
 						gfx_context,
@@ -1072,7 +1144,7 @@ namespace Sunset
 				buffered_frame_number,
 				{
 					.shader_setup = bloom_resolve_shader_setup,
-					.inputs = { scene_color_desc, bloom_blur_image_desc },
+					.inputs = { antialiased_scene_color_desc, bloom_blur_image_desc },
 					.outputs = { post_bloom_color_desc }
 				},
 				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
@@ -1166,7 +1238,7 @@ namespace Sunset
 				{
 					.shader_setup = ssr_shader_setup,
 					.inputs = { main_position_image_desc, main_normal_image_desc, main_smra_image_desc,
-								scene_color_desc, ssr_image_desc },
+								antialiased_scene_color_desc, ssr_image_desc },
 					.outputs = { ssr_image_desc }
 				},
 				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)

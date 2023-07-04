@@ -89,6 +89,18 @@ namespace Sunset
 		int32_t ssao_texture;
 	};
 
+	struct FXAAData
+	{
+		int32_t input_scene_color;
+		int32_t output_scene_color;
+		float min_edge_threshold;
+		float max_edge_threshold;
+		glm::vec2 resolution;
+		glm::vec2 inv_resolution;
+		int32_t max_iterations;
+		glm::vec3 padding;
+	};
+
 	struct TAAData
 	{
 		int32_t input_scene_color;
