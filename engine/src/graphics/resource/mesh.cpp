@@ -459,6 +459,8 @@ namespace Sunset
 
 	Sunset::MeshID MeshFactory::load(class GraphicsContext* const gfx_context, const char* path)
 	{
+		ZoneScopedN("MeshFactory::load");
+
 		Identity id{ path };
 		bool b_added{ false };
 		const MeshID mesh_id = MeshCache::get()->fetch_or_add(id, gfx_context, b_added);
@@ -481,7 +483,10 @@ namespace Sunset
 			vertex_buffer.resize(serialized_mesh_info.vertex_buffer_size);
 			index_buffer.resize(serialized_mesh_info.index_buffer_size);
 
-			unpack_mesh(&serialized_mesh_info, asset.binary.data(), asset.binary.size(), vertex_buffer.data(), index_buffer.data());
+			{
+				ZoneScopedN("MeshFactory::load: unpack_mesh");
+				unpack_mesh(&serialized_mesh_info, asset.binary.data(), asset.binary.size(), vertex_buffer.data(), index_buffer.data());
+			}
 
 			mesh->vertices.clear();
 

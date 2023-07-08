@@ -75,6 +75,7 @@ namespace Sunset
 		std::vector<RGPassHandle> consumers;
 		bool b_is_persistent{ false };
 		bool b_is_bindless{ false };
+		uint32_t max_frame_lifetime{ 2 };
 	};
 
 	struct RGFrameData

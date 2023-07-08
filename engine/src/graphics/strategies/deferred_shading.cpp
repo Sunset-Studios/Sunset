@@ -646,8 +646,8 @@ namespace Sunset
 					
 					gfx_context->dispatch_compute(
 						command_buffer,
-						static_cast<uint32_t>((image_extent.x + 15) / 16),
-						static_cast<uint32_t>((image_extent.y + 15) / 16),
+						static_cast<uint32_t>((image_extent.x + 31) / 32),
+						static_cast<uint32_t>((image_extent.y + 31) / 32),
 						1
 					);
 				}
@@ -681,8 +681,8 @@ namespace Sunset
 
 					gfx_context->dispatch_compute(
 						command_buffer,
-						static_cast<uint32_t>((image_extent.x + 15) / 16),
-						static_cast<uint32_t>((image_extent.y + 15) / 16),
+						static_cast<uint32_t>((image_extent.x + 31) / 32),
+						static_cast<uint32_t>((image_extent.y + 31) / 32),
 						1
 					);
 				}
@@ -1267,8 +1267,8 @@ namespace Sunset
 
 					gfx_context->dispatch_compute(
 						command_buffer,
-						static_cast<uint32_t>((image_extent.x + 15) / 16),
-						static_cast<uint32_t>((image_extent.y + 15) / 16),
+						static_cast<uint32_t>((image_extent.x + 31) / 32),
+						static_cast<uint32_t>((image_extent.y + 31) / 32),
 						1
 					);
 				}
@@ -1302,8 +1302,8 @@ namespace Sunset
 
 					gfx_context->dispatch_compute(
 						command_buffer,
-						static_cast<uint32_t>((image_extent.x + 15) / 16),
-						static_cast<uint32_t>((image_extent.y + 15) / 16),
+						static_cast<uint32_t>((image_extent.x + 31) / 32),
+						static_cast<uint32_t>((image_extent.y + 31) / 32),
 						1
 					);
 				}

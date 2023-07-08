@@ -48,15 +48,19 @@ namespace Sunset
 
 	void unpack_mesh(SerializedMeshInfo* serialized_mesh_info, const char* source_buffer, size_t source_buffer_size, char* destination_vertex_buffer, char* destination_index_buffer)
 	{
+		ZoneScopedN("unpack_mesh");
+
 		std::vector<char> decompressed_buffer;
 		decompressed_buffer.resize(serialized_mesh_info->vertex_buffer_size + serialized_mesh_info->index_buffer_size);
 
 		if (serialized_mesh_info->compression_mode == CompressionMode::LZ4)
 		{
+			ZoneScopedN("unpack_mesh: LZ4_decompress_safe");
 			LZ4_decompress_safe(source_buffer, decompressed_buffer.data(), static_cast<int>(source_buffer_size), static_cast<int>(decompressed_buffer.size()));
 		}
 		else
 		{
+			ZoneScopedN("unpack_mesh: memcpy");
 			memcpy(decompressed_buffer.data(), source_buffer, source_buffer_size);
 		}
 

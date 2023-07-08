@@ -93,8 +93,7 @@ namespace Sunset
 		JobBatcher<ThreadedJob<>> jobs(iterations);
 		for (uint32_t i = 0; i < iterations; ++i)
 		{
-			ThreadedJob<> job = parallel_op(i);
-			jobs.add(job, i);
+			jobs.add(parallel_op(i), i);
 		}
 
 		{

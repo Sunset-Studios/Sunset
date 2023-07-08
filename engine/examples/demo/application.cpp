@@ -25,7 +25,7 @@ namespace Sunset
 	{
 		bIsInitialized = true;
 
-		window = WindowFactory::create(ENGINE_NAME, glm::ivec2(0), glm::ivec2(1280, 720), false);
+		window = WindowFactory::create(ENGINE_NAME, glm::ivec2(0), glm::ivec2(1920, 1080), false);
 
 		Renderer::get()->setup(window);
 

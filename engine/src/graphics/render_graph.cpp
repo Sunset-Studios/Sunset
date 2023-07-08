@@ -24,6 +24,7 @@ namespace Sunset
 		for (uint32_t i = 0; i < MAX_BUFFERED_FRAMES; ++i)
 		{
 			reset(gfx_context, i);
+			registries[i].resource_deletion_queue.flush();
 		}
 	}
 
@@ -668,10 +669,13 @@ namespace Sunset
 
 				if (!registry.resource_metadata[resource].b_is_persistent)
 				{
+					registry.resource_deletion_queue.remove_execution(registry.resource_metadata[resource].physical_id);
 					registry.resource_deletion_queue.push_execution([gfx_context, physical_id = registry.resource_metadata[resource].physical_id]()
 						{
 							CACHE_DELETE(Buffer, physical_id, gfx_context);
-						}
+						},
+						registry.resource_metadata[resource].physical_id,
+						registry.resource_metadata[resource].max_frame_lifetime
 					);
 				}
 			}
@@ -708,10 +712,13 @@ namespace Sunset
 
 				if (!registry.resource_metadata[resource].b_is_persistent)
 				{
+					registry.resource_deletion_queue.remove_execution(registry.resource_metadata[resource].physical_id);
 					registry.resource_deletion_queue.push_execution([gfx_context, physical_id = registry.resource_metadata[resource].physical_id]()
 						{
 							CACHE_DELETE(Image, physical_id, gfx_context);
-						}
+						},
+						registry.resource_metadata[resource].physical_id,
+						registry.resource_metadata[resource].max_frame_lifetime
 					);
 				}
 			}
@@ -1114,7 +1121,7 @@ namespace Sunset
 		ZoneScopedN("RenderGraph::free_physical_resources");
 
 		// TODO: Look into aliasing memory for expired resources as opposed to just flat out deleting them (though that should also be done)
-		registries[current_buffered_frame].resource_deletion_queue.flush();
+		registries[current_buffered_frame].resource_deletion_queue.update();
 		DescriptorHelpers::free_bindless_image_descriptors(gfx_context, pass_cache.global_descriptor_set[current_buffered_frame], registries[current_buffered_frame].all_bindless_resource_handles);
 	}
 }
