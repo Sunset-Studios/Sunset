@@ -60,9 +60,12 @@ namespace Sunset
 		if (b_added)
 		{
 			SerializedAsset asset;
-			if (!deserialize_asset(config.path, asset))
 			{
-				return ImageID();
+				ZoneScopedN("ImageFactory::load: deserialize_asset");
+				if (!deserialize_asset(config.path, asset))
+				{
+					return ImageID();
+				}
 			}
 
 			SerializedImageInfo image_info = get_serialized_image_info(&asset);
@@ -82,10 +85,17 @@ namespace Sunset
 			);
 			Buffer* const staging_buffer = CACHE_FETCH(Buffer, staging_buffer_id);
 
-			staging_buffer->copy_from(gfx_context, asset.binary.data(), asset.binary.size(), 0, [&image_info, &asset](void* memory)
 			{
-				unpack_image(&image_info, asset.binary.data(), asset.binary.size(), (char*)memory);
-			});
+				ZoneScopedN("ImageFactory::load: unpack_image");
+				staging_buffer->copy_from(gfx_context, asset.binary.data(), asset.binary.size(), 0, [&image_info, &asset](void* memory)
+				{
+					parallel_for(image_info.compressed_block_sizes.size(), [&image_info, &asset, memory](uint32_t block_index)
+					{
+						ZoneScopedN("ImageFactory::load: unpack_image_block");
+						unpack_image_block(&image_info, asset.binary.data(), (char*)memory, block_index);
+					});
+				});
+			}
 
 			{
 				AttachmentConfig image_config = config;
@@ -94,10 +104,13 @@ namespace Sunset
 				image_config.extent = glm::vec3(image_info.extent[0], image_info.extent[1], image_info.extent[2]);
 				image->initialize(gfx_context, image_config);
 
-				gfx_context->get_command_queue(DeviceQueueType::Graphics)->submit_immediate(gfx_context, 0, [image, staging_buffer, gfx_context](void* command_buffer)
 				{
-					image->copy_from_buffer(gfx_context, command_buffer, staging_buffer);
-				});
+					ZoneScopedN("ImageFactory::load: copy_from_buffer");
+					gfx_context->get_command_queue(DeviceQueueType::Graphics)->submit_immediate(gfx_context, 0, [image, staging_buffer, gfx_context](void* command_buffer)
+					{
+						image->copy_from_buffer(gfx_context, command_buffer, staging_buffer);
+					});
+				}
 			}
 
 			CACHE_DELETE(Buffer, staging_buffer_id, gfx_context);

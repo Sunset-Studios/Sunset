@@ -71,5 +71,35 @@ namespace Sunset
 		return smallest_queue;
 	}
 
+	Job::Job(const std::coroutine_handle<>& handle)
+		: handle(handle)
+	{
+		JobScheduler::get()->set_job_done_state(handle.address(), false);
+	}
 
+	bool Job::is_done() const
+	{
+		return JobScheduler::get()->get_job_done_state(handle.address());
+	}
+
+	void parallel_for(uint32_t iterations, std::function<void(uint32_t)> op)
+	{
+		const auto parallel_op = [op](uint32_t index) -> ThreadedJob<>
+		{
+			op(index);
+			co_return;
+		};
+
+		JobBatcher<ThreadedJob<>> jobs(iterations);
+		for (uint32_t i = 0; i < iterations; ++i)
+		{
+			ThreadedJob<> job = parallel_op(i);
+			jobs.add(job, i);
+		}
+
+		{
+			ZoneScopedN("parallel_for: wait_on_all");
+			jobs.wait_on_all();
+		}
+	}
 }

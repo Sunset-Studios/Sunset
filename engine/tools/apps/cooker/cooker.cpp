@@ -18,6 +18,8 @@ namespace Sunset
 	{
 		int texture_width, texture_height, texture_channels;
 
+		int file_size = stbi_info((const char*)input_path.u8string().c_str(), &texture_width, &texture_height, &texture_channels);
+
 		stbi_uc* pixel_buffer = stbi_load((const char*)input_path.u8string().c_str(), &texture_width, &texture_height, &texture_channels, STBI_rgb_alpha);
 
 		if (pixel_buffer == nullptr)

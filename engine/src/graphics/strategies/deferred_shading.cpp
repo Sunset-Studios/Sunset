@@ -1422,6 +1422,8 @@ namespace Sunset
 	{
 		if (!b_initialized.load(std::memory_order_acquire))
 		{
+			ZoneScopedN("DeferredShadingPersistentStorage::initialize");
+
 			b_initialized.store(true, std::memory_order_release);
 
 			GraphicsContext* const gfx_context = Renderer::get()->context();

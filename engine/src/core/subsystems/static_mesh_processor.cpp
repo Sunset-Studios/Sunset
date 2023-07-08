@@ -21,6 +21,8 @@ namespace Sunset
 {	
 	void StaticMeshProcessor::initialize(class Scene* scene)
 	{
+		ZoneScopedN("StaticMeshProcessor::initialize");
+
 		for (int i = 0; i < MAX_BUFFERED_FRAMES; ++i)
 		{
 			if (MaterialGlobals::get()->material_data.data_buffer[i] == 0)

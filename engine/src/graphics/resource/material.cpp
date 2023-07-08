@@ -38,6 +38,8 @@ namespace Sunset
 
 	void material_load_textures(class GraphicsContext* const gfx_context, MaterialID material)
 	{
+		ZoneScopedN("material_load_textures");
+
 		Material* const material_ptr = CACHE_FETCH(Material, material);
 		assert(material_ptr != nullptr && "Cannot load material textures for a null material!");
 
@@ -85,6 +87,8 @@ namespace Sunset
 		
 		if (material_ptr->b_needs_texture_upload[buffered_frame_number])
 		{
+			ZoneScopedN("material_update: Upload textures");
+
 			std::vector<DescriptorBindlessWrite> bindless_writes;
 			for (int i = 0; i < material_ptr->textures.size(); ++i)
 			{
