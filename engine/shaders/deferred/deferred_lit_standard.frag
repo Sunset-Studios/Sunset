@@ -1,7 +1,6 @@
 #version 460
 
 #include "common/common.inc"
-#include "common/pbr_common.inc"
 #include "common/lighting_common.inc"
 
 layout (location = 0) in vec3 in_color;
@@ -36,6 +35,7 @@ layout (push_constant) uniform constants
 	int position_texure;
 	int sky_texture;
 	int ssao_texture;
+	int shadow_texture;
 } lighting_pass_constants;
 
 void main()
@@ -133,7 +133,8 @@ void main()
 			min(ao, tex_ssao),
 			irradiance,
 			prefiltered_color,
-			tex_env_brdf);
+			tex_env_brdf,
+			lighting_pass_constants.shadow_texture);
 	}
 
 	out_frag_color = vec4(color + (albedo * emissive), 1.0f);

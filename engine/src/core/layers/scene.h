@@ -15,6 +15,7 @@ namespace Sunset
 		glm::vec4 fog_color;
 		glm::vec4 sunlight_direction;
 		glm::vec4 sunlight_color;
+		glm::vec4 csm_plane_distances;
 		float fog_distance;
 		float sunlight_intensity;
 		float sunlight_angular_radius;
@@ -27,6 +28,7 @@ namespace Sunset
 		int32_t sky_box;
 		int32_t prefilter_map;
 		int32_t brdf_lut;
+		glm::mat4 light_space_matrices[MAX_SHADOW_CASCADES];
 	};
 
 	struct SceneData
@@ -43,7 +45,7 @@ namespace Sunset
 
 	void set_scene_fog_color(class Scene* scene, glm::vec4 fog_color);
 	void set_scene_fog_distance(class Scene* scene, float fog_distance);
-	void set_scene_sunlight_direction(class Scene* scene, glm::vec4 sunlight_direction);
+	void set_scene_sunlight_direction(class Scene* scene, glm::vec3 sunlight_direction);
 	void set_scene_sunlight_color(class Scene* scene, glm::vec4 sunlight_color);
 	void set_scene_sunlight_intensity(class Scene* scene, float sunlight_intensity);
 	void set_scene_sunlight_angular_radius(class Scene* scene, float angular_radius);

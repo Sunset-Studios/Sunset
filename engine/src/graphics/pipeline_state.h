@@ -61,6 +61,11 @@ namespace Sunset
 			state_data.viewports.clear();
 		}
 
+		void clear_scissors(class GraphicsContext* const gfx_context)
+		{
+			state_data.scissors.clear();
+		}
+
 		void add_viewport(class GraphicsContext* const gfx_context, float x_pos, float y_pos, float width, float height, float min_depth, float max_depth)
 		{
 			state_data.viewports.emplace_back(x_pos, y_pos, width, height, min_depth, max_depth);
@@ -187,6 +192,7 @@ namespace Sunset
 			static PipelineGraphicsStateBuilder create_default(const glm::ivec2& resolution);
 
 			PipelineGraphicsStateBuilder& clear_viewports();
+			PipelineGraphicsStateBuilder& clear_scissors();
 			PipelineGraphicsStateBuilder& add_viewport(const Viewport& viewport);
 			PipelineGraphicsStateBuilder& add_viewport(float x_pos, float y_pos, float width, float height, float min_depth, float max_depth);
 			PipelineGraphicsStateBuilder& add_scissor(int32_t x_pos, int32_t y_pos, int32_t width, int32_t height);

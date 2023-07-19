@@ -83,7 +83,12 @@ namespace Sunset
             set_body_gravity_scale(body_comp, gravity_scale);
         }
     }
+
     void set_body_restitution(Scene* scene, EntityID entity, float restitution)
     {
+        if (BodyComponent* const body_comp = scene->get_component<BodyComponent>(entity))
+        {
+            set_body_restitution(body_comp, restitution);
+        }
     }
 }

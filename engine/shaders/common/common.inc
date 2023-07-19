@@ -3,6 +3,7 @@
 
 #define MAX_DESCRIPTOR_BINDINGS 16535
 #define MAX_TEXTURES_PER_MATERIAL 16
+#define MAX_SHADOW_CASCADES 3
 #define PI 3.14159265358f
 #define UP vec3(0.0, 1.0, 0.0)
 
@@ -25,6 +26,7 @@ layout (std140, set = 0, binding = 1) uniform SceneLightingData
 	vec4 fog_color;
 	vec4 sunlight_direction;
 	vec4 sunlight_color;
+    vec4 csm_plane_distances;
 	float fog_distance;
 	float sunlight_intensity;
 	float sunlight_angular_radius;
@@ -37,6 +39,7 @@ layout (std140, set = 0, binding = 1) uniform SceneLightingData
 	int sky_box;
     int prefilter_map;
     int brdf_lut;
+    mat4 light_space_matrices[MAX_SHADOW_CASCADES];
 } scene_lighting_data;
 
 layout (set = 0, binding = 2) uniform writeonly image2D storage_2D[MAX_DESCRIPTOR_BINDINGS];
@@ -48,7 +51,7 @@ layout (set = 0, binding = 3) uniform sampler2DArray textures_2DArray[];
 
 float cubic_filter(in float x, in float b, in float c)
 {
-	float y = 0.0f;
+	float y = 0.0f; 
 	float x2 = x * x;
 	float x3 = x2 * x;
 	if (x < 1)

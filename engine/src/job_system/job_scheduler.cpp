@@ -3,7 +3,7 @@
 
 namespace Sunset
 {
-	AutoCVar_Int cvar_idle_thread_nanosecond_sleep("jobs.idle_thread_nanosecond_sleep", "Number of nanoseconds to wait between sleeps when job scheduler threads have no work queued", 5);
+	AutoCVar_Int cvar_idle_thread_nanosecond_sleep("jobs.idle_thread_nanosecond_sleep", "Number of nanoseconds to wait between sleeps when job scheduler threads have no work queued", 2);
 
 	std::vector<JobQueue> JobScheduler::per_thread_queues;
 

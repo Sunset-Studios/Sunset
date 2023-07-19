@@ -1,6 +1,7 @@
 #version 460
 
 #include "common/common.inc"
+#include "common/lighting_common.inc"
 
 layout (location = 0) in vec3 in_color;
 layout (location = 1) in vec2 in_tex_coord;
@@ -31,18 +32,6 @@ struct MaterialData
 	float tiling_coeffs[MAX_TEXTURES_PER_MATERIAL];
 };
 
-struct LightData
-{
-	vec4 color;
-	vec4 direction;
-	float radius;
-	float outer_angle;
-	vec2 area_size;
-	uint type;
-	int entity;
-	float intensity;
-};
-
 layout (std430, set = 1, binding = 0) readonly buffer EntitySceneDataBuffer
 {
 	EntitySceneData entities[];
@@ -62,54 +51,6 @@ layout (std430, set = 1, binding = 3) buffer LightDataBuffer
 {
 	LightData lights[];
 } light_data;
-
-vec3 calculate_blinn_phong(LightData light, vec3 position, vec3 normal, vec3 view_dir, vec3 fragment_pos, vec3 albedo, float shininess, vec3 ambient)
-{
-	vec3 light_dir;
-	float attenuation = 1.0f;
-
-	// Ambient
-	vec3 ambient_color = albedo * ambient;
-
-	if (light.type == 0) // Directional
-	{
-		light_dir = normalize(-position);
-	}
-	else if (light.type == 1) // Point
-	{
-		const vec3 light_to_frag = fragment_pos - position;
-		light_dir = normalize(light_to_frag);
-		const float distance = length(light_to_frag);
-		const float falloff = 1.0f - smoothstep(0.0f, light.radius, distance);
-		attenuation = falloff / (1.0f + 0.09f * distance + 0.032f * distance * distance);
-	}
-	else if (light.type == 2) // Spot
-	{
-		const vec3 light_to_frag = fragment_pos - position;
-		light_dir = normalize(light_to_frag);
-		const float distance = length(light_to_frag);
-		const float spot_effect = dot(light_dir, light.direction.xyz);
-		const float falloff = pow(spot_effect, 180.0f / max(1.0f, light.outer_angle));
-		attenuation = falloff / (1.0f + 0.09f * distance + 0.032f * distance * distance);
-	}
-
-	attenuation = clamp(attenuation, 0.0f, 255.0f);
-
-	// Diffuse
-	float n_dot_l = max(dot(normal, light_dir), 0.0f);
-	vec3 diffuse_color = light.color.rgb * albedo * n_dot_l;
-
-	// Specular
-	vec3 halfway = normalize(light_dir + view_dir);
-	float n_dot_h = max(dot(normal, halfway), 0.0f);
-	float specular = pow(n_dot_h, shininess);
-	vec3 specular_color = light.color.rgb * specular;
-
-	// Attenuation
-	vec3 final_color = ambient_color + (diffuse_color + specular_color) * light.intensity * attenuation;
-
-	return final_color;
-}
 
 void main()
 {

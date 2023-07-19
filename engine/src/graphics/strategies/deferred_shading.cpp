@@ -21,16 +21,16 @@ namespace Sunset
 	AutoCVar_Bool cvar_use_skybox("ren.use_skybox", "Whether or not to render a skybox (supplied to the scene as a cubemap texture) instead of using the preetham skydome shader.", false);
 
 	AutoCVar_Bool cvar_ssao_enabled("ren.ssao.enable", "Whether or not to do screen space ambient occlusion", true);
-	AutoCVar_Float cvar_ssao_strength("ren.ssao.strength", "The strength of the SSAO contribution applied to ambient lighting calculations", 2.0f);
+	AutoCVar_Float cvar_ssao_strength("ren.ssao.strength", "The strength of the SSAO contribution applied to ambient lighting calculations", 1.0f);
 	AutoCVar_Float cvar_ssao_radius("ren.ssao.radius", "The contribution radius of SSAO samples", 1.0f);
 
 	AutoCVar_Bool cvar_ssr_enabled("ren.ssr.enable", "Whether or not to do screen space reflections", true);
-	AutoCVar_Int cvar_ssr_max_ray_hit_steps("ren.ssr.max_ray_hit_steps", "Maximum number of shader loop steps to use when checking for depth hits during SSR pass", 24);
+	AutoCVar_Int cvar_ssr_max_ray_hit_steps("ren.ssr.max_ray_hit_steps", "Maximum number of shader loop steps to use when checking for depth hits during SSR pass", 8);
 	AutoCVar_Float cvar_ssr_max_ray_distance("ren.ssr.max_ray_distance", "Maximum distance in world units to step the reflection ray during SSR pass", 16.0f);
 	AutoCVar_Float cvar_ssr_strength("ren.ssr.strength", "Multiplier to ramp up final SSR color by", 3.0f);
 
 	AutoCVar_Int cvar_num_bloom_pass_iterations("ren.bloom.num_pass_iterations", "The number of bloom horizontal and vertical blur iterations. (0 to turn bloom off).", 6);
-	AutoCVar_Float cvar_bloom_intensity("ren.bloom.intensity", "The intensity of the applied final bloom", 0.2f);
+	AutoCVar_Float cvar_bloom_intensity("ren.bloom.intensity", "The intensity of the applied final bloom", 0.1f);
 
 	AutoCVar_Bool cvar_taa_enabled("ren.taa.enable", "Whether or not to do temporal anti-aliasing", true);
 	AutoCVar_Int cvar_taa_inverse_luminance_filter("ren.taa.inverse_luminance_filter_enabled", "Whether to do inverse luminance filtering during the history color resolve", 1);
@@ -282,6 +282,83 @@ namespace Sunset
 			}
 		}
 
+		// Shadow pass
+		RGResourceHandle shadow_map_desc;
+		{
+			RGShaderDataSetup shader_setup
+			{
+				.pipeline_shaders =
+				{
+					{ PipelineShaderStageType::Vertex, "../../shaders/common/csm.vert.sun" },
+					{ PipelineShaderStageType::Fragment, "../../shaders/common/passthrough.frag.sun"}
+				},
+				.rasterizer_state = PipelineRasterizerState
+				{
+					.cull_mode = PipelineRasterizerCullMode::FrontFace
+				}
+			};
+
+			const glm::vec2 image_extent = gfx_context->get_surface_resolution();
+			shadow_map_desc = render_graph.create_image(
+				gfx_context,
+				{
+					.name = "csm_shadow_map",
+					.format = Format::FloatDepth32,
+					.extent = glm::vec3(image_extent.x, image_extent.y, 1.0f),
+					.flags = ImageFlags::DepthStencil | ImageFlags::Image2DArray | ImageFlags::Sampled,
+					.usage_type = MemoryUsageType::OnlyGPU,
+					.sampler_address_mode = SamplerAddressMode::BorderClamp,
+					.image_filter = ImageFilter::Nearest,
+					.array_count = MAX_SHADOW_CASCADES,
+					.attachment_clear = true,
+					.split_array_layer_views = true
+				},
+				buffered_frame_number
+			);
+
+			std::string cascade_pass_name = "csm_pass0";
+			for (uint32_t cascade = 0; cascade < MAX_SHADOW_CASCADES; ++cascade)
+			{
+				cascade_pass_name[cascade_pass_name.size() - 1] = '0' + cascade;
+				RGPassHandle csm_pass_handle = render_graph.add_pass(
+					gfx_context,
+					cascade_pass_name.c_str(),
+					RenderPassFlags::Graphics,
+					buffered_frame_number,
+					{
+						.shader_setup = shader_setup,
+						.inputs = { entity_data_buffer_desc, compacted_object_instance_buffer_desc, draw_indirect_buffer_desc },
+						.outputs = { shadow_map_desc },
+						.output_views = { cascade }
+					},
+					[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
+					{
+						{
+							CSMData csm_data
+							{
+								.shadow_cascade = static_cast<int32_t>(cascade) 
+							};
+							PushConstantPipelineData pc_data = PushConstantPipelineData::create(&csm_data, PipelineShaderStageType::Vertex);
+							gfx_context->push_constants(command_buffer, frame_data.pass_pipeline_state, pc_data);
+						}
+
+						const bool b_use_draw_push_constants = false;
+						const bool b_flush = false;
+						Renderer::get()->get_mesh_task_queue(frame_data.buffered_frame_number).submit_draws(
+							gfx_context,
+							command_buffer,
+							frame_data.current_pass,
+							frame_data.global_descriptor_set,
+							frame_data.pass_pipeline_state,
+							frame_data.buffered_frame_number,
+							b_use_draw_push_constants,
+							b_flush
+						);
+					}
+				);
+			}
+		}
+
 		// G-Buffer pass
 		RGResourceHandle main_albedo_image_desc;
 		RGResourceHandle main_depth_image_desc;
@@ -382,7 +459,7 @@ namespace Sunset
 					.flags = ImageFlags::Color | ImageFlags::Sampled | ImageFlags::Image2D,
 					.usage_type = MemoryUsageType::OnlyGPU,
 					.sampler_address_mode = SamplerAddressMode::EdgeClamp,
-					.image_filter = ImageFilter::Nearest,
+					.image_filter = ImageFilter::Linear,
 					.attachment_clear = true,
 				},
 				buffered_frame_number
@@ -633,7 +710,7 @@ namespace Sunset
 						.position_texture = (0x0000ffff & position_image_handle),
 						.normal_texture = (0x0000ffff & normal_image_handle),
 						.out_ssao_texture = (0x0000ffff & ssao_image_handle),
-						.noise_scale = glm::vec2(image_extent.x * 0.25f, image_extent.y * 0.25f),
+						.noise_scale = glm::vec2(image_extent.x, image_extent.y),
 						.resolution = image_extent,
 						.radius = static_cast<float>(cvar_ssao_radius.get()),
 						.bias = 0.05f,
@@ -727,7 +804,7 @@ namespace Sunset
 					.inputs = { entity_data_buffer_desc, light_data_buffer_desc,
 								compacted_object_instance_buffer_desc, main_albedo_image_desc,
 								main_smra_image_desc, main_cc_image_desc, main_normal_image_desc,
-								main_position_image_desc, sky_image_desc, ssao_image_desc },
+								main_position_image_desc, sky_image_desc, ssao_image_desc, shadow_map_desc },
 					.outputs = { scene_color_desc }
 				},
 				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
@@ -741,6 +818,7 @@ namespace Sunset
 
 					uint8_t next_bindless_index = 6;
 					const BindingTableHandle ssao_image_handle = ssao_image_desc != 0 ? frame_data.pass_bindless_resources.handles[next_bindless_index++] : -1;
+					const BindingTableHandle shadow_image_handle = shadow_map_desc != 0 ? frame_data.pass_bindless_resources.handles[next_bindless_index++] : -1;
 
 					LightingPassData lighting_data
 					{
@@ -750,7 +828,8 @@ namespace Sunset
 						.normal_texure = 0x0000ffff & normal_image_handle,
 						.position_texure = 0x0000ffff & position_image_handle,
 						.sky_texure = 0x0000ffff & sky_image_handle,
-						.ssao_texture = ssao_image_handle >= 0 ? 0x0000ffff & ssao_image_handle : -1
+						.ssao_texture = ssao_image_handle >= 0 ? 0x0000ffff & ssao_image_handle : -1,
+						.shadow_texture = shadow_image_handle >= 0 ? 0x0000ffff & shadow_image_handle : -1
 					};
 
 					PushConstantPipelineData pass_data = PushConstantPipelineData::create(&lighting_data, PipelineShaderStageType::Fragment);
@@ -762,25 +841,56 @@ namespace Sunset
 			);
 		}
 
-		RGResourceHandle antialiased_scene_color_desc = scene_color_desc;
+		RGResourceHandle post_ssr_color_desc = scene_color_desc;
 
-		// FXAA pass
-		if (cvar_fxaa_enabled.get())
+		// SSR Pass
+		if (cvar_ssr_enabled.get())
 		{
-			RGShaderDataSetup shader_setup
+			RGShaderDataSetup ssr_shader_setup
 			{
 				.pipeline_shaders =
 				{
-					{ PipelineShaderStageType::Compute, "../../shaders/effects/fxaa.comp.sun" }
+					{ PipelineShaderStageType::Compute, "../../shaders/effects/ssr.comp.sun" }
+				}
+			};
+
+			RGShaderDataSetup ssr_blur_shader_setup
+			{
+				.pipeline_shaders =
+				{
+					{ PipelineShaderStageType::Compute, "../../shaders/effects/box_blur.comp.sun" }
+				}
+			};
+
+			RGShaderDataSetup ssr_resolve_shader_setup
+			{
+				.pipeline_shaders =
+				{
+					{ PipelineShaderStageType::Vertex, "../../shaders/common/fullscreen.vert.sun" },
+					{ PipelineShaderStageType::Fragment, "../../shaders/effects/ssr_resolve.frag.sun" }
 				}
 			};
 
 			const glm::vec2 image_extent = gfx_context->get_surface_resolution();
-
-			antialiased_scene_color_desc = render_graph.create_image(
+			RGResourceHandle ssr_image_desc = render_graph.create_image(
 				gfx_context,
 				{
-					.name = "fxaa_output_color",
+					.name = "ssr_image",
+					.format = Format::Float4x32,
+					.extent = glm::vec3(image_extent.x, image_extent.y, 1.0f),
+					.flags = ImageFlags::Color | ImageFlags::Image2D | ImageFlags::Sampled | ImageFlags::Storage,
+					.usage_type = MemoryUsageType::OnlyGPU,
+					.sampler_address_mode = SamplerAddressMode::Repeat,
+					.image_filter = ImageFilter::Linear,
+					.attachment_clear = true
+				},
+				buffered_frame_number
+			);
+
+			RGResourceHandle ssr_blurred_image_desc = render_graph.create_image(
+				gfx_context,
+				{
+					.name = "ssr_blurred_image",
 					.format = Format::Float4x32,
 					.extent = glm::vec3(image_extent.x, image_extent.y, 1.0f),
 					.flags = ImageFlags::Color | ImageFlags::Image2D | ImageFlags::Sampled | ImageFlags::Storage,
@@ -794,33 +904,38 @@ namespace Sunset
 
 			render_graph.add_pass(
 				gfx_context,
-				"fast_approximate_aa",
+				"ssr_pass",
 				RenderPassFlags::Compute,
 				buffered_frame_number,
 				{
-					.shader_setup = shader_setup,
-					.inputs = { scene_color_desc, antialiased_scene_color_desc },
-					.outputs = { antialiased_scene_color_desc }
+					.shader_setup = ssr_shader_setup,
+					.inputs = { main_position_image_desc, main_normal_image_desc, main_smra_image_desc,
+								scene_color_desc, ssr_image_desc },
+					.outputs = { ssr_image_desc }
 				},
 				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
 				{
-					const BindingTableHandle scene_color_index = frame_data.pass_bindless_resources.handles[0];
-					const BindingTableHandle out_scene_color_index = frame_data.pass_bindless_resources.handles[3];
+					const BindingTableHandle position_image_handle = frame_data.pass_bindless_resources.handles[0];
+					const BindingTableHandle normal_image_handle = frame_data.pass_bindless_resources.handles[1];
+					const BindingTableHandle smra_image_handle = frame_data.pass_bindless_resources.handles[2];
+					const BindingTableHandle scene_color_image_handle = frame_data.pass_bindless_resources.handles[3];
+					const BindingTableHandle ssr_image_handle = frame_data.pass_bindless_resources.handles[6];
 
+					SSRData ssr_data
 					{
-						FXAAData fxaa_data
-						{
-							.input_scene_color = (0x0000ffff & scene_color_index),
-							.output_scene_color = (0x0000ffff & out_scene_color_index),
-							.min_edge_threshold = 0.0312f,
-							.max_edge_threshold = 0.125,
-							.resolution = image_extent,
-							.inv_resolution = 1.0f / image_extent,
-							.max_iterations = 12
-						};
-						PushConstantPipelineData pc_data = PushConstantPipelineData::create(&fxaa_data, PipelineShaderStageType::Compute);
-						gfx_context->push_constants(command_buffer, frame_data.pass_pipeline_state, pc_data);
-					}
+						.scene_color_texture = (0x0000ffff & scene_color_image_handle),
+						.position_texture = (0x0000ffff & position_image_handle),
+						.normal_texture = (0x0000ffff & normal_image_handle),
+						.smra_texture = (0x0000ffff & smra_image_handle),
+						.out_ssr_texture = (0x0000ffff & ssr_image_handle),
+						.ray_hit_steps = cvar_ssr_max_ray_hit_steps.get(),
+						.max_ray_distance = static_cast<float>(cvar_ssr_max_ray_distance.get()),
+						.resolution = image_extent,
+					};
+
+					PushConstantPipelineData pass_data = PushConstantPipelineData::create(&ssr_data, PipelineShaderStageType::Compute);
+
+					gfx_context->push_constants(command_buffer, frame_data.pass_pipeline_state, pass_data);
 
 					gfx_context->dispatch_compute(
 						command_buffer,
@@ -828,6 +943,85 @@ namespace Sunset
 						static_cast<uint32_t>((image_extent.y + 31) / 32),
 						1
 					);
+				}
+			);
+
+			render_graph.add_pass(
+				gfx_context,
+				"ssr_blur_pass",
+				RenderPassFlags::Compute,
+				buffered_frame_number,
+				{
+					.shader_setup = ssr_blur_shader_setup,
+					.inputs = { ssr_image_desc, ssr_blurred_image_desc },
+					.outputs = { ssr_blurred_image_desc }
+				},
+				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
+				{
+					const BindingTableHandle ssr_image_handle = frame_data.pass_bindless_resources.handles[0];
+					const BindingTableHandle ssr_blurred_image_handle = frame_data.pass_bindless_resources.handles[3];
+
+					BoxBlurData blur_data
+					{
+						.staging_texture = (0x0000ffff & ssr_image_handle),
+						.out_texture = (0x0000ffff & ssr_blurred_image_handle),
+						.resolution = image_extent
+					};
+
+					PushConstantPipelineData pass_data = PushConstantPipelineData::create(&blur_data, PipelineShaderStageType::Compute);
+
+					gfx_context->push_constants(command_buffer, frame_data.pass_pipeline_state, pass_data);
+
+					gfx_context->dispatch_compute(
+						command_buffer,
+						static_cast<uint32_t>((image_extent.x + 31) / 32),
+						static_cast<uint32_t>((image_extent.y + 31) / 32),
+						1
+					);
+				}
+			);
+
+			post_ssr_color_desc = render_graph.create_image(
+				gfx_context,
+				{
+					.name = "post_ssr_color",
+					.format = Format::Float4x32,
+					.extent = glm::vec3(image_extent.x, image_extent.y, 1.0f),
+					.flags = ImageFlags::Color | ImageFlags::Image2D | ImageFlags::Sampled | ImageFlags::Storage,
+					.usage_type = MemoryUsageType::OnlyGPU,
+					.sampler_address_mode = SamplerAddressMode::EdgeClamp,
+					.image_filter = ImageFilter::Linear,
+					.attachment_clear = true
+				},
+				buffered_frame_number
+			);
+
+			render_graph.add_pass(
+				gfx_context,
+				"ssr_resolve_pass",
+				RenderPassFlags::Graphics,
+				buffered_frame_number,
+				{
+					.shader_setup = ssr_resolve_shader_setup,
+					.inputs = { main_smra_image_desc, ssr_image_desc, ssr_blurred_image_desc, scene_color_desc },
+					.outputs = { post_ssr_color_desc }
+				},
+				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
+				{
+					SSRResolveData fullscreen_data
+					{
+						.smra_texture = (0x0000ffff & frame_data.pass_bindless_resources.handles[0]),
+						.ssr_texture = (0x0000ffff & frame_data.pass_bindless_resources.handles[1]),
+						.ssr_blurred_texture = (0x0000ffff & frame_data.pass_bindless_resources.handles[2]),
+						.scene_color_texture = (0x0000ffff & frame_data.pass_bindless_resources.handles[3]),
+						.ssr_strength = static_cast<float>(cvar_ssr_strength.get())
+					};
+
+					PushConstantPipelineData pass_data = PushConstantPipelineData::create(&fullscreen_data, PipelineShaderStageType::Fragment);
+
+					gfx_context->push_constants(command_buffer, frame_data.pass_pipeline_state, pass_data);
+
+					Renderer::get()->draw_fullscreen_quad(command_buffer);
 				}
 			);
 		}
@@ -852,8 +1046,8 @@ namespace Sunset
 				buffered_frame_number,
 				{
 					.shader_setup = shader_setup,
-					.inputs = { antialiased_scene_color_desc, readonly_temporal_color_history, motion_vectors_image_desc, main_depth_image_desc },
-					.outputs = { antialiased_scene_color_desc, temporal_color_history }
+					.inputs = { post_ssr_color_desc, readonly_temporal_color_history, motion_vectors_image_desc, main_depth_image_desc },
+					.outputs = { post_ssr_color_desc, temporal_color_history }
 				},
 				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
 				{
@@ -925,7 +1119,7 @@ namespace Sunset
 			);
 		}
 
-		RGResourceHandle post_bloom_color_desc = antialiased_scene_color_desc;
+		RGResourceHandle post_bloom_color_desc = post_ssr_color_desc;
 
 		// Bloom pass
 		const uint32_t num_iterations = cvar_num_bloom_pass_iterations.get();
@@ -985,13 +1179,13 @@ namespace Sunset
 				buffered_frame_number,
 				{
 					.shader_setup = bloom_downsample_shader_setup,
-					.inputs = { antialiased_scene_color_desc, bloom_blur_image_desc },
+					.inputs = { post_ssr_color_desc, bloom_blur_image_desc },
 					.outputs = { bloom_blur_image_desc },
 					.b_split_input_image_mips = true
 				},
 				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
 				{
-					Image* const color_image = CACHE_FETCH(Image, graph.get_physical_resource(antialiased_scene_color_desc, frame_data.buffered_frame_number));
+					Image* const color_image = CACHE_FETCH(Image, graph.get_physical_resource(post_ssr_color_desc, frame_data.buffered_frame_number));
 
 					color_image->barrier(
 						gfx_context,
@@ -1144,7 +1338,7 @@ namespace Sunset
 				buffered_frame_number,
 				{
 					.shader_setup = bloom_resolve_shader_setup,
-					.inputs = { antialiased_scene_color_desc, bloom_blur_image_desc },
+					.inputs = { post_ssr_color_desc, bloom_blur_image_desc },
 					.outputs = { post_bloom_color_desc }
 				},
 				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
@@ -1169,56 +1363,25 @@ namespace Sunset
 			);
 		}
 
-		RGResourceHandle post_ssr_color_desc = post_bloom_color_desc;
+		RGResourceHandle antialiased_scene_color_desc = post_bloom_color_desc;
 
-		// SSR Pass
-		if (cvar_ssr_enabled.get())
+		// FXAA pass
+		if (cvar_fxaa_enabled.get())
 		{
-			RGShaderDataSetup ssr_shader_setup
+			RGShaderDataSetup shader_setup
 			{
 				.pipeline_shaders =
 				{
-					{ PipelineShaderStageType::Compute, "../../shaders/effects/ssr.comp.sun" }
-				}
-			};
-
-			RGShaderDataSetup ssr_blur_shader_setup
-			{
-				.pipeline_shaders =
-				{
-					{ PipelineShaderStageType::Compute, "../../shaders/effects/box_blur.comp.sun" }
-				}
-			};
-
-			RGShaderDataSetup ssr_resolve_shader_setup
-			{
-				.pipeline_shaders =
-				{
-					{ PipelineShaderStageType::Vertex, "../../shaders/common/fullscreen.vert.sun" },
-					{ PipelineShaderStageType::Fragment, "../../shaders/effects/ssr_resolve.frag.sun" }
+					{ PipelineShaderStageType::Compute, "../../shaders/effects/fxaa.comp.sun" }
 				}
 			};
 
 			const glm::vec2 image_extent = gfx_context->get_surface_resolution();
-			RGResourceHandle ssr_image_desc = render_graph.create_image(
-				gfx_context,
-				{
-					.name = "ssr_image",
-					.format = Format::Float4x32,
-					.extent = glm::vec3(image_extent.x, image_extent.y, 1.0f),
-					.flags = ImageFlags::Color | ImageFlags::Image2D | ImageFlags::Sampled | ImageFlags::Storage,
-					.usage_type = MemoryUsageType::OnlyGPU,
-					.sampler_address_mode = SamplerAddressMode::Repeat,
-					.image_filter = ImageFilter::Linear,
-					.attachment_clear = true
-				},
-				buffered_frame_number
-			);
 
-			RGResourceHandle ssr_blurred_image_desc = render_graph.create_image(
+			antialiased_scene_color_desc = render_graph.create_image(
 				gfx_context,
 				{
-					.name = "ssr_blurred_image",
+					.name = "fxaa_output_color",
 					.format = Format::Float4x32,
 					.extent = glm::vec3(image_extent.x, image_extent.y, 1.0f),
 					.flags = ImageFlags::Color | ImageFlags::Image2D | ImageFlags::Sampled | ImageFlags::Storage,
@@ -1232,38 +1395,33 @@ namespace Sunset
 
 			render_graph.add_pass(
 				gfx_context,
-				"ssr_pass",
+				"fast_approximate_aa",
 				RenderPassFlags::Compute,
 				buffered_frame_number,
 				{
-					.shader_setup = ssr_shader_setup,
-					.inputs = { main_position_image_desc, main_normal_image_desc, main_smra_image_desc,
-								antialiased_scene_color_desc, ssr_image_desc },
-					.outputs = { ssr_image_desc }
+					.shader_setup = shader_setup,
+					.inputs = { post_bloom_color_desc, antialiased_scene_color_desc },
+					.outputs = { antialiased_scene_color_desc }
 				},
 				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
 				{
-					const BindingTableHandle position_image_handle = frame_data.pass_bindless_resources.handles[0];
-					const BindingTableHandle normal_image_handle = frame_data.pass_bindless_resources.handles[1];
-					const BindingTableHandle smra_image_handle = frame_data.pass_bindless_resources.handles[2];
-					const BindingTableHandle scene_color_image_handle = frame_data.pass_bindless_resources.handles[3];
-					const BindingTableHandle ssr_image_handle = frame_data.pass_bindless_resources.handles[6];
+					const BindingTableHandle scene_color_index = frame_data.pass_bindless_resources.handles[0];
+					const BindingTableHandle out_scene_color_index = frame_data.pass_bindless_resources.handles[3];
 
-					SSRData ssr_data
 					{
-						.scene_color_texture = (0x0000ffff & scene_color_image_handle),
-						.position_texture = (0x0000ffff & position_image_handle),
-						.normal_texture = (0x0000ffff & normal_image_handle),
-						.smra_texture = (0x0000ffff & smra_image_handle),
-						.out_ssr_texture = (0x0000ffff & ssr_image_handle),
-						.ray_hit_steps = cvar_ssr_max_ray_hit_steps.get(),
-						.max_ray_distance = static_cast<float>(cvar_ssr_max_ray_distance.get()),
-						.resolution = image_extent,
-					};
-
-					PushConstantPipelineData pass_data = PushConstantPipelineData::create(&ssr_data, PipelineShaderStageType::Compute);
-
-					gfx_context->push_constants(command_buffer, frame_data.pass_pipeline_state, pass_data);
+						FXAAData fxaa_data
+						{
+							.input_scene_color = (0x0000ffff & scene_color_index),
+							.output_scene_color = (0x0000ffff & out_scene_color_index),
+							.min_edge_threshold = 0.0312f,
+							.max_edge_threshold = 0.125,
+							.resolution = image_extent,
+							.inv_resolution = 1.0f / image_extent,
+							.max_iterations = 12
+						};
+						PushConstantPipelineData pc_data = PushConstantPipelineData::create(&fxaa_data, PipelineShaderStageType::Compute);
+						gfx_context->push_constants(command_buffer, frame_data.pass_pipeline_state, pc_data);
+					}
 
 					gfx_context->dispatch_compute(
 						command_buffer,
@@ -1271,85 +1429,6 @@ namespace Sunset
 						static_cast<uint32_t>((image_extent.y + 31) / 32),
 						1
 					);
-				}
-			);
-
-			render_graph.add_pass(
-				gfx_context,
-				"ssr_blur_pass",
-				RenderPassFlags::Compute,
-				buffered_frame_number,
-				{
-					.shader_setup = ssr_blur_shader_setup,
-					.inputs = { ssr_image_desc, ssr_blurred_image_desc },
-					.outputs = { ssr_blurred_image_desc }
-				},
-				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
-				{
-					const BindingTableHandle ssr_image_handle = frame_data.pass_bindless_resources.handles[0];
-					const BindingTableHandle ssr_blurred_image_handle = frame_data.pass_bindless_resources.handles[3];
-
-					BoxBlurData blur_data
-					{
-						.staging_texture = (0x0000ffff & ssr_image_handle),
-						.out_texture = (0x0000ffff & ssr_blurred_image_handle),
-						.resolution = image_extent
-					};
-
-					PushConstantPipelineData pass_data = PushConstantPipelineData::create(&blur_data, PipelineShaderStageType::Compute);
-
-					gfx_context->push_constants(command_buffer, frame_data.pass_pipeline_state, pass_data);
-
-					gfx_context->dispatch_compute(
-						command_buffer,
-						static_cast<uint32_t>((image_extent.x + 31) / 32),
-						static_cast<uint32_t>((image_extent.y + 31) / 32),
-						1
-					);
-				}
-			);
-
-			post_ssr_color_desc = render_graph.create_image(
-				gfx_context,
-				{
-					.name = "post_ssr_color",
-					.format = Format::Float4x32,
-					.extent = glm::vec3(image_extent.x, image_extent.y, 1.0f),
-					.flags = ImageFlags::Color | ImageFlags::Image2D | ImageFlags::Sampled | ImageFlags::Storage,
-					.usage_type = MemoryUsageType::OnlyGPU,
-					.sampler_address_mode = SamplerAddressMode::EdgeClamp,
-					.image_filter = ImageFilter::Linear,
-					.attachment_clear = true
-				},
-				buffered_frame_number
-			);
-
-			render_graph.add_pass(
-				gfx_context,
-				"ssr_resolve_pass",
-				RenderPassFlags::Graphics,
-				buffered_frame_number,
-				{
-					.shader_setup = ssr_resolve_shader_setup,
-					.inputs = { main_smra_image_desc, ssr_image_desc, ssr_blurred_image_desc, post_bloom_color_desc },
-					.outputs = { post_ssr_color_desc }
-				},
-				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
-				{
-					SSRResolveData fullscreen_data
-					{
-						.smra_texture = (0x0000ffff & frame_data.pass_bindless_resources.handles[0]),
-						.ssr_texture = (0x0000ffff & frame_data.pass_bindless_resources.handles[1]),
-						.ssr_blurred_texture = (0x0000ffff & frame_data.pass_bindless_resources.handles[2]),
-						.scene_color_texture = (0x0000ffff & frame_data.pass_bindless_resources.handles[3]),
-						.ssr_strength = static_cast<float>(cvar_ssr_strength.get())
-					};
-
-					PushConstantPipelineData pass_data = PushConstantPipelineData::create(&fullscreen_data, PipelineShaderStageType::Fragment);
-
-					gfx_context->push_constants(command_buffer, frame_data.pass_pipeline_state, pass_data);
-
-					Renderer::get()->draw_fullscreen_quad(command_buffer);
 				}
 			);
 		}
@@ -1379,7 +1458,7 @@ namespace Sunset
 				buffered_frame_number,
 				{
 					.shader_setup = shader_setup,
-					.inputs = { post_ssr_color_desc }
+					.inputs = { antialiased_scene_color_desc }
 				},
 				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
 				{

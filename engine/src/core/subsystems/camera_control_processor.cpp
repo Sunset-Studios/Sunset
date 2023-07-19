@@ -48,7 +48,7 @@ namespace Sunset
 				WORLD_UP
 			);
 			camera_control_comp->data.gpu_data.projection_matrix = glm::perspective(
-				glm::radians(camera_control_comp->data.fov),
+				camera_control_comp->data.gpu_data.fov,
 				camera_control_comp->data.aspect_ratio,
 				camera_control_comp->data.near_plane,
 				camera_control_comp->data.far_plane

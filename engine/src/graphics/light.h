@@ -31,7 +31,10 @@ namespace Sunset
 		LightType type;          // Light type
 		uint32_t entity_index;   // Index of object entity
 		float intensity;         // Intensity of the light
-		bool b_use_sun_directon; // Whether to use the skydome sun direction as opposed to the internal light direction (only for directional lights)
+		uint32_t b_use_sun_directon{ false }; // Whether to use the skydome sun direction as opposed to the internal light direction (only for directional lights)
+		uint32_t b_casts_shadows{ false };
+		uint32_t b_csm_caster{ false };
+		uint32_t padding[2];
 	};
 
 	DECLARE_GPU_SHARED_DATA(LightData, MAX_LIGHT_COUNT);

@@ -25,6 +25,8 @@ namespace Sunset
 	void set_light_type(LightComponent* light_comp, LightType type);
 	void set_light_entity_index(LightComponent* light_comp, uint32_t index);
 	void set_light_should_use_sun_direction(LightComponent* light_comp, bool use_sun_dir);
+	void set_light_casts_shadows(LightComponent* light_comp, bool b_casts_shadows);
+	void set_light_is_csm_caster(LightComponent* light_comp, bool b_csm_caster);
 
 	void set_light_color(class Scene* scene, EntityID entity, const glm::vec3& new_color);
 	void set_light_direction(class Scene* scene, EntityID entity, const glm::vec3& new_direction);
@@ -36,4 +38,6 @@ namespace Sunset
 	void set_light_type(class Scene* scene, EntityID entity, LightType type);
 	void set_light_entity_index(class Scene* scene, EntityID entity, uint32_t index);
 	void set_light_should_use_sun_direction(class Scene* scene, EntityID entity, bool use_sun_dir);
+	void set_light_casts_shadows(class Scene* scene, EntityID entity, bool use_sun_dir);
+	void set_light_is_csm_caster(class Scene* scene, EntityID entity, bool b_csm_caster);
 }

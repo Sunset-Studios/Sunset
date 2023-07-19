@@ -80,8 +80,14 @@ namespace Sunset
 
 	void JoltContext::step_simulation()
 	{
+		ZoneScopedN("JoltContext::step_simulation");
 		static const float fixed_delta_time = 1.0f / 60.0f;
+
+		flush_pending_body_adds();
+
 		system_data->physics_system.Update(fixed_delta_time, cvar_num_collision_steps.get(), &system_data->temp_allocator, &system_data->job_system);
+
+		system_data->pending_body_adds.reset();
 	}
 
 	BodyHandle JoltContext::create_body(const SphereShapeDescription& shape_desc, const glm::vec3& position, const glm::quat& rotation, PhysicsBodyType body_type)
@@ -142,8 +148,8 @@ namespace Sunset
 		{
 			JPH::BodyInterface& body_interface = system_data->physics_system.GetBodyInterface();
 
-			const JPH::BodyID jolt_body(body);
-			body_interface.AddBody(jolt_body, JPH::EActivation::DontActivate);
+			JPH::BodyID* body_id = system_data->pending_body_adds.get_new();
+			*body_id = JPH::BodyID(body);
 		}
 	}
 
@@ -262,6 +268,16 @@ namespace Sunset
 		return glm::quat();
 	}
 
+	bool JoltContext::get_body_in_simulation(BodyHandle body)
+	{
+		if (body >= 0)
+		{
+			JPH::BodyInterface& body_interface = system_data->physics_system.GetBodyInterface();
+			return body_interface.IsAdded(JPH::BodyID(body));
+		}
+		return false;
+	}
+
 	BodyHandle JoltContext::create_body_internal(JPH::ShapeSettings* shape_settings, const glm::vec3& position, const glm::quat& rotation, PhysicsBodyType body_type)
 	{
 		JPH::BodyInterface& body_interface = system_data->physics_system.GetBodyInterface();
@@ -276,9 +292,21 @@ namespace Sunset
 		// TODO: May be better to opt into this. If the majority of bodies in the scene are static, not setting this would give us some space savings since we aren't creating a MotionProperties object per body.
 		body_settings.mAllowDynamicOrKinematic = true;
 
-		JPH::BodyID body = body_interface.CreateAndAddBody(body_settings, JPH::EActivation::Activate);
+		JPH::BodyID* new_body_id = system_data->pending_body_adds.get_new();
+		JPH::Body* body = body_interface.CreateBody(body_settings);
+		*new_body_id = body->GetID();
 
-		return body.GetIndexAndSequenceNumber();
+		return new_body_id->GetIndexAndSequenceNumber();
+	}
+
+	void JoltContext::flush_pending_body_adds()
+	{
+		if (system_data->pending_body_adds.size() > 0)
+		{
+			JPH::BodyInterface& body_interface = system_data->physics_system.GetBodyInterface();
+			JPH::BodyInterface::AddState add_state = body_interface.AddBodiesPrepare(system_data->pending_body_adds.data(), system_data->pending_body_adds.size());
+			body_interface.AddBodiesFinalize(system_data->pending_body_adds.data(), system_data->pending_body_adds.size(), add_state, JPH::EActivation::Activate);
+		}
 	}
 
 	bool CollisionPairFilter::ShouldCollide(JPH::ObjectLayer inObject1, JPH::ObjectLayer inObject2) const

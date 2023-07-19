@@ -10,12 +10,14 @@ namespace Sunset
 {
 	namespace PhysicsBodyDirtyFlags
 	{
-		constexpr uint16_t BODY = 0x00000000;
-		constexpr uint16_t POSITION = 0x00000001;
-		constexpr uint16_t ROTATION = 0x00000002;
-		constexpr uint16_t BODY_TYPE = 0x00000004;
-		constexpr uint16_t GRAVITY_SCALE = 0x00000008;
-		constexpr uint16_t RESTITUTION = 0x00000010;
+		constexpr uint16_t NONE = 0x00000000;
+		constexpr uint16_t BODY = 0x00000001;
+		constexpr uint16_t POSITION = 0x00000002;
+		constexpr uint16_t ROTATION = 0x00000004;
+		constexpr uint16_t BODY_TYPE = 0x00000008;
+		constexpr uint16_t GRAVITY_SCALE = 0x00000010;
+		constexpr uint16_t RESTITUTION = 0x00000020;
+		constexpr uint16_t SIMULATING = 0x00000040; // No longer used
 	}
 
 	struct PhysicsBodyData

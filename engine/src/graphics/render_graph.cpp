@@ -756,7 +756,8 @@ namespace Sunset
 			if (!b_is_input_resource || b_is_local_load)
 			{
 				const uint32_t image_view_index = pass->parameters.output_views.size() > resource_params_index ? pass->parameters.output_views[resource_params_index] : 0;
-				pass->pass_config.attachments.push_back({ .image = registry.resource_metadata[resource].physical_id, .image_view_index = image_view_index });
+				// NOTE: We can set b_image_view_considers_layer_split here if we want to process an image view with multiple layers as a single layer of that image view
+				pass->pass_config.attachments.push_back({ .image = registry.resource_metadata[resource].physical_id, .image_view_index = image_view_index/*, .b_image_view_considers_layer_split = false*/});
 			}
 		}
 	}
@@ -863,8 +864,11 @@ namespace Sunset
 
 				if (shader_setup.viewport.has_value())
 				{
+					const Viewport& viewport = shader_setup.viewport.value();
 					state_builder.clear_viewports();
-					state_builder.add_viewport(shader_setup.viewport.value());
+					state_builder.clear_scissors();
+					state_builder.add_viewport(viewport);
+					state_builder.add_scissor(viewport.x, viewport.y, viewport.width, viewport.height);
 				}
 
 				for (const auto& shader_stage : shader_setup.pipeline_shaders)

@@ -59,6 +59,11 @@ namespace Sunset
 		float padding{ 0 };
 	};
 
+	struct CSMData
+	{
+		int32_t shadow_cascade;
+	};
+
 	struct MotionVectorsData
 	{
 		int32_t input_depth_index;
@@ -87,6 +92,7 @@ namespace Sunset
 		int32_t position_texure;
 		int32_t sky_texure;
 		int32_t ssao_texture;
+		int32_t shadow_texture;
 	};
 
 	struct FXAAData

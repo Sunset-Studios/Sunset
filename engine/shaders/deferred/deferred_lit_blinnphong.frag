@@ -1,7 +1,6 @@
 #version 460
 
 #include "common/common.inc"
-#include "common/pbr_common.inc"
 #include "common/lighting_common.inc"
 
 layout (location = 0) in vec3 in_color;

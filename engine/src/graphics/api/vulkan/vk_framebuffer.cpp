@@ -34,17 +34,22 @@ namespace Sunset
 
 			const AttachmentConfig& attachment_config = image_attachment->get_attachment_config();
 
-			if (uint32_t width = glm::clamp(static_cast<uint32_t>(attachment_config.extent.x) >> attachment.image_view_index, 0u, static_cast<uint32_t>(attachment_config.extent.x)); width > max_width)
+			const uint32_t mip_index = attachment.image_view_index / attachment_config.array_count;
+			if (uint32_t width = glm::clamp(static_cast<uint32_t>(attachment_config.extent.x) >> mip_index, 0u, static_cast<uint32_t>(attachment_config.extent.x)); width > max_width)
 			{
 				max_width = width; 
 			}
 
-			if (uint32_t height = glm::clamp(static_cast<uint32_t>(attachment_config.extent.y) >> attachment.image_view_index, 0u, static_cast<uint32_t>(attachment_config.extent.y)); height > max_height)
+			if (uint32_t height = glm::clamp(static_cast<uint32_t>(attachment_config.extent.y) >> mip_index, 0u, static_cast<uint32_t>(attachment_config.extent.y)); height > max_height)
 			{
 				max_height = height;
 			}
 
-			if (uint32_t layer_count = attachment_config.array_count; layer_count > max_layer_count)
+			if (attachment.b_image_view_considers_layer_split)
+			{
+				max_layer_count = 1;
+			}
+			else if (uint32_t layer_count = attachment_config.array_count; layer_count > max_layer_count)
 			{
 				max_layer_count = layer_count;
 			}

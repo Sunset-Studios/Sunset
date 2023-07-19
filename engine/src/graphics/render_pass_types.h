@@ -39,6 +39,7 @@ namespace Sunset
 	{
 		ImageID image;
 		uint32_t image_view_index{ 0 };
+		bool b_image_view_considers_layer_split{ true };
 	};
 
 	struct RenderPassConfig

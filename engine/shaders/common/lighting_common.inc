@@ -1,3 +1,5 @@
+#include "common/pbr_common.inc"
+
 struct LightData
 {
 	vec4 color;
@@ -8,8 +10,67 @@ struct LightData
 	uint type;
 	int entity;
 	float intensity;
-	bool b_use_sun_direction;	
+	uint b_use_sun_direction;
+	uint b_casts_shadows;
+	uint b_csm_caster;
+	uint padding[2];	
 };
+
+float calculate_csm_shadow(vec3 frag_pos, vec3 normal, vec3 light_dir, int shadow_map_index)
+{
+	// Select the appropriate cascade
+	const vec4 frag_pos_view_space = camera_data.view * vec4(frag_pos, 1.0);
+	const float depth = abs(frag_pos_view_space.z);
+
+	vec4 res = step(scene_lighting_data.csm_plane_distances, vec4(depth));
+	int cascade = clamp(int(res.x + res.y + res.z), 0, MAX_SHADOW_CASCADES - 1);
+
+	// Calculate projected coords based on light space matrix for the given cascade
+	const vec4 frag_pos_light_space = scene_lighting_data.light_space_matrices[cascade] * vec4(frag_pos, 1.0);
+	const vec3 proj_coords = (frag_pos_light_space.xyz / frag_pos_light_space.w) * 0.5 + 0.5;
+
+	if (proj_coords.z > 1.0)
+	{
+		return 0.0;
+	}
+
+	float bias = max(0.05 * (1.0 - dot(normal, light_dir)), 0.005);
+	bias *= 1.0 / (scene_lighting_data.csm_plane_distances[cascade] * 0.5);
+
+	// PCF
+	const vec2 texel_size = 1.0 / textureSize(textures_2DArray[nonuniformEXT(shadow_map_index)], 0).xy;
+	const float biased_depth = proj_coords.z - bias;
+
+	float shadow = 0.0;
+	float pcf_depth = texture(textures_2DArray[nonuniformEXT(shadow_map_index)], vec3(proj_coords.xy + vec2(-1, -1) * texel_size, cascade)).r;
+	shadow += float(biased_depth > pcf_depth);
+
+	pcf_depth = texture(textures_2DArray[nonuniformEXT(shadow_map_index)], vec3(proj_coords.xy + vec2(-1, 0) * texel_size, cascade)).r;
+	shadow += float(biased_depth > pcf_depth);
+
+	pcf_depth = texture(textures_2DArray[nonuniformEXT(shadow_map_index)], vec3(proj_coords.xy + vec2(-1, 1) * texel_size, cascade)).r;
+	shadow += float(biased_depth > pcf_depth);
+
+	pcf_depth = texture(textures_2DArray[nonuniformEXT(shadow_map_index)], vec3(proj_coords.xy + vec2(0, -1) * texel_size, cascade)).r;
+	shadow += float(biased_depth > pcf_depth);
+
+	pcf_depth = texture(textures_2DArray[nonuniformEXT(shadow_map_index)], vec3(proj_coords.xy + vec2(0, 0) * texel_size, cascade)).r;
+	shadow += float(biased_depth > pcf_depth);
+
+	pcf_depth = texture(textures_2DArray[nonuniformEXT(shadow_map_index)], vec3(proj_coords.xy + vec2(0, 1) * texel_size, cascade)).r;
+	shadow += float(biased_depth > pcf_depth);
+
+	pcf_depth = texture(textures_2DArray[nonuniformEXT(shadow_map_index)], vec3(proj_coords.xy + vec2(1, -1) * texel_size, cascade)).r;
+	shadow += float(biased_depth > pcf_depth);
+
+	pcf_depth = texture(textures_2DArray[nonuniformEXT(shadow_map_index)], vec3(proj_coords.xy + vec2(1, 0) * texel_size, cascade)).r;
+	shadow += float(biased_depth > pcf_depth);
+
+	pcf_depth = texture(textures_2DArray[nonuniformEXT(shadow_map_index)], vec3(proj_coords.xy + vec2(1, 1) * texel_size, cascade)).r;
+	shadow += float(biased_depth > pcf_depth);
+
+	return shadow / 9.0;
+}
 
 vec3 calculate_blinn_phong(
 	LightData light,
@@ -26,7 +87,7 @@ vec3 calculate_blinn_phong(
 
 	if (light.type == 0) // Directional
 	{
-		light_dir = normalize(light.b_use_sun_direction ? -scene_lighting_data.sunlight_direction.xyz : -position);
+		light_dir = normalize(light.b_use_sun_direction > 0 ? -scene_lighting_data.sunlight_direction.xyz : -position);
 	}
 	else if (light.type == 1) // Point
 	{
@@ -82,14 +143,15 @@ vec3 calculate_brdf(
 	float ao,
 	vec3 irradiance,
 	vec3 prefiltered_color,
-	vec2 env_brdf)
+	vec2 env_brdf,
+	int shadow_map_index)
 {
 	vec3 light_dir;
 	float attenuation = 1.0f;
 
 	if (light.type == 0) // Directional
 	{
-		light_dir = normalize(light.b_use_sun_direction ? scene_lighting_data.sunlight_direction.xyz : -position);
+		light_dir = normalize(light.b_use_sun_direction > 0 ? scene_lighting_data.sunlight_direction.xyz : -position);
 	}
 	else if (light.type == 1) // Point
 	{
@@ -160,7 +222,10 @@ vec3 calculate_brdf(
 	float fc = f_schlick(0.04f, 1.0f, l_dot_h) * clear_coat;
 	float frc = (dc * vc) * fc;
 
+	// shadow
+	float shadow_factor = light.b_csm_caster > 0 && shadow_map_index != -1 ? calculate_csm_shadow(fragment_pos, normal, light_dir, shadow_map_index) : 0.0;
+
 	// account for energy loss in the base layer
-	vec3 brdf = ((fd + fr * (1.0f - fc)) * (1.0f - fc) + frc);
+	vec3 brdf = ((fd + (1.0 - shadow_factor) * fr * (1.0f - fc)) * (1.0f - fc) + frc);
 	return brdf * lluminance;
 }

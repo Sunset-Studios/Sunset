@@ -34,6 +34,12 @@ namespace Sunset
 			BodyComponent* const body_comp = scene->get_component<BodyComponent>(entity);
 			TransformComponent* const transform_comp = scene->get_component<TransformComponent>(entity);
 
+			const bool b_in_simulation = phys_context->get_body_in_simulation(body_comp->body_data.body);
+			if (!b_in_simulation)
+			{
+				continue;
+			}
+
 			// If the body changed entirely (due to shape changes) or if we have explicity set our entity transform data externally, propagate those changes to the physics body instead of the other way around.
 			if ((body_comp->body_data.dirty_flags & PhysicsBodyDirtyFlags::BODY) || EntityGlobals::get()->entity_transform_dirty_states.test(get_entity_index(entity)))
 			{

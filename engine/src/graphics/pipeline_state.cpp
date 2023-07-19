@@ -44,6 +44,12 @@ namespace Sunset
 		return *this;
 	}
 
+	PipelineGraphicsStateBuilder& PipelineGraphicsStateBuilder::clear_scissors()
+	{
+		state_data.scissors.clear();
+		return *this;
+	}
+
 	PipelineGraphicsStateBuilder& PipelineGraphicsStateBuilder::add_viewport(const Viewport& viewport)
 	{
 		state_data.viewports.emplace_back(viewport);

@@ -217,7 +217,7 @@ namespace Sunset
 		{
 			while (!job.is_done())
 			{
-				std::this_thread::sleep_for(std::chrono::nanoseconds(5));
+				std::this_thread::sleep_for(std::chrono::nanoseconds(1));
 			}
 		}
 	}

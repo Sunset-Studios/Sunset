@@ -155,4 +155,32 @@ namespace Sunset
 			set_light_should_use_sun_direction(light_comp, use_sun_dir);
 		}
 	}
+
+	void set_light_casts_shadows(LightComponent* light_comp, bool b_casts_shadows)
+	{
+		light_comp->light->b_casts_shadows = b_casts_shadows;
+		LightGlobals::get()->light_dirty_states.set(light_comp->light_data_buffer_offset);
+	}
+
+	void set_light_casts_shadows(class Scene* scene, EntityID entity, bool b_casts_shadows)
+	{
+		if (LightComponent* const light_comp = scene->get_component<LightComponent>(entity))
+		{
+			set_light_casts_shadows(light_comp, b_casts_shadows);
+		}
+	}
+
+	void set_light_is_csm_caster(LightComponent* light_comp, bool b_csm_caster)
+	{
+		light_comp->light->b_csm_caster = b_csm_caster;
+		LightGlobals::get()->light_dirty_states.set(light_comp->light_data_buffer_offset);
+	}
+
+	void set_light_is_csm_caster(Scene* scene, EntityID entity, bool b_csm_caster)
+	{
+		if (LightComponent* const light_comp = scene->get_component<LightComponent>(entity))
+		{
+			set_light_is_csm_caster(light_comp, b_csm_caster);
+		}
+	}
 }

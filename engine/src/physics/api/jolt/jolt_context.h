@@ -9,6 +9,8 @@
 #include <Jolt/Physics/PhysicsSystem.h>
 #include <Jolt/Physics/Body/BodyActivationListener.h>
 
+#include <memory/allocators/stack_allocator.h>
+
 namespace Sunset
 {
 	// Class that determines if two object layers can collide
@@ -100,6 +102,7 @@ namespace Sunset
 			JoltJobSystem job_system;
 			JPH::PhysicsSystem physics_system;
 			JPH::TempAllocatorImpl temp_allocator{ 10 * 1024 * 1024 };
+			StaticFrameAllocator<JPH::BodyID, MAX_PHYSICS_BODIES> pending_body_adds;
 		};
 
 	public:
@@ -128,9 +131,11 @@ namespace Sunset
 		void set_body_inactive(BodyHandle body);
 		glm::vec3 get_body_position(BodyHandle body);
 		glm::quat get_body_rotation(BodyHandle body);
+		bool get_body_in_simulation(BodyHandle body);
 
 	protected:
 		BodyHandle create_body_internal(JPH::ShapeSettings* shape_settings, const glm::vec3& position, const glm::quat& rotation, PhysicsBodyType body_type);
+		void flush_pending_body_adds();
 
 	protected:
 		Hooks hooks;

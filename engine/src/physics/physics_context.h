@@ -96,6 +96,11 @@ namespace Sunset
 			return physics_policy.get_body_rotation(body);
 		}
 
+		bool get_body_in_simulation(BodyHandle body)
+		{
+			return physics_policy.get_body_in_simulation(body);
+		}
+
 	private:
 		Policy physics_policy;
 	};
@@ -161,6 +166,11 @@ namespace Sunset
 		glm::quat get_body_rotation(BodyHandle body)
 		{
 			return glm::quat();
+		}
+
+		bool get_body_in_simulation(BodyHandle body)
+		{
+			return false;
 		}
 	};
 

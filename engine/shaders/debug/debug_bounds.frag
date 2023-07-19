@@ -1,6 +1,7 @@
 #version 460
 
 #include "common/common.inc"
+#include "common/lighting_common.inc"
 
 layout (location = 0) in vec3 in_color;
 layout (location = 1) in vec2 in_tex_coord;
@@ -25,18 +26,6 @@ struct MaterialData
 {
 	int textures[MAX_TEXTURES_PER_MATERIAL];
 	float tiling_coeffs[MAX_TEXTURES_PER_MATERIAL];
-};
-
-struct LightData
-{
-	vec4 color;
-	vec4 direction;
-	float radius;
-	float outer_angle;
-	vec2 area_size;
-	uint type;
-	int entity;
-	float intensity;
 };
 
 layout (std430, set = 1, binding = 0) readonly buffer EntitySceneDataBuffer

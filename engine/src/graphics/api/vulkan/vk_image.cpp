@@ -88,20 +88,43 @@ namespace Sunset
 		image_views.reserve(config.mip_count);
 		for (uint32_t i = 0; i < config.mip_count; ++i)
 		{
-			VkImageViewCreateInfo image_view_info = {};
-			image_view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-			image_view_info.pNext = nullptr;
-			image_view_info.viewType = VK_FROM_SUNSET_IMAGE_VIEW_TYPE(config.flags);
-			image_view_info.image = image;
-			image_view_info.format = VK_FROM_SUNSET_FORMAT(config.format);
-			image_view_info.subresourceRange.baseMipLevel = i;
-			image_view_info.subresourceRange.levelCount = 1;
-			image_view_info.subresourceRange.baseArrayLayer = 0;
-			image_view_info.subresourceRange.layerCount = config.array_count;
-			image_view_info.subresourceRange.aspectMask = VK_FROM_SUNSET_IMAGE_USAGE_ASPECT_FLAGS(config.flags);
+			if (config.split_array_layer_views)
+			{
+				for (uint32_t j = 0; j < config.array_count; ++j)
+				{
+					VkImageViewCreateInfo image_view_info = {};
+					image_view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+					image_view_info.pNext = nullptr;
+					image_view_info.viewType = VK_FROM_SUNSET_IMAGE_VIEW_TYPE(config.flags);
+					image_view_info.image = image;
+					image_view_info.format = VK_FROM_SUNSET_FORMAT(config.format);
+					image_view_info.subresourceRange.baseMipLevel = i;
+					image_view_info.subresourceRange.levelCount = 1;
+					image_view_info.subresourceRange.baseArrayLayer = j;
+					image_view_info.subresourceRange.layerCount = 1;
+					image_view_info.subresourceRange.aspectMask = VK_FROM_SUNSET_IMAGE_USAGE_ASPECT_FLAGS(config.flags);
 
-			VkImageView& image_view = image_views.emplace_back();
-			VK_CHECK(vkCreateImageView(context_state->get_device(), &image_view_info, nullptr, &image_view));
+					VkImageView& image_view = image_views.emplace_back();
+					VK_CHECK(vkCreateImageView(context_state->get_device(), &image_view_info, nullptr, &image_view));
+				}
+			}
+			else
+			{
+				VkImageViewCreateInfo image_view_info = {};
+				image_view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+				image_view_info.pNext = nullptr;
+				image_view_info.viewType = VK_FROM_SUNSET_IMAGE_VIEW_TYPE(config.flags);
+				image_view_info.image = image;
+				image_view_info.format = VK_FROM_SUNSET_FORMAT(config.format);
+				image_view_info.subresourceRange.baseMipLevel = i;
+				image_view_info.subresourceRange.levelCount = 1;
+				image_view_info.subresourceRange.baseArrayLayer = 0;
+				image_view_info.subresourceRange.layerCount = config.array_count;
+				image_view_info.subresourceRange.aspectMask = VK_FROM_SUNSET_IMAGE_USAGE_ASPECT_FLAGS(config.flags);
+
+				VkImageView& image_view = image_views.emplace_back();
+				VK_CHECK(vkCreateImageView(context_state->get_device(), &image_view_info, nullptr, &image_view));
+			}
 		}
 
 		if ((config.flags & ImageFlags::Sampled) != ImageFlags::None)
@@ -117,6 +140,8 @@ namespace Sunset
 			sampler_create_info.minLod = 0.0f;
 			sampler_create_info.maxLod = 16.0f;
 			sampler_create_info.mipmapMode = config.linear_mip_filtering ? VK_SAMPLER_MIPMAP_MODE_LINEAR : VK_SAMPLER_MIPMAP_MODE_NEAREST;
+			sampler_create_info.anisotropyEnable = VK_TRUE;
+			sampler_create_info.maxAnisotropy = 1.0f;
 
 			VkSamplerReductionModeCreateInfo create_info_sampler_reduction = {};
 			if (config.does_min_reduction)

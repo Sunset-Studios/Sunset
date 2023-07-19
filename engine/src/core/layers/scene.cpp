@@ -183,12 +183,12 @@ namespace Sunset
 		}
 	}
 
-	void set_scene_sunlight_direction(class Scene* scene, glm::vec4 sunlight_direction)
+	void set_scene_sunlight_direction(class Scene* scene, glm::vec3 sunlight_direction)
 	{
 		assert(scene != nullptr && "Cannot set sunlight direction on null scene!");
 		for (uint32_t i = 0; i < MAX_BUFFERED_FRAMES; ++i)
 		{
-			scene->scene_data.lighting[i].sunlight_direction = sunlight_direction;
+			scene->scene_data.lighting[i].sunlight_direction = glm::vec4(sunlight_direction, 0.0f);
 		}
 	}
 
