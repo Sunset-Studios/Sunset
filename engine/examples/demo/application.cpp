@@ -67,7 +67,7 @@ namespace Sunset
 
 				set_light_color(light_comp, glm::vec3(1.0f, 1.0f, 1.0f));
 				set_light_type(light_comp, LightType::Directional);
-				set_light_intensity(light_comp, 4.0f);
+				set_light_intensity(light_comp, 2.0f);
 				set_light_entity_index(light_comp, get_entity_index(light_entity));
 				set_light_should_use_sun_direction(light_comp, true);
 				set_light_is_csm_caster(light_comp, true);
@@ -87,7 +87,7 @@ namespace Sunset
 				set_light_color(light_comp, glm::vec3(1.0f, 1.0f, 1.0f));
 				set_light_type(light_comp, LightType::Point);
 				set_light_radius(light_comp, 75.0f);
-				set_light_intensity(light_comp, 100.0f);
+				set_light_intensity(light_comp, 500.0f);
 				set_light_entity_index(light_comp, get_entity_index(light_entity));
 			}
 

@@ -61,6 +61,11 @@ vec3 f_schlick(const vec3 f0, float f90, float VoH)
     return f0 + (f90 - f0) * one_minus_voh_2 * one_minus_voh_2 * one_minus_voh;
 }
 
+vec3 f_schlick_roughness(float NoV, vec3 f0, float roughness)
+{
+    return f0 + (max(vec3(1.0 - roughness), f0) - f0) * pow(clamp(1.0 - NoV, 0.0, 1.0), 5.0);
+}
+
 // diffuse
 float fd_lambert()
 {

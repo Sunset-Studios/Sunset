@@ -206,10 +206,12 @@ vec3 calculate_brdf(
 	// specular BRDF
 	vec3 fr = (d * v) * f;
 
+	vec3 env_f = f_schlick_roughness(n_dot_v, f0, a);
+
 	// diffuse BRDF
 	vec3 diffuse_color = (1.0f - metallic) * albedo * irradiance;
-	vec3 env_specular = prefiltered_color * (f0 * env_brdf.x + f90 * env_brdf.y);
-	vec3 fd = (diffuse_color * fd_lambert() + env_specular) * ao;
+	vec3 env_specular = prefiltered_color * (f0 * env_brdf.x + env_brdf.y);
+	vec3 fd = (diffuse_color * (1.0f - env_f) * (1.0f - metallic) + env_specular) * ao;
 
 	// remapping and linearization of clear coat roughness
 	float clamped_clear_coat_roughness = clamp(clear_coat_roughness, 0.089f, 1.0f);

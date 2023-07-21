@@ -108,6 +108,7 @@ namespace Sunset
 		ZoneScopedN("LightProcessor::calculate_light_space_matrix");
 
 		glm::mat4 proj = glm::perspective(fov, aspect_ratio, near, far);
+		proj[1][1] *= -1;
 		const std::array<glm::vec4, 8> corners = get_world_space_frustum_corners(glm::inverse(proj * view));
 
 		glm::vec3 center(0.0f, 0.0f, 0.0f);
@@ -119,7 +120,7 @@ namespace Sunset
 		}
 		center /= 8.0f; 
 
-		const glm::mat4 light_view = glm::lookAt(center - light_dir, center, WORLD_UP);
+		const glm::mat4 light_view = glm::lookAt(center + light_dir, center, WORLD_UP);
 
 		glm::vec3 min(std::numeric_limits<float>::max());
 		glm::vec3 max(std::numeric_limits<float>::lowest());
@@ -130,7 +131,7 @@ namespace Sunset
 			max = glm::max(max, lv_corner);
 		}
 
-		glm::mat4 light_projection = glm::ortho(min.x, max.x, min.y, max.y, -max.z, -min.z);
+		glm::mat4 light_projection = glm::ortho(min.x, max.x, max.y, min.y, -max.z, -min.z);
 
 		return light_projection * light_view;
 	}
