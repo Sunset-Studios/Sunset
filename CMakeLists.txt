@@ -174,4 +174,8 @@ FetchContent_MakeAvailable(JoltPhysics)
 
 set_target_third_party(Jolt)
 
+if (MSVC)
+    add_definitions(/MP)
+endif()
+
 add_subdirectory("${ENGINE_DIR}")
