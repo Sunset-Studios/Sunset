@@ -36,4 +36,4 @@
 engine/bin
 
 # Sunset specific inclusions
-!engine/third_party/sdl2/lib/*
+!engine/third_party/sdl2/**
