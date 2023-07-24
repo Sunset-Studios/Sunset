@@ -184,6 +184,43 @@ namespace Sunset
 		return description;
 	}
 
+	MeshID MeshFactory::create_line(GraphicsContext* const gfx_context)
+	{
+		Identity id{ "engine_line" };
+		bool b_added{ false };
+		static MeshID mesh_id = MeshCache::get()->fetch_or_add(id, gfx_context, b_added);
+		Mesh* const mesh = CACHE_FETCH(Mesh, mesh_id);
+
+		if (b_added)
+		{
+			mesh->vertices.resize(2);
+			MeshSection& section = mesh->sections.emplace_back();
+
+			mesh->vertices[0].position = { -1.0f, 0.0f, 0.0f };
+			mesh->vertices[1].position = { 1.0f, 0.0f, 0.0f };
+
+			mesh->vertices[0].normal = { 0.0f, 0.0f, 1.0f };
+			mesh->vertices[1].normal = { 0.0f, 0.0f, 1.0f };
+
+			mesh->vertices[0].color = { 1.0f, 0.0f, 0.0f };
+			mesh->vertices[1].color = { 1.0f, 0.0f, 0.0f };
+
+			section.indices.insert(section.indices.end(), { 0, 1 });
+
+			mesh->name = id;
+
+			{
+				mesh->local_bounds.extents = glm::vec3(1.0f, 1.0f, 0.0f);
+				mesh->local_bounds.origin = glm::vec3(0.0f);
+				mesh->local_bounds.radius = 1.0f;
+			}
+
+			upload_mesh(gfx_context, mesh);
+		}
+
+		return mesh_id;
+	}
+
 	Sunset::MeshID MeshFactory::create_triangle(class GraphicsContext* const gfx_context)
 	{
 		Identity id{ "engine_triangle" };

@@ -129,6 +129,12 @@ namespace Sunset
 			return current_frame_index;
 		}
 
+		T* get(uint32_t index)
+		{
+			assert(index < current_frame_index && "Element at that index does not exist in this allocator!");
+			return &items[index];
+		}
+
 		T* get_new()
 		{
 			assert(current_frame_index < max_items_in_pool && "There are no more elements in the pool to allocate from! Try increasing the frame allocator size.");

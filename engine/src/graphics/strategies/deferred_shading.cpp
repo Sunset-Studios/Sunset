@@ -5,6 +5,7 @@
 #include <graphics/descriptor.h>
 #include <graphics/resource/image.h>
 #include <graphics/command_queue.h>
+#include <graphics/debug_draw_helpers.h>
 #include <window/window.h>
 #include <core/data_globals.h>
 #include <utility/maths.h>
@@ -1388,7 +1389,7 @@ namespace Sunset
 					.usage_type = MemoryUsageType::OnlyGPU,
 					.sampler_address_mode = SamplerAddressMode::Repeat,
 					.image_filter = ImageFilter::Linear,
-					.attachment_clear = true
+					.attachment_clear = false
 				},
 				buffered_frame_number
 			);
@@ -1429,6 +1430,47 @@ namespace Sunset
 						static_cast<uint32_t>((image_extent.y + 31) / 32),
 						1
 					);
+				}
+			);
+		}
+
+		if (DebugDrawState::get()->requested_primitive_datas[buffered_frame_number].size() > 0)
+		{
+			RGShaderDataSetup shader_setup
+			{
+				.pipeline_shaders =
+				{
+					{ PipelineShaderStageType::Vertex, "../../shaders/debug/debug_primitive.vert.sun" },
+					{ PipelineShaderStageType::Fragment, "../../shaders/debug/debug_primitive_deferred.frag.sun" }
+				},
+				.rasterizer_state = PipelineRasterizerState
+				{
+					.line_width = 1.0f,
+					.polygon_draw_mode = PipelineRasterizerPolygonMode::Line,
+					.cull_mode = PipelineRasterizerCullMode::None
+				},
+				.primitive_topology_type = PipelinePrimitiveTopologyType::LineStrip
+			};
+
+			RGResourceHandle debug_primitive_buffer_desc = render_graph.register_buffer(
+				gfx_context,
+				DebugDrawState::get()->primitive_data_buffers[buffered_frame_number],
+				buffered_frame_number
+			);
+
+			RGPassHandle base_pass_handle = render_graph.add_pass(
+				gfx_context,
+				"debug_primitive_pass",
+				RenderPassFlags::Graphics,
+				buffered_frame_number,
+				{
+					.shader_setup = shader_setup,
+					.inputs = { debug_primitive_buffer_desc },
+					.outputs = { antialiased_scene_color_desc }
+				},
+				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
+				{
+					submit_requested_debug_draws(gfx_context, command_buffer, frame_data.pass_pipeline_state, buffered_frame_number);
 				}
 			);
 		}

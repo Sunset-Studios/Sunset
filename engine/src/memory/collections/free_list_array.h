@@ -13,10 +13,8 @@ namespace Sunset
 		{
 			assert(size > 0 && "Cannot make a zero sized free list");
 			elements.resize(size);
-			for (int32_t i = size - 1; i >= 0; --i)
-			{
-				free_indices.push_back(i);
-			}
+			used_elements.reserve(size);
+			reset();
 		}
 
 		~FreeListArray() = default;
@@ -63,6 +61,23 @@ namespace Sunset
 			{
 				free_indices.push_back((*it).second);
 				used_elements.erase(element);
+			}
+		}
+
+		void free(uint32_t index)
+		{
+			assert(index < array_size && "Must free from this freelist with a valid index!");
+			free_indices.push_back(index);
+			used_elements.erase(&elements[index]);
+		}
+
+		void reset()
+		{
+			free_indices.clear();
+			used_elements.clear();
+			for (int32_t i = array_size - 1; i >= 0; --i)
+			{
+				free_indices.push_back(i);
 			}
 		}
 

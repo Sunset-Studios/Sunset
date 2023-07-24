@@ -853,6 +853,11 @@ namespace Sunset
 					state_builder.set_attachment_blend_state(shader_setup.attachment_blend.value());
 				}
 
+				if (shader_setup.primitive_topology_type.has_value())
+				{
+					state_builder.set_primitive_topology_type(shader_setup.primitive_topology_type.value());
+				}
+
 				const bool b_depth_test_enabled = shader_setup.b_depth_write_enabled.has_value() ? shader_setup.b_depth_write_enabled.value() : true;
 				const CompareOperation depth_stencil_compare_op = shader_setup.depth_stencil_compare_op.has_value() ? shader_setup.depth_stencil_compare_op.value() : CompareOperation::LessOrEqual;
 				state_builder.set_depth_stencil_state(true, b_depth_test_enabled, depth_stencil_compare_op);

@@ -111,7 +111,9 @@ if(NOT glslang_POPULATED)
 
   add_subdirectory(${glslang_SOURCE_DIR} ${glslang_BINARY_DIR})
 
-  set_target_third_party(glslangValidator)
+  if (TARGET glslangValidator)
+    set_target_third_party(glslangValidator)
+  endif()
   set_target_third_party(spirv-remap)
   set_target_third_party(HLSL)
   set_target_third_party(GenericCodeGen)
@@ -125,6 +127,8 @@ if(NOT glslang_POPULATED)
 endif()
 
 # Fetch Shaderc
+set(SHADERC_ENABLE_SHARED_CRT ON CACHE BOOL "" FORCE)
+
 FetchContent_Declare(
   shaderc
   GIT_REPOSITORY https://github.com/google/shaderc.git

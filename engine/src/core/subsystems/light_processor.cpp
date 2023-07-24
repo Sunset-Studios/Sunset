@@ -6,9 +6,13 @@
 #include <core/ecs/components/camera_control_component.h>
 #include <graphics/resource/buffer.h>
 #include <graphics/renderer.h>
+#include <graphics/debug_draw_helpers.h>
+#include <utility/cvar.h>
 
 namespace Sunset
 {
+	AutoCVar_Bool cvar_light_to_frustum_split_line_draw("ren.debug.light_to_frustum_split_line_draw", "Whether or not to draw a line from the center of every frustum split to the CSM affecting light source", true);
+
 	void LightProcessor::initialize(class Scene* scene)
 	{
 		for (int i = 0; i < MAX_BUFFERED_FRAMES; ++i)
@@ -98,17 +102,17 @@ namespace Sunset
 				near_plane,
 				far_plane,
 				camera_comp->data.gpu_data.view_matrix,
-				light_dir
+				light_dir,
+				buffered_frame_number
 			);
 		};
 	}
 
-	glm::mat4 LightProcessor::calculate_light_space_matrix(float fov, float aspect_ratio, float near, float far, const glm::mat4& view, const glm::vec3& light_dir)
+	glm::mat4 LightProcessor::calculate_light_space_matrix(float fov, float aspect_ratio, float near, float far, const glm::mat4& view, const glm::vec3& light_dir, uint32_t buffered_frame_number)
 	{
 		ZoneScopedN("LightProcessor::calculate_light_space_matrix");
 
 		glm::mat4 proj = glm::perspective(fov, aspect_ratio, near, far);
-		proj[1][1] *= -1;
 		const std::array<glm::vec4, 8> corners = get_world_space_frustum_corners(glm::inverse(proj * view));
 
 		glm::vec3 center(0.0f, 0.0f, 0.0f);
@@ -122,6 +126,7 @@ namespace Sunset
 
 		const glm::mat4 light_view = glm::lookAt(center + light_dir, center, WORLD_UP);
 
+
 		glm::vec3 min(std::numeric_limits<float>::max());
 		glm::vec3 max(std::numeric_limits<float>::lowest());
 		for (const glm::vec4& corner : corners)
@@ -133,6 +138,22 @@ namespace Sunset
 
 		glm::mat4 light_projection = glm::ortho(min.x, max.x, max.y, min.y, -max.z, -min.z);
 
+		if (cvar_light_to_frustum_split_line_draw.get())
+		{
+			debug_draw_line(Renderer::get()->context(), corners[0], corners[1], glm::vec3(1.0f, 0.0f, 0.0f), buffered_frame_number);
+			debug_draw_line(Renderer::get()->context(), corners[1], corners[2], glm::vec3(1.0f, 0.0f, 0.0f), buffered_frame_number);
+			debug_draw_line(Renderer::get()->context(), corners[2], corners[3], glm::vec3(1.0f, 0.0f, 0.0f), buffered_frame_number);
+			debug_draw_line(Renderer::get()->context(), corners[3], corners[0], glm::vec3(1.0f, 0.0f, 0.0f), buffered_frame_number);
+			debug_draw_line(Renderer::get()->context(), corners[0], corners[4], glm::vec3(1.0f, 0.0f, 0.0f), buffered_frame_number);
+			debug_draw_line(Renderer::get()->context(), corners[1], corners[5], glm::vec3(1.0f, 0.0f, 0.0f), buffered_frame_number);
+			debug_draw_line(Renderer::get()->context(), corners[2], corners[6], glm::vec3(1.0f, 0.0f, 0.0f), buffered_frame_number);
+			debug_draw_line(Renderer::get()->context(), corners[3], corners[7], glm::vec3(1.0f, 0.0f, 0.0f), buffered_frame_number);
+			debug_draw_line(Renderer::get()->context(), corners[4], corners[5], glm::vec3(1.0f, 0.0f, 0.0f), buffered_frame_number);
+			debug_draw_line(Renderer::get()->context(), corners[5], corners[6], glm::vec3(1.0f, 0.0f, 0.0f), buffered_frame_number);
+			debug_draw_line(Renderer::get()->context(), corners[6], corners[7], glm::vec3(1.0f, 0.0f, 0.0f), buffered_frame_number);
+			debug_draw_line(Renderer::get()->context(), corners[7], corners[4], glm::vec3(1.0f, 0.0f, 0.0f), buffered_frame_number);
+		}
+
 		return light_projection * light_view;
 	}
 
@@ -140,12 +161,12 @@ namespace Sunset
 	{
 		static glm::vec4 corners[8] = {
 			{-1, -1, -1, 1},
-			{-1, -1, 1, 1},
-			{-1, 1, -1, 1},
-			{-1, 1, 1, 1},
 			{1, -1, -1, 1},
-			{1, -1, 1, 1},
+			{-1, 1, -1, 1},
 			{1, 1, -1, 1},
+			{-1, -1, 1, 1},
+			{1, -1, 1, 1},
+			{-1, 1, 1, 1},
 			{1, 1, 1, 1}
 		};
 
@@ -159,6 +180,7 @@ namespace Sunset
 			inv_view_proj * corners[6],
 			inv_view_proj * corners[7]
 		};
+
 		transformed_corners[0] /= transformed_corners[0].w;
 		transformed_corners[1] /= transformed_corners[1].w;
 		transformed_corners[2] /= transformed_corners[2].w;

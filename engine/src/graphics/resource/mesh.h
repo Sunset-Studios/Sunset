@@ -47,6 +47,7 @@ namespace Sunset
 	class MeshFactory
 	{
 	public:
+		static MeshID create_line(class GraphicsContext* const gfx_context);
 		static MeshID create_triangle(class GraphicsContext* const gfx_context);
 		static MeshID create_quad(class GraphicsContext* const gfx_context);
 		static MeshID create_sphere(class GraphicsContext* const gfx_context, const glm::ivec2& segments, float radius);
