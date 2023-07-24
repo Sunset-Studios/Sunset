@@ -34,3 +34,6 @@
 *.sun
 *.spv
 engine/bin
+
+# Sunset specific inclusions
+!engine/third_party/sdl2/lib/*
