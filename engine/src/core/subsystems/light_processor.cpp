@@ -11,7 +11,7 @@
 
 namespace Sunset
 {
-	AutoCVar_Bool cvar_light_to_frustum_split_line_draw("ren.debug.light_to_frustum_split_line_draw", "Whether or not to draw a line from the center of every frustum split to the CSM affecting light source", true);
+	AutoCVar_Bool cvar_light_to_frustum_split_line_draw("ren.debug.light_to_frustum_split_line_draw", "Whether or not to draw a line from the center of every frustum split to the CSM affecting light source", false);
 
 	void LightProcessor::initialize(class Scene* scene)
 	{
@@ -88,55 +88,51 @@ namespace Sunset
 
 	void LightProcessor::calculate_csm_matrices(Scene* scene, CameraControlComponent* camera_comp, const glm::vec3& light_dir, uint32_t buffered_frame_number)
 	{
-		static float frustum_split_percentages[MAX_SHADOW_CASCADES] = { 0.02f, 0.1f, 1.0f };
+		static float frustum_split_percentages[MAX_SHADOW_CASCADES] = { 0.04f, 0.08f, 0.2f };
 		ZoneScopedN("LightProcessor::calculate_csm_matrices");
 		for (uint32_t index = 0; index < MAX_SHADOW_CASCADES; ++index)
 		{
 			ZoneScopedN("LightProcessor::calculate_csm_matrices iteration");
-			const float near_plane = index == 0 ? camera_comp->data.near_plane : camera_comp->data.far_plane * frustum_split_percentages[index - 1];
+			const float near_plane = camera_comp->data.near_plane;
 			const float far_plane = camera_comp->data.far_plane * frustum_split_percentages[index];
 			scene->scene_data.lighting[buffered_frame_number].csm_plane_distances[index] = far_plane;
 			scene->scene_data.lighting[buffered_frame_number].light_space_matrices[index] = calculate_light_space_matrix(
-				camera_comp->data.gpu_data.fov,
-				camera_comp->data.aspect_ratio,
+				camera_comp,
 				near_plane,
 				far_plane,
-				camera_comp->data.gpu_data.view_matrix,
-				light_dir,
+				glm::normalize(light_dir),
 				buffered_frame_number
 			);
 		};
 	}
 
-	glm::mat4 LightProcessor::calculate_light_space_matrix(float fov, float aspect_ratio, float near, float far, const glm::mat4& view, const glm::vec3& light_dir, uint32_t buffered_frame_number)
+	glm::mat4 LightProcessor::calculate_light_space_matrix(CameraControlComponent* camera_comp, float near, float far, const glm::vec3& light_dir, uint32_t buffered_frame_number)
 	{
 		ZoneScopedN("LightProcessor::calculate_light_space_matrix");
 
-		glm::mat4 proj = glm::perspective(fov, aspect_ratio, near, far);
-		const std::array<glm::vec4, 8> corners = get_world_space_frustum_corners(glm::inverse(proj * view));
+		std::array<glm::vec3, 8> corners = get_world_space_frustum_corners(camera_comp, near, far);
 
 		glm::vec3 center(0.0f, 0.0f, 0.0f);
-		for (const glm::vec4& corner : corners)
+		for (const glm::vec3& corner : corners)
 		{
-			center.x += corner.x;
-			center.y += corner.y;
-			center.z += corner.z;
+			center += corner;
 		}
 		center /= 8.0f; 
 
-		const glm::mat4 light_view = glm::lookAt(center + light_dir, center, WORLD_UP);
-
+		const glm::mat4 light_view = glm::lookAt(center - light_dir, center + light_dir, WORLD_UP);
 
 		glm::vec3 min(std::numeric_limits<float>::max());
 		glm::vec3 max(std::numeric_limits<float>::lowest());
-		for (const glm::vec4& corner : corners)
+		for (const glm::vec3& corner : corners)
 		{
-			const glm::vec3 lv_corner = glm::vec3(light_view * corner);
-			min = glm::min(min, lv_corner);
-			max = glm::max(max, lv_corner);
+			const glm::vec3 lv_corner = glm::vec3(light_view * glm::vec4(corner, 1.0f));
+			min.x = glm::min(min.x, lv_corner.x);
+			min.y = glm::min(min.y, lv_corner.y);
+			min.z = glm::min(min.z, lv_corner.z);
+			max.x = glm::max(max.x, lv_corner.x);
+			max.y = glm::max(max.y, lv_corner.y);
+			max.z = glm::max(max.z, lv_corner.z);
 		}
-
-		glm::mat4 light_projection = glm::ortho(min.x, max.x, max.y, min.y, -max.z, -min.z);
 
 		if (cvar_light_to_frustum_split_line_draw.get())
 		{
@@ -152,44 +148,41 @@ namespace Sunset
 			debug_draw_line(Renderer::get()->context(), corners[5], corners[6], glm::vec3(1.0f, 0.0f, 0.0f), buffered_frame_number);
 			debug_draw_line(Renderer::get()->context(), corners[6], corners[7], glm::vec3(1.0f, 0.0f, 0.0f), buffered_frame_number);
 			debug_draw_line(Renderer::get()->context(), corners[7], corners[4], glm::vec3(1.0f, 0.0f, 0.0f), buffered_frame_number);
+			debug_draw_line(Renderer::get()->context(), center, center - light_dir, glm::vec3(1.0f, 0.0f, 0.0f), buffered_frame_number);
 		}
+
+		glm::mat4 light_projection = glm::ortho(min.x, max.x, min.y, max.y, min.z, max.z);
 
 		return light_projection * light_view;
 	}
 
-	std::array<glm::vec4, 8> LightProcessor::get_world_space_frustum_corners(const glm::mat4& inv_view_proj)
+	std::array<glm::vec3, 8> LightProcessor::get_world_space_frustum_corners(CameraControlComponent* camera_comp, float near, float far)
 	{
-		static glm::vec4 corners[8] = {
-			{-1, -1, -1, 1},
-			{1, -1, -1, 1},
-			{-1, 1, -1, 1},
-			{1, 1, -1, 1},
-			{-1, -1, 1, 1},
-			{1, -1, 1, 1},
-			{-1, 1, 1, 1},
-			{1, 1, 1, 1}
-		};
+		glm::mat3 basis;
+		basis[2] = glm::normalize(camera_comp->data.forward);
+		basis[0] = glm::normalize(glm::cross(WORLD_UP, basis[2]));
+		basis[1] = glm::normalize(glm::cross(basis[0], basis[2]));
 
-		std::array<glm::vec4, 8> transformed_corners = {
-			inv_view_proj * corners[0],
-			inv_view_proj * corners[1],
-			inv_view_proj * corners[2],
-			inv_view_proj * corners[3],
-			inv_view_proj * corners[4],
-			inv_view_proj * corners[5],
-			inv_view_proj * corners[6],
-			inv_view_proj * corners[7]
-		};
+		const float tang = glm::tan(camera_comp->data.gpu_data.fov * 0.5f);
+		const float near_height = near * tang;
+		const float near_width = near_height * camera_comp->data.aspect_ratio;
+		const float far_height = far * tang;
+		const float far_width = far_height * camera_comp->data.aspect_ratio;
 
-		transformed_corners[0] /= transformed_corners[0].w;
-		transformed_corners[1] /= transformed_corners[1].w;
-		transformed_corners[2] /= transformed_corners[2].w;
-		transformed_corners[3] /= transformed_corners[3].w;
-		transformed_corners[4] /= transformed_corners[4].w;
-		transformed_corners[5] /= transformed_corners[5].w;
-		transformed_corners[6] /= transformed_corners[6].w;
-		transformed_corners[7] /= transformed_corners[7].w;
+		glm::vec3 near_center = camera_comp->data.position + basis[2] * near;
+		glm::vec3 far_center = camera_comp->data.position + basis[2] * far;
 
-		return transformed_corners;
+		std::array<glm::vec3, 8> corners;
+
+		corners[0] = near_center + basis[1] * near_height - basis[0] * near_width;
+		corners[1] = near_center + basis[1] * near_height + basis[0] * near_width;
+		corners[2] = near_center - basis[1] * near_height + basis[0] * near_width;
+		corners[3] = near_center - basis[1] * near_height - basis[0] * near_width;
+		corners[4] = far_center + basis[1] * far_height - basis[0] * far_width;
+		corners[5] = far_center + basis[1] * far_height + basis[0] * far_width;
+		corners[6] = far_center - basis[1] * far_height + basis[0] * far_width;
+		corners[7] = far_center - basis[1] * far_height - basis[0] * far_width;
+
+		return corners;
 	}
 }

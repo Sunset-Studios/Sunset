@@ -5,6 +5,7 @@
 #include <graphics/resource_state.h>
 #include <graphics/pipeline_state.h>
 #include <graphics/resource/buffer.h>
+#include <glm/gtx/rotate_vector.hpp>
 
 namespace Sunset
 {
@@ -17,14 +18,7 @@ namespace Sunset
 		uint32_t instance_count,
 		const PushConstantPipelineData& push_constants)
 	{
-		// TODO: Given that most of our resources will go through descriptors, this resource state will likely get deprecated.
-		// Only using it to store vertex buffer info at the moment, but this can be moved to a global merged vertex descriptor buffer
-		// that we can index from the vertex shader using some push constant object ID.
-		if (cached_resource_state != resource_state)
-		{
-			CACHE_FETCH(ResourceState, resource_state)->bind(gfx_context, command_buffer);
-			cached_resource_state = resource_state;
-		}
+		CACHE_FETCH(ResourceState, resource_state)->bind(gfx_context, command_buffer);
 
 		if (push_constants.data != nullptr)
 		{
@@ -64,11 +58,10 @@ namespace Sunset
 	{
 		const glm::vec3 line = line_end - line_start;
 		const float magnitude = glm::length(line);
-		const glm::quat direction = glm::rotation(glm::normalize(line), WORLD_RIGHT);
 
 		const glm::mat4 translation = glm::translate(glm::mat4(1.0f), line_start);
-		const glm::mat4 rotation = glm::mat4_cast(direction);
-		const glm::mat4 scale = glm::scale(glm::mat4(1.0f), glm::vec3(magnitude));
+		const glm::mat4 rotation = glm::orientation(glm::normalize(line), WORLD_RIGHT);
+		const glm::mat4 scale = glm::scale(glm::mat4(1.0f), glm::vec3(magnitude, 0.0f, 0.0f));
 
 		DebugPrimitiveData* const prim_data = DebugDrawState::get()->requested_primitive_datas[buffered_frame_number].get_new();
 		prim_data->transform = translation * rotation * scale;

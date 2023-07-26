@@ -101,7 +101,7 @@ namespace Sunset
 					image_view_info.subresourceRange.baseMipLevel = i;
 					image_view_info.subresourceRange.levelCount = 1;
 					image_view_info.subresourceRange.baseArrayLayer = j;
-					image_view_info.subresourceRange.layerCount = 1;
+					image_view_info.subresourceRange.layerCount = j == 0 ? config.array_count : 1;
 					image_view_info.subresourceRange.aspectMask = VK_FROM_SUNSET_IMAGE_USAGE_ASPECT_FLAGS(config.flags);
 
 					VkImageView& image_view = image_views.emplace_back();

@@ -76,7 +76,7 @@ void main()
 
 	const vec3 normal =
 		normal_tex_index == -1
-		? in_normal
+		? normalize(in_normal)
 		: in_tbn_matrix * normalize(texture(textures_2D[nonuniformEXT(normal_tex_index)], in_tex_coord * material.tiling_coeffs[1]).xyz * 2.0f - 1.0f);
 
 	const float roughness =

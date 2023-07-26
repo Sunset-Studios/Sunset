@@ -11,6 +11,7 @@ layout (location = 0) out vec4 out_frag_color;
 layout (push_constant) uniform constants
 {
 	int scene_color_index;
+	int scene_layer_index;
 } fullscreen_push_constants;
 
 void main()
@@ -19,7 +20,9 @@ void main()
 
 	if (fullscreen_push_constants.scene_color_index > -1)
 	{
-		color = texture(textures_2D[nonuniformEXT(fullscreen_push_constants.scene_color_index)], in_tex_coord).xyz;
+		color = fullscreen_push_constants.scene_layer_index > -1
+			? texture(textures_2DArray[nonuniformEXT(fullscreen_push_constants.scene_color_index)], vec3(in_tex_coord, fullscreen_push_constants.scene_layer_index)).xyz
+			: texture(textures_2D[nonuniformEXT(fullscreen_push_constants.scene_color_index)], in_tex_coord).xyz;
 	}
 
 	out_frag_color = vec4(color, 1.0f);

@@ -13,9 +13,8 @@ layout (push_constant) uniform constants
 
 void main()
 {
-	ivec2 texel_pos = ivec2(gl_GlobalInvocationID.xy);
-
-	const vec2 screen_uv = nearest_uv(texel_pos, box_blur_constants.resolution);
+	const ivec2 texel_pos = ivec2(gl_GlobalInvocationID.xy);
+	const vec2 screen_uv = vec2(gl_GlobalInvocationID.xy) / box_blur_constants.resolution;
 
 	const vec2 texel_size = 1.0 / vec2(textureSize(textures_2D[nonuniformEXT(box_blur_constants.staging_texture)], 0));
 
@@ -25,7 +24,7 @@ void main()
 		for (int y = -1; y < 1; ++y)
 		{
 			vec2 offset = vec2(float(x), float(y)) * texel_size;
-			result += texture(textures_2D[nonuniformEXT(box_blur_constants.staging_texture)], screen_uv + offset);
+			result += vec4(texture_catmull_rom(screen_uv + offset, box_blur_constants.staging_texture, box_blur_constants.resolution), 1.0);
 		}
 	}
 	result /= 9.0;

@@ -17,11 +17,6 @@ namespace Sunset
 		DebugDrawExecutor() = default;
 		~DebugDrawExecutor() = default;
 
-		void reset()
-		{
-			cached_resource_state = 0;
-		}
-
 		void operator()(
 			class GraphicsContext* const gfx_context,
 			void* command_buffer,
@@ -31,9 +26,6 @@ namespace Sunset
 			uint32_t instance_count = 1,
 			const PushConstantPipelineData& push_constants = {}
 		);
-
-	private:
-		ResourceStateID cached_resource_state{ 0 };
 	};
 
 	struct DebugPrimitiveData

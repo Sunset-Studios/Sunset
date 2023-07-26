@@ -93,7 +93,7 @@ namespace Sunset
 			CameraControlComponent* const camera_control_comp = assign_component<CameraControlComponent>(active_camera);
 			set_fov(camera_control_comp, 75.0f);
 			set_aspect_ratio(camera_control_comp, (float)res.x / (float)res.y);
-			set_near_plane(camera_control_comp, 0.01f);
+			set_near_plane(camera_control_comp, 0.001f);
 			set_far_plane(camera_control_comp, 1000.0f);
 			set_position(camera_control_comp, glm::vec3(75.0f, 25.0f, 25.0f));
 			set_forward(camera_control_comp, glm::vec3(-1.0f, 0.0f, 0.0f), true);

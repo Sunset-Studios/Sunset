@@ -22,7 +22,7 @@ namespace Sunset
 	AutoCVar_Bool cvar_use_skybox("ren.use_skybox", "Whether or not to render a skybox (supplied to the scene as a cubemap texture) instead of using the preetham skydome shader.", false);
 
 	AutoCVar_Bool cvar_ssao_enabled("ren.ssao.enable", "Whether or not to do screen space ambient occlusion", true);
-	AutoCVar_Float cvar_ssao_strength("ren.ssao.strength", "The strength of the SSAO contribution applied to ambient lighting calculations", 1.0f);
+	AutoCVar_Float cvar_ssao_strength("ren.ssao.strength", "The strength of the SSAO contribution applied to ambient lighting calculations", 3.0f);
 	AutoCVar_Float cvar_ssao_radius("ren.ssao.radius", "The contribution radius of SSAO samples", 1.0f);
 
 	AutoCVar_Bool cvar_ssr_enabled("ren.ssr.enable", "Whether or not to do screen space reflections", true);
@@ -40,6 +40,8 @@ namespace Sunset
 	AutoCVar_Bool cvar_fxaa_enabled("ren.fxaa.enable", "Whether or not to do fast approximate anti-aliasing", true);
 
 	AutoCVar_Float cvar_final_image_exposure("ren.final_image_exposure", "The exposure to apply once HDR color gets resolved down to LDR", 2.0f);
+
+	AutoCVar_Bool cvar_show_debug_visualizer("ren.debug.show_visualizer", "Whether or not to show the debug visualizer viewport for rendered intermediate textures", true);
 
 	bool DeferredShadingStrategy::render(GraphicsContext* gfx_context, RenderGraph& render_graph, class Swapchain* swapchain, int32_t buffered_frame_number, bool b_offline)
 	{
@@ -308,8 +310,8 @@ namespace Sunset
 					.extent = glm::vec3(image_extent.x, image_extent.y, 1.0f),
 					.flags = ImageFlags::DepthStencil | ImageFlags::Image2DArray | ImageFlags::Sampled,
 					.usage_type = MemoryUsageType::OnlyGPU,
-					.sampler_address_mode = SamplerAddressMode::BorderClamp,
-					.image_filter = ImageFilter::Nearest,
+					.sampler_address_mode = SamplerAddressMode::EdgeClamp,
+					.image_filter = ImageFilter::Linear,
 					.array_count = MAX_SHADOW_CASCADES,
 					.attachment_clear = true,
 					.split_array_layer_views = true
@@ -666,8 +668,8 @@ namespace Sunset
 					.extent = glm::vec3(image_extent.x, image_extent.y, 1.0f),
 					.flags = ImageFlags::Color | ImageFlags::Image2D | ImageFlags::Sampled | ImageFlags::Storage,
 					.usage_type = MemoryUsageType::OnlyGPU,
-					.sampler_address_mode = SamplerAddressMode::Repeat,
-					.image_filter = ImageFilter::Nearest,
+					.sampler_address_mode = SamplerAddressMode::EdgeClamp,
+					.image_filter = ImageFilter::Linear,
 					.attachment_clear = true
 				},
 				buffered_frame_number
@@ -682,7 +684,7 @@ namespace Sunset
 					.flags = ImageFlags::Color | ImageFlags::Image2D | ImageFlags::Sampled | ImageFlags::Storage,
 					.usage_type = MemoryUsageType::OnlyGPU,
 					.sampler_address_mode = SamplerAddressMode::Repeat,
-					.image_filter = ImageFilter::Nearest,
+					.image_filter = ImageFilter::Linear,
 					.attachment_clear = true
 				},
 				buffered_frame_number
@@ -714,7 +716,7 @@ namespace Sunset
 						.noise_scale = glm::vec2(image_extent.x, image_extent.y),
 						.resolution = image_extent,
 						.radius = static_cast<float>(cvar_ssao_radius.get()),
-						.bias = 0.05f,
+						.bias = 0.1f,
 						.strength = static_cast<float>(cvar_ssao_strength.get())
 					};
 
@@ -1445,7 +1447,7 @@ namespace Sunset
 				},
 				.rasterizer_state = PipelineRasterizerState
 				{
-					.line_width = 1.0f,
+					.line_width = 2.0f,
 					.polygon_draw_mode = PipelineRasterizerPolygonMode::Line,
 					.cull_mode = PipelineRasterizerCullMode::None
 				},
@@ -1458,7 +1460,7 @@ namespace Sunset
 				buffered_frame_number
 			);
 
-			RGPassHandle base_pass_handle = render_graph.add_pass(
+			RGPassHandle debug_primitive_pass_handle = render_graph.add_pass(
 				gfx_context,
 				"debug_primitive_pass",
 				RenderPassFlags::Graphics,
@@ -1471,6 +1473,50 @@ namespace Sunset
 				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
 				{
 					submit_requested_debug_draws(gfx_context, command_buffer, frame_data.pass_pipeline_state, buffered_frame_number);
+				}
+			);
+		}
+
+		if (cvar_show_debug_visualizer.get())
+		{
+			const glm::vec2 image_extent = gfx_context->get_surface_resolution();
+
+			RGShaderDataSetup shader_setup
+			{
+				.pipeline_shaders =
+				{
+					{ PipelineShaderStageType::Vertex, "../../shaders/common/fullscreen.vert.sun" },
+					{ PipelineShaderStageType::Fragment, "../../shaders/common/fullscreen.frag.sun" }
+				},
+				.viewport = Viewport	
+				{
+					.width = image_extent.x * 0.25f,
+					.height = image_extent.y * 0.25f
+				}
+			};
+
+			RGPassHandle debug_visualizer_pass_handle = render_graph.add_pass(
+				gfx_context,
+				"debug_visualizer_pass",
+				RenderPassFlags::Graphics,
+				buffered_frame_number,
+				{
+					.shader_setup = shader_setup,
+					.inputs = { main_normal_image_desc },
+					.outputs = { antialiased_scene_color_desc },
+				},
+				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
+				{
+					FullscreenData fullscreen_data
+					{
+						.scene_texture_index = (0x0000ffff & frame_data.pass_bindless_resources.handles[0])
+					};
+
+					PushConstantPipelineData pass_data = PushConstantPipelineData::create(&fullscreen_data, PipelineShaderStageType::Fragment);
+
+					gfx_context->push_constants(command_buffer, frame_data.pass_pipeline_state, pass_data);
+
+					Renderer::get()->draw_fullscreen_quad(command_buffer);
 				}
 			);
 		}

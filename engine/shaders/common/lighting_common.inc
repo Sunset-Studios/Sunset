@@ -208,10 +208,13 @@ vec3 calculate_brdf(
 
 	vec3 env_f = f_schlick_roughness(n_dot_v, f0, a);
 
+	// shadow
+	float shadow_factor = light.b_csm_caster > 0 && shadow_map_index != -1 ? calculate_csm_shadow(fragment_pos, normal, light_dir, shadow_map_index) : 0.0;
+
 	// diffuse BRDF
-	vec3 diffuse_color = (1.0f - metallic) * albedo * irradiance;
-	vec3 env_specular = prefiltered_color * (f0 * env_brdf.x + env_brdf.y);
-	vec3 fd = (diffuse_color * (1.0f - env_f) * (1.0f - metallic) + env_specular) * ao;
+	vec3 diffuse_color = (1.0f - metallic) * albedo * irradiance * ao;
+	vec3 env_specular = prefiltered_color * (f0 * env_brdf.x + f90 * env_brdf.y);
+	vec3 fd = diffuse_color * (1.0 - shadow_factor) * fd_lambert() + env_specular * env_f;
 
 	// remapping and linearization of clear coat roughness
 	float clamped_clear_coat_roughness = clamp(clear_coat_roughness, 0.089f, 1.0f);
@@ -224,10 +227,7 @@ vec3 calculate_brdf(
 	float fc = f_schlick(0.04f, 1.0f, l_dot_h) * clear_coat;
 	float frc = (dc * vc) * fc;
 
-	// shadow
-	float shadow_factor = light.b_csm_caster > 0 && shadow_map_index != -1 ? calculate_csm_shadow(fragment_pos, normal, light_dir, shadow_map_index) : 0.0;
-
 	// account for energy loss in the base layer
-	vec3 brdf = ((fd + (1.0 - shadow_factor) * fr * (1.0f - fc)) * (1.0f - fc) + frc);
+	vec3 brdf = ((fd + fr * (1.0f - fc)) * (1.0f - fc) + frc);
 	return brdf * lluminance;
 }

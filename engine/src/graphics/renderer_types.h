@@ -73,7 +73,8 @@ namespace Sunset
 
 	struct FullscreenData
 	{
-		int32_t scene_texture_index;
+		int32_t scene_texture_index{ -1 };
+		int32_t scene_texture_layer{ -1 };
 	};
 
 	struct DepthReduceData

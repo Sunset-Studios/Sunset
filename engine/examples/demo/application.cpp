@@ -80,7 +80,7 @@ namespace Sunset
 
 				TransformComponent* const transform_comp = scene->assign_component<TransformComponent>(light_entity);
 
-				set_position(transform_comp, glm::vec3(-75.0f, 25.0f, 0.0f));
+				set_position(transform_comp, glm::vec3(-25.0f, 25.0f, 0.0f));
 
 				LightComponent* const light_comp = scene->assign_component<LightComponent>(light_entity);
 
@@ -105,21 +105,23 @@ namespace Sunset
 				MaterialID mesh_material = MaterialFactory::create(
 					Renderer::get()->context(),
 					{
-						.textures =
+						/*.textures =
 						{
 							"../../assets/foam-grip-albedo.sun",
 							"../../assets/foam-grip-normal.sun",
 							"../../assets/foam-grip-roughness.sun",
 							"../../assets/foam-grip-metallic.sun",
 							"../../assets/foam-grip-ao.sun"
-						}
+						}*/
+						.color = glm::vec3(3.0f, 3.0f, 3.0f),
+						.uniform_roughness = 0.2f,
 					}
 				);
-				material_set_texture_tiling(Renderer::get()->context(), mesh_material, 0, 10.0f);
-				material_set_texture_tiling(Renderer::get()->context(), mesh_material, 1, 10.0f);
-				material_set_texture_tiling(Renderer::get()->context(), mesh_material, 2, 10.0f);
-				material_set_texture_tiling(Renderer::get()->context(), mesh_material, 3, 10.0f);
-				material_set_texture_tiling(Renderer::get()->context(), mesh_material, 4, 10.0f);
+				//material_set_texture_tiling(Renderer::get()->context(), mesh_material, 0, 10.0f);
+				//material_set_texture_tiling(Renderer::get()->context(), mesh_material, 1, 10.0f);
+				//material_set_texture_tiling(Renderer::get()->context(), mesh_material, 2, 10.0f);
+				//material_set_texture_tiling(Renderer::get()->context(), mesh_material, 3, 10.0f);
+				//material_set_texture_tiling(Renderer::get()->context(), mesh_material, 4, 10.0f);
 
 				set_mesh(mesh_comp, MeshFactory::create_quad(Renderer::get()->context()));
 				set_material(mesh_comp, mesh_material);

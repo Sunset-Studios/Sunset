@@ -38,7 +38,7 @@ void main()
 	const vec4 tex_pos = texture(textures_2D[nonuniformEXT(ssao_constants.position_texture)], tex_coords);
 	const vec3 frag_pos = (camera_data.view * vec4(tex_pos.xyz, 1.0)).xyz;
 	const vec3 normal = normalize(texture(textures_2D[nonuniformEXT(ssao_constants.normal_texture)], tex_coords).xyz);
-	const vec3 random_vec = texture(textures_2D[nonuniformEXT(ssao_constants.ssao_noise_texture)], tex_coords * ssao_constants.noise_scale).xyz;
+	const vec3 random_vec = normalize(texture(textures_2D[nonuniformEXT(ssao_constants.ssao_noise_texture)], tex_coords * ssao_constants.noise_scale).xyz);
 
 	const vec3 tangent = normalize(random_vec - normal * dot(random_vec, normal));
 	const vec3 bitangent = normalize(cross(normal, tangent));
@@ -51,20 +51,24 @@ void main()
 	float occlusion = 0.0;
 	for (int i = 0; i < KERNEL_SIZE; ++i)
 	{
-		vec3 sample_pos = frag_pos + (tbn * ssao_data.data.kernel[i]) * ssao_constants.radius;
-		vec4 offset = vec4(sample_pos, 1.0);
+		vec3 sample_dir = (tbn * ssao_data.data.kernel[i]) * ssao_constants.radius;
+		if (dot(normalize(sample_dir), normal) > 0.15)
+		{
+			vec3 sample_pos = frag_pos + sample_dir;
+			vec4 offset = vec4(sample_pos, 1.0);
 
-		offset = unjittered_proj * offset;
-		offset.xyz /= offset.w;
-		offset.xyz = offset.xyz * 0.5 + 0.5;
+			offset = unjittered_proj * offset;
+			offset.xyz /= offset.w;
+			offset.xyz = offset.xyz * 0.5 + 0.5;
 
-		const vec4 tex_pos = texture(textures_2D[nonuniformEXT(ssao_constants.position_texture)], offset.xy);
-		float sample_depth = (camera_data.view * vec4(tex_pos.xyz, 1.0)).z;
-		float range_check = smoothstep(0.0, 1.0, ssao_constants.radius / abs(frag_pos.z - sample_depth));
-		occlusion += (sample_depth - ssao_constants.bias >= sample_pos.z ? 1.0 : 0.0) * range_check;
+			const vec4 tex_pos = texture(textures_2D[nonuniformEXT(ssao_constants.position_texture)], offset.xy);
+			float sample_depth = (camera_data.view * vec4(tex_pos.xyz, 1.0)).z;
+			float range_check = smoothstep(0.0, 1.0, ssao_constants.radius / abs(frag_pos.z - sample_depth));
+			occlusion += (sample_depth >= sample_pos.z + ssao_constants.bias ? 1.0 : 0.0) * range_check;
+		}
 	}
 	const float occlusion_factor = occlusion / float(KERNEL_SIZE);
-	occlusion = pow(1.0 - occlusion_factor, max(1.0, ssao_constants.strength * occlusion_factor));
+	occlusion = pow(1.0 - occlusion_factor, max(0.1, ssao_constants.strength * occlusion_factor));
 
-	imageStore(storage_2D[nonuniformEXT(ssao_constants.out_ssao_texture)], texel_pos, vec4(occlusion, occlusion, occlusion, occlusion));
+	imageStore(storage_2D[nonuniformEXT(ssao_constants.out_ssao_texture)], texel_pos, vec4(occlusion, occlusion, occlusion, 1.0f));
 }
