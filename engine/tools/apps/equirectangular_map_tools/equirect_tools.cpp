@@ -45,7 +45,7 @@ namespace Sunset
 		};
 
 	public:
-		void render(GraphicsContext* gfx_context, RenderGraph& render_graph, class Swapchain* swapchain, int32_t buffered_frame_number, bool b_offline = false)
+		bool render(GraphicsContext* gfx_context, RenderGraph& render_graph, class Swapchain* swapchain, int32_t buffered_frame_number, bool b_offline = false)
 		{
 			const glm::vec2 viewport_extent = Renderer::get()->context()->get_surface_resolution();
 
@@ -226,6 +226,7 @@ namespace Sunset
 				const glm::ivec3 prefilter_image_size = prefilter_image->get_attachment_config().extent;
 				const uint32_t mip_count = prefilter_image->get_attachment_config().mip_count;
 
+				std::string pass_name = "environment_prefilter_pass0";
 				for (uint32_t mip = 0; mip < mip_count; ++mip)
 				{
 					const uint32_t mip_width = glm::clamp(prefilter_image_size.x >> mip, 1, prefilter_image_size.x);
@@ -234,7 +235,7 @@ namespace Sunset
 					prefilter_shader_setup.viewport->width = mip_width;
 					prefilter_shader_setup.viewport->height = mip_height;
 
-					const std::string pass_name = "environment_prefilter_pass" + std::to_string(mip);
+					pass_name[pass_name.size() - 1] = '0' + mip;
 
 					const float mip_roughness = static_cast<float>(mip) / static_cast<float>(mip_count - 1);
 
@@ -295,6 +296,8 @@ namespace Sunset
 			);
 
 			render_graph.submit(gfx_context, swapchain, buffered_frame_number, b_offline);
+
+			return true;
 		}
 	};
 
@@ -328,7 +331,6 @@ namespace Sunset
 	void EquirectToolsApplication::run()
 	{
 		{
-			Renderer::get()->wait_for_gpu();
 			Renderer::get()->begin_frame();
 			Renderer::get()->draw<IBLBakingStrategy>(true);
 			Renderer::get()->wait_for_gpu();
@@ -337,7 +339,7 @@ namespace Sunset
 		// Save off output images
 		if (b_generate_cubemap_textures)
 		{
-			write_ibl_texture_to_png(parent_equirect_path, "cubemap", EquirectToolsApplication::equirect_cubemap_image, true);
+			write_ibl_texture_to_png(parent_equirect_path, "cubemap", EquirectToolsApplication::equirect_cubemap_image, true, true);
 		}
 
 		if (b_generate_irradiance_map)
@@ -426,7 +428,7 @@ namespace Sunset
 				};
 				EquirectToolsApplication::equirect_image = ImageFactory::create(Renderer::get()->context(), config);
 
-				Renderer::get()->context()->get_command_queue(DeviceQueueType::Graphics)->submit_immediate(Renderer::get()->context(), [this, staging_buffer, gfx_context = Renderer::get()->context()](void* command_buffer)
+				Renderer::get()->context()->get_command_queue(DeviceQueueType::Graphics)->submit_immediate(Renderer::get()->context(), 0, [this, staging_buffer, gfx_context = Renderer::get()->context()](void* command_buffer)
 				{
 					Image* const image_obj = CACHE_FETCH(Image, EquirectToolsApplication::equirect_image);
 					image_obj->copy_from_buffer(gfx_context, command_buffer, staging_buffer);
@@ -532,6 +534,7 @@ namespace Sunset
 		// Copy generated cubemap texture to a staging buffer that we use to do our external image write
 		Renderer::get()->context()->get_command_queue(DeviceQueueType::Graphics)->submit_immediate(
 			Renderer::get()->context(),
+			0,
 			[this, image_obj, image_size, layer_count, mip_count, image_channels, staging_buffer, gfx_context = Renderer::get()->context()](void* command_buffer)
 			{
 				uint32_t buffer_offset = 0;
@@ -574,10 +577,7 @@ namespace Sunset
 				}
 			}
 
-			if (b_flip_on_write)
-			{
-				stbi_flip_vertically_on_write(true);
-			}
+			stbi_flip_vertically_on_write(b_flip_on_write);
 
 			// Write our temporary 8 bit buffer to a set of .png images
 			buffer_offset = 0;

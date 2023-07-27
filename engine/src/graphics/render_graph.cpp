@@ -756,8 +756,7 @@ namespace Sunset
 			if (!b_is_input_resource || b_is_local_load)
 			{
 				const uint32_t image_view_index = pass->parameters.output_views.size() > resource_params_index ? pass->parameters.output_views[resource_params_index] : 0;
-				// NOTE: We can set b_image_view_considers_layer_split here if we want to process an image view with multiple layers as a single layer of that image view
-				pass->pass_config.attachments.push_back({ .image = registry.resource_metadata[resource].physical_id, .image_view_index = image_view_index/*, .b_image_view_considers_layer_split = false*/});
+				pass->pass_config.attachments.push_back({ .image = registry.resource_metadata[resource].physical_id, .image_view_index = image_view_index, .b_image_view_considers_layer_split = static_cast<bool>(image_resource->config.split_array_layer_views) });
 			}
 		}
 	}

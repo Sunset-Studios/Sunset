@@ -34,7 +34,7 @@ namespace Sunset
 
 			const AttachmentConfig& attachment_config = image_attachment->get_attachment_config();
 
-			const uint32_t mip_index = attachment.image_view_index / attachment_config.array_count;
+			const uint32_t mip_index = attachment_config.split_array_layer_views ? attachment.image_view_index / attachment_config.array_count : attachment.image_view_index;
 			if (uint32_t width = glm::clamp(static_cast<uint32_t>(attachment_config.extent.x) >> mip_index, 0u, static_cast<uint32_t>(attachment_config.extent.x)); width > max_width)
 			{
 				max_width = width; 

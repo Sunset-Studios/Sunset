@@ -21,6 +21,8 @@ namespace Sunset
 {
 	AutoCVar_Bool cvar_use_skybox("ren.use_skybox", "Whether or not to render a skybox (supplied to the scene as a cubemap texture) instead of using the preetham skydome shader.", false);
 
+	AutoCVar_Int cvar_shadow_map_resolution("ren.shadows.resolution", "Resolution for our CSM image", 4096);
+
 	AutoCVar_Bool cvar_ssao_enabled("ren.ssao.enable", "Whether or not to do screen space ambient occlusion", true);
 	AutoCVar_Float cvar_ssao_strength("ren.ssao.strength", "The strength of the SSAO contribution applied to ambient lighting calculations", 3.0f);
 	AutoCVar_Float cvar_ssao_radius("ren.ssao.radius", "The contribution radius of SSAO samples", 1.0f);
@@ -41,7 +43,7 @@ namespace Sunset
 
 	AutoCVar_Float cvar_final_image_exposure("ren.final_image_exposure", "The exposure to apply once HDR color gets resolved down to LDR", 2.0f);
 
-	AutoCVar_Bool cvar_show_debug_visualizer("ren.debug.show_visualizer", "Whether or not to show the debug visualizer viewport for rendered intermediate textures", true);
+	AutoCVar_Bool cvar_show_debug_visualizer("ren.debug.show_visualizer", "Whether or not to show the debug visualizer viewport for rendered intermediate textures", false);
 
 	bool DeferredShadingStrategy::render(GraphicsContext* gfx_context, RenderGraph& render_graph, class Swapchain* swapchain, int32_t buffered_frame_number, bool b_offline)
 	{
@@ -298,6 +300,11 @@ namespace Sunset
 				.rasterizer_state = PipelineRasterizerState
 				{
 					.cull_mode = PipelineRasterizerCullMode::FrontFace
+				},
+				.viewport = Viewport
+				{
+					.width = static_cast<float>(cvar_shadow_map_resolution.get()),
+					.height = static_cast<float>(cvar_shadow_map_resolution.get())
 				}
 			};
 
@@ -307,7 +314,7 @@ namespace Sunset
 				{
 					.name = "csm_shadow_map",
 					.format = Format::FloatDepth32,
-					.extent = glm::vec3(image_extent.x, image_extent.y, 1.0f),
+					.extent = glm::vec3(cvar_shadow_map_resolution.get(), cvar_shadow_map_resolution.get(), 1.0f),
 					.flags = ImageFlags::DepthStencil | ImageFlags::Image2DArray | ImageFlags::Sampled,
 					.usage_type = MemoryUsageType::OnlyGPU,
 					.sampler_address_mode = SamplerAddressMode::EdgeClamp,
@@ -1502,14 +1509,15 @@ namespace Sunset
 				buffered_frame_number,
 				{
 					.shader_setup = shader_setup,
-					.inputs = { main_normal_image_desc },
+					.inputs = { shadow_map_desc },
 					.outputs = { antialiased_scene_color_desc },
 				},
 				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
 				{
 					FullscreenData fullscreen_data
 					{
-						.scene_texture_index = (0x0000ffff & frame_data.pass_bindless_resources.handles[0])
+						.scene_texture_index = (0x0000ffff & frame_data.pass_bindless_resources.handles[0]),
+						.scene_texture_layer = 0
 					};
 
 					PushConstantPipelineData pass_data = PushConstantPipelineData::create(&fullscreen_data, PipelineShaderStageType::Fragment);
