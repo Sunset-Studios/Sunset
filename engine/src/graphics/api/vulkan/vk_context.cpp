@@ -134,7 +134,7 @@ namespace Sunset
 		const int16_t current_buffered_frame = get_buffered_frame_number();
 		if (state.has_pending_work[current_buffered_frame].load(std::memory_order_acquire))
 		{
-			VK_CHECK(vkWaitForFences(state.get_device(), 1, &state.sync_pool.get_fence(state.frame_sync_primitives[current_buffered_frame].render_fence), true, 1000000000));
+			VK_CHECK(vkWaitForFences(state.get_device(), 1, &state.sync_pool.get_fence(state.frame_sync_primitives[current_buffered_frame].render_fence), true, 1e+10));
 			state.has_pending_work[current_buffered_frame].store(false, std::memory_order_release);
 		}
 		VK_CHECK(vkResetFences(state.get_device(), 1, &state.sync_pool.get_fence(state.frame_sync_primitives[current_buffered_frame].render_fence)));

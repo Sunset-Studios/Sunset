@@ -303,7 +303,7 @@ namespace Sunset
 
 	void EquirectToolsApplication::init(const std::filesystem::path& equirect_path, bool generate_cubemap, bool generate_irradiance_map, bool generate_prefilter_map, bool generate_brdf_lut)
 	{
-		Renderer::get()->setup(nullptr, glm::ivec2(1280, 1280));
+		Renderer::get()->setup(nullptr, glm::ivec2(2048, 2048));
 
 		equirect_name = equirect_path.stem().string();
 		parent_equirect_path = create_save_directory(equirect_path.parent_path());
@@ -331,8 +331,11 @@ namespace Sunset
 	void EquirectToolsApplication::run()
 	{
 		{
+			// TODO: This is a lot to remember to do in order to run a single standalone frame, so maybe package into a neater abstraction?
 			Renderer::get()->begin_frame();
+			Renderer::get()->set_is_building_command_list(Renderer::get()->context()->get_buffered_frame_number(), true);
 			Renderer::get()->draw<IBLBakingStrategy>(true);
+			Renderer::get()->wait_for_command_list_build();
 			Renderer::get()->wait_for_gpu();
 		}
 
@@ -428,7 +431,10 @@ namespace Sunset
 				};
 				EquirectToolsApplication::equirect_image = ImageFactory::create(Renderer::get()->context(), config);
 
-				Renderer::get()->context()->get_command_queue(DeviceQueueType::Graphics)->submit_immediate(Renderer::get()->context(), 0, [this, staging_buffer, gfx_context = Renderer::get()->context()](void* command_buffer)
+				Renderer::get()->context()->get_command_queue(DeviceQueueType::Graphics)->submit_immediate(
+					Renderer::get()->context(),
+					0,
+					[this, staging_buffer, gfx_context = Renderer::get()->context()](void* command_buffer)
 				{
 					Image* const image_obj = CACHE_FETCH(Image, EquirectToolsApplication::equirect_image);
 					image_obj->copy_from_buffer(gfx_context, command_buffer, staging_buffer);
