@@ -238,7 +238,7 @@ namespace Sunset
 	constexpr uint16_t MAX_MESH_RESOURCE_STATES = 32;
 	constexpr uint16_t MAX_MESH_MATERIALS = MAX_MESH_RESOURCE_STATES;
 	constexpr uint32_t MIN_ENTITIES = 8192;
-	constexpr uint32_t MAX_SHADOW_CASCADES = 3;
+	constexpr uint32_t MAX_SHADOW_CASCADES = 4;
 
 	struct Bounds
 	{

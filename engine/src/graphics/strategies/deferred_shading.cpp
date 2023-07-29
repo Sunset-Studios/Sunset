@@ -43,7 +43,7 @@ namespace Sunset
 
 	AutoCVar_Float cvar_final_image_exposure("ren.final_image_exposure", "The exposure to apply once HDR color gets resolved down to LDR", 2.0f);
 
-	AutoCVar_Bool cvar_show_debug_visualizer("ren.debug.show_visualizer", "Whether or not to show the debug visualizer viewport for rendered intermediate textures", false);
+	AutoCVar_Bool cvar_show_debug_visualizer("ren.debug.show_visualizer", "Whether or not to show the debug visualizer viewport for rendered intermediate textures", true);
 
 	bool DeferredShadingStrategy::render(GraphicsContext* gfx_context, RenderGraph& render_graph, class Swapchain* swapchain, int32_t buffered_frame_number, bool b_offline)
 	{
@@ -318,9 +318,10 @@ namespace Sunset
 					.flags = ImageFlags::DepthStencil | ImageFlags::Image2DArray | ImageFlags::Sampled,
 					.usage_type = MemoryUsageType::OnlyGPU,
 					.sampler_address_mode = SamplerAddressMode::EdgeClamp,
-					.image_filter = ImageFilter::Linear,
+					.image_filter = ImageFilter::Nearest,
 					.array_count = MAX_SHADOW_CASCADES,
 					.attachment_clear = true,
+					.attachment_stencil_clear = true,
 					.split_array_layer_views = true
 				},
 				buffered_frame_number

@@ -46,7 +46,7 @@ namespace Sunset
 
 			set_scene_sunlight_intensity(scene.get(), 1.0f);
 			set_scene_sunlight_angular_radius(scene.get(), 0.9999566769f);
-			set_scene_sunlight_direction(scene.get(), glm::normalize(glm::vec3(1.0f, 0.75f, -0.25f)));
+			set_scene_sunlight_direction(scene.get(), glm::normalize(glm::vec3(1.0f, 0.95f, -0.25f)));
 			set_scene_atmospheric_turbidity(scene.get(), 2.542f);
 			set_scene_atmospheric_rayleigh(scene.get(), 1.0f);
 			set_scene_mie_coefficient(scene.get(), 0.005f);

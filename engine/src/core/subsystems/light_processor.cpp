@@ -12,6 +12,7 @@
 namespace Sunset
 {
 	AutoCVar_Bool cvar_light_to_frustum_split_line_draw("ren.debug.light_to_frustum_split_line_draw", "Whether or not to draw a line from the center of every frustum split to the CSM affecting light source", false);
+	AutoCVar_Float cvar_csm_camera_frustum_inflation("ren.csm.camera_frustum_inflation", "How much to scale the camera frustum when computing the tight fitting light space matrices", 1.5f);
 
 	void LightProcessor::initialize(class Scene* scene)
 	{
@@ -88,12 +89,12 @@ namespace Sunset
 
 	void LightProcessor::calculate_csm_matrices(Scene* scene, CameraControlComponent* camera_comp, const glm::vec3& light_dir, uint32_t buffered_frame_number)
 	{
-		static float frustum_split_percentages[MAX_SHADOW_CASCADES] = { 0.04f, 0.08f, 0.2f };
+		static float frustum_split_percentages[MAX_SHADOW_CASCADES] = { 0.02f, 0.04f, 0.1f, 0.2f };
 		ZoneScopedN("LightProcessor::calculate_csm_matrices");
 		for (uint32_t index = 0; index < MAX_SHADOW_CASCADES; ++index)
 		{
 			ZoneScopedN("LightProcessor::calculate_csm_matrices iteration");
-			const float near_plane = camera_comp->data.near_plane;
+			const float near_plane = index == 0 ? camera_comp->data.near_plane : camera_comp->data.far_plane * frustum_split_percentages[index - 1];
 			const float far_plane = camera_comp->data.far_plane * frustum_split_percentages[index];
 			scene->scene_data.lighting[buffered_frame_number].csm_plane_distances[index] = far_plane;
 			scene->scene_data.lighting[buffered_frame_number].light_space_matrices[index] = calculate_light_space_matrix(
@@ -110,29 +111,10 @@ namespace Sunset
 	{
 		ZoneScopedN("LightProcessor::calculate_light_space_matrix");
 
-		std::array<glm::vec3, 8> corners = get_world_space_frustum_corners(camera_comp, near, far);
+		const float frustum_inflation = cvar_csm_camera_frustum_inflation.get();
 
-		glm::vec3 center(0.0f, 0.0f, 0.0f);
-		for (const glm::vec3& corner : corners)
-		{
-			center += corner;
-		}
-		center /= 8.0f; 
-
-		const glm::mat4 light_view = glm::lookAt(center - light_dir, center + light_dir, WORLD_UP);
-
-		glm::vec3 min(std::numeric_limits<float>::max());
-		glm::vec3 max(std::numeric_limits<float>::lowest());
-		for (const glm::vec3& corner : corners)
-		{
-			const glm::vec3 lv_corner = glm::vec3(light_view * glm::vec4(corner, 1.0f));
-			min.x = glm::min(min.x, lv_corner.x);
-			min.y = glm::min(min.y, lv_corner.y);
-			min.z = glm::min(min.z, lv_corner.z);
-			max.x = glm::max(max.x, lv_corner.x);
-			max.y = glm::max(max.y, lv_corner.y);
-			max.z = glm::max(max.z, lv_corner.z);
-		}
+		glm::vec3 center;
+		std::array<glm::vec4, 8> corners = get_world_space_frustum_corners(camera_comp, near, far, center, frustum_inflation);
 
 		if (cvar_light_to_frustum_split_line_draw.get())
 		{
@@ -151,37 +133,56 @@ namespace Sunset
 			debug_draw_line(Renderer::get()->context(), center, center - light_dir, glm::vec3(1.0f, 0.0f, 0.0f), buffered_frame_number);
 		}
 
-		glm::mat4 light_projection = glm::ortho(min.x, max.x, min.y, max.y, min.z, max.z);
+		center.y = camera_comp->data.position.y; // Prevents an offset to the shadow map cascade when light view matrix tries to follow a downward facing camera frustum
+		const glm::mat4 light_view = glm::lookAt(center + light_dir * (far - near) * frustum_inflation, center, WORLD_UP);
 
-		return light_projection * light_view;
+		glm::vec3 min(std::numeric_limits<float>::max());
+		glm::vec3 max(std::numeric_limits<float>::lowest());
+		for (const glm::vec4& corner : corners)
+		{
+			const glm::vec3 lv_corner = light_view * corner;
+			min = glm::min(min, lv_corner);
+			max = glm::max(max, lv_corner);
+		}
+
+		const float radius = glm::length(max - min) * 0.5f;
+
+		glm::mat4 ortho = glm::ortho(-radius, radius, -radius, radius, -radius, radius);
+		ortho[1][1] *= -1;
+
+		return ortho * light_view;
 	}
 
-	std::array<glm::vec3, 8> LightProcessor::get_world_space_frustum_corners(CameraControlComponent* camera_comp, float near, float far)
+	std::array<glm::vec4, 8> LightProcessor::get_world_space_frustum_corners(CameraControlComponent* camera_comp, float near, float far, glm::vec3& out_center, float inflation_factor)
 	{
-		glm::mat3 basis;
-		basis[2] = glm::normalize(camera_comp->data.forward);
-		basis[0] = glm::normalize(glm::cross(WORLD_UP, basis[2]));
-		basis[1] = glm::normalize(glm::cross(basis[0], basis[2]));
+		glm::mat3 basis
+		{
+			glm::normalize(camera_comp->data.gpu_data.view_matrix[0]),
+			glm::normalize(camera_comp->data.gpu_data.view_matrix[1]),
+			glm::normalize(camera_comp->data.gpu_data.view_matrix[2])
+		};
 
 		const float tang = glm::tan(camera_comp->data.gpu_data.fov * 0.5f);
-		const float near_height = near * tang;
+		const float near_height = near * tang * inflation_factor;
 		const float near_width = near_height * camera_comp->data.aspect_ratio;
-		const float far_height = far * tang;
+		const float far_height = far * tang * inflation_factor;
 		const float far_width = far_height * camera_comp->data.aspect_ratio;
 
 		glm::vec3 near_center = camera_comp->data.position + basis[2] * near;
 		glm::vec3 far_center = camera_comp->data.position + basis[2] * far;
 
-		std::array<glm::vec3, 8> corners;
+		std::array<glm::vec4, 8> corners;
 
-		corners[0] = near_center + basis[1] * near_height - basis[0] * near_width;
-		corners[1] = near_center + basis[1] * near_height + basis[0] * near_width;
-		corners[2] = near_center - basis[1] * near_height + basis[0] * near_width;
-		corners[3] = near_center - basis[1] * near_height - basis[0] * near_width;
-		corners[4] = far_center + basis[1] * far_height - basis[0] * far_width;
-		corners[5] = far_center + basis[1] * far_height + basis[0] * far_width;
-		corners[6] = far_center - basis[1] * far_height + basis[0] * far_width;
-		corners[7] = far_center - basis[1] * far_height - basis[0] * far_width;
+		corners[0] = glm::vec4(near_center + basis[1] * near_height - basis[0] * near_width, 1.0f);
+		corners[1] = glm::vec4(near_center + basis[1] * near_height + basis[0] * near_width, 1.0f);
+		corners[2] = glm::vec4(near_center - basis[1] * near_height + basis[0] * near_width, 1.0f);
+		corners[3] = glm::vec4(near_center - basis[1] * near_height - basis[0] * near_width, 1.0f);
+		corners[4] = glm::vec4(far_center + basis[1] * far_height - basis[0] * far_width, 1.0f);
+		corners[5] = glm::vec4(far_center + basis[1] * far_height + basis[0] * far_width, 1.0f);
+		corners[6] = glm::vec4(far_center - basis[1] * far_height + basis[0] * far_width, 1.0f);
+		corners[7] = glm::vec4(far_center - basis[1] * far_height - basis[0] * far_width, 1.0f);
+
+		out_center = (near_center + far_center) * 0.5f;
 
 		return corners;
 	}
