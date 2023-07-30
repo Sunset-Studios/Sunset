@@ -11,12 +11,14 @@ namespace Sunset
 	{
 		MeshID mesh;
 		uint32_t section_count{ 0 };
+		float custom_bounds_scale{ 1.1f };
 		std::array<MaterialID, MAX_MESH_MATERIALS> materials;
 		std::array<ResourceStateID, MAX_MESH_RESOURCE_STATES> resource_states;
 	};
 
 	void set_mesh(MeshComponent* mesh_comp, MeshID mesh);
 	void set_material(MeshComponent* mesh_comp, MaterialID material, int32_t section = -1);
+	void set_custom_bounds_scale(MeshComponent* mesh_comp, float bounds_scale);
 
 	size_t mesh_vertex_count(MeshComponent* mesh_comp);
 	size_t mesh_index_count(MeshComponent* mesh_comp, uint32_t section = 0);

@@ -20,7 +20,7 @@ namespace Sunset
 	{
 		glm::mat4 local_transform;
 		glm::vec4 bounds_pos_radius;
-		glm::vec4 bounds_extent;
+		glm::vec4 bounds_extent_and_custom_scale;
 	};
 
 	DECLARE_GPU_SHARED_DATA(EntitySceneData, MIN_ENTITIES);

@@ -46,7 +46,7 @@ namespace Sunset
 
 			set_scene_sunlight_intensity(scene.get(), 1.0f);
 			set_scene_sunlight_angular_radius(scene.get(), 0.9999566769f);
-			set_scene_sunlight_direction(scene.get(), glm::normalize(glm::vec3(1.0f, 0.95f, -0.25f)));
+			set_scene_sunlight_direction(scene.get(), glm::normalize(glm::vec3(1.0f, 0.5f, -0.25f)));
 			set_scene_atmospheric_turbidity(scene.get(), 2.542f);
 			set_scene_atmospheric_rayleigh(scene.get(), 1.0f);
 			set_scene_mie_coefficient(scene.get(), 0.005f);
@@ -67,7 +67,7 @@ namespace Sunset
 
 				set_light_color(light_comp, glm::vec3(1.0f, 1.0f, 1.0f));
 				set_light_type(light_comp, LightType::Directional);
-				set_light_intensity(light_comp, 2.0f);
+				set_light_intensity(light_comp, 4.0f);
 				set_light_entity_index(light_comp, get_entity_index(light_entity));
 				set_light_should_use_sun_direction(light_comp, true);
 				set_light_is_csm_caster(light_comp, true);
@@ -91,6 +91,23 @@ namespace Sunset
 				set_light_entity_index(light_comp, get_entity_index(light_entity));
 			}
 
+			// Add another point light
+			{
+				EntityID light_entity = scene->make_entity();
+
+				TransformComponent* const transform_comp = scene->assign_component<TransformComponent>(light_entity);
+
+				set_position(transform_comp, glm::vec3(-15.0f, 5.0f, 0.0f));
+
+				LightComponent* const light_comp = scene->assign_component<LightComponent>(light_entity);
+
+				set_light_color(light_comp, glm::vec3(1.0f, 1.0f, 0.961f));
+				set_light_type(light_comp, LightType::Point);
+				set_light_radius(light_comp, 75.0f);
+				set_light_intensity(light_comp, 250.0f);
+				set_light_entity_index(light_comp, get_entity_index(light_entity));
+			}
+
 			// Add ground plane
 			{
 				EntityID mesh_ent = scene->make_entity();
@@ -105,23 +122,21 @@ namespace Sunset
 				MaterialID mesh_material = MaterialFactory::create(
 					Renderer::get()->context(),
 					{
-						/*.textures =
+						.textures =
 						{
 							"../../assets/foam-grip-albedo.sun",
 							"../../assets/foam-grip-normal.sun",
 							"../../assets/foam-grip-roughness.sun",
 							"../../assets/foam-grip-metallic.sun",
 							"../../assets/foam-grip-ao.sun"
-						}*/
-						.color = glm::vec3(3.0f, 3.0f, 3.0f),
-						.uniform_roughness = 0.2f,
+						}
 					}
 				);
-				//material_set_texture_tiling(Renderer::get()->context(), mesh_material, 0, 10.0f);
-				//material_set_texture_tiling(Renderer::get()->context(), mesh_material, 1, 10.0f);
-				//material_set_texture_tiling(Renderer::get()->context(), mesh_material, 2, 10.0f);
-				//material_set_texture_tiling(Renderer::get()->context(), mesh_material, 3, 10.0f);
-				//material_set_texture_tiling(Renderer::get()->context(), mesh_material, 4, 10.0f);
+				material_set_texture_tiling(Renderer::get()->context(), mesh_material, 0, 10.0f);
+				material_set_texture_tiling(Renderer::get()->context(), mesh_material, 1, 10.0f);
+				material_set_texture_tiling(Renderer::get()->context(), mesh_material, 2, 10.0f);
+				material_set_texture_tiling(Renderer::get()->context(), mesh_material, 3, 10.0f);
+				material_set_texture_tiling(Renderer::get()->context(), mesh_material, 4, 10.0f);
 
 				set_mesh(mesh_comp, MeshFactory::create_quad(Renderer::get()->context()));
 				set_material(mesh_comp, mesh_material);
@@ -166,6 +181,7 @@ namespace Sunset
 
 				set_mesh(mesh_comp, MeshFactory::create_sphere(Renderer::get()->context(), glm::ivec2(32, 32), 1.0f));
 				set_material(mesh_comp, drone_material);
+				set_custom_bounds_scale(mesh_comp, 2.0f);
 
 				BodyComponent* const body_comp = scene->assign_component<BodyComponent>(mesh_ent);
 
@@ -177,6 +193,37 @@ namespace Sunset
 				set_body_type(body_comp, PhysicsBodyType::Dynamic);
 				set_body_gravity_scale(body_comp, 1.0f);
 				set_body_restitution(body_comp, 0.5f);
+			}
+
+			// Add TV 
+			{
+				EntityID mesh_ent = scene->make_entity();
+
+				TransformComponent* const transform_comp = scene->assign_component<TransformComponent>(mesh_ent);
+
+				set_position(transform_comp, glm::vec3(-25.0f, 0.0f, 0.0f));
+				set_rotation(transform_comp, glm::vec3(0.0f, glm::radians(90.0f), 0.0f));
+				set_scale(transform_comp, glm::vec3(0.25f));
+
+				MeshComponent* const mesh_comp = scene->assign_component<MeshComponent>(mesh_ent);
+
+				MaterialID body_material = MaterialFactory::create(
+					Renderer::get()->context(),
+					{
+						.textures =
+						{
+							"../../assets/tv/tv_color.sun",
+							"../../assets/tv/tv_normal.sun",
+							"../../assets/tv/tv_roughness.sun",
+							"../../assets/tv/tv_metallic.sun",
+							"../../assets/tv/tv_ao.sun",
+							"../../assets/default_white.sun"
+						}
+					}
+				);
+
+				set_mesh(mesh_comp, MeshFactory::load(Renderer::get()->context(), "../../assets/tv/tv.sun"));
+				set_material(mesh_comp, body_material);
 			}
 
 			SimulationCore::get()->register_layer(std::move(scene));

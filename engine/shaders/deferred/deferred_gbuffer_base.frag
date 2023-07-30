@@ -20,7 +20,7 @@ struct EntitySceneData
 {
 	mat4 transform;
 	vec4 bounds_pos_radius;
-	vec4 bounds_extent;
+	vec4 bounds_extent_and_custom_scale;
 };
 
 struct CompactedObjectInstance

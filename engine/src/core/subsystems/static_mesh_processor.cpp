@@ -56,7 +56,7 @@ namespace Sunset
 			if (EntityGlobals::get()->entity_transform_dirty_states.test(entity_index))
 			{
 				const Bounds transformed_bounds = transform_mesh_bounds(mesh_comp, transform_comp->transform.local_matrix);
-				entity_data.bounds_extent = glm::vec4(transformed_bounds.extents, 1.0f);
+				entity_data.bounds_extent_and_custom_scale = glm::vec4(transformed_bounds.extents, mesh_comp->custom_bounds_scale);
 				entity_data.bounds_pos_radius = glm::vec4(transformed_bounds.origin, transformed_bounds.radius);
 				entity_data.local_transform = transform_comp->transform.local_matrix;
 			}

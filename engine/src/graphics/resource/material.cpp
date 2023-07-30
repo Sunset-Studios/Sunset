@@ -55,7 +55,9 @@ namespace Sunset
 						.path = material_ptr->description.textures[i],
 						.flags = (ImageFlags::Sampled | ImageFlags::TransferDst),
 						.usage_type = MemoryUsageType::OnlyGPU,
-						.image_filter = ImageFilter::Linear
+						.image_filter = ImageFilter::Linear,
+						.mip_count = 3,
+						.linear_mip_filtering = true
 					}
 				);
 				for (uint32_t i = 0; i < MAX_BUFFERED_FRAMES; ++i)

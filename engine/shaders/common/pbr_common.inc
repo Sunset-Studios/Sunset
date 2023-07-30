@@ -2,7 +2,7 @@
 float d_ggx(float NoH, float roughness)
 {
 	float a = NoH * roughness;
-	float k = roughness / (1.0f - NoH * NoH + a * a);
+	float k = roughness / max(0.001f, 1.0f - NoH * NoH + a * a);
 	return k * k * (1.0f / PI);
 }
 

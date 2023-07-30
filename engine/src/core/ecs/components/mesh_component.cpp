@@ -27,6 +27,12 @@ namespace Sunset
 		}
 	}
 
+	void set_custom_bounds_scale(MeshComponent* mesh_comp, float bounds_scale)
+	{
+		assert(mesh_comp != nullptr && "Cannot set bounds scale on null mesh component");
+		mesh_comp->custom_bounds_scale = bounds_scale;
+	}
+
 	size_t mesh_vertex_count(MeshComponent* mesh_comp)
 	{
 		assert(mesh_comp != nullptr && "Cannot get vertex count via null mesh component");

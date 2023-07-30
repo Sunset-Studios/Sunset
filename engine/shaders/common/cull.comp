@@ -8,7 +8,7 @@ struct EntitySceneData
 {
 	mat4 transform;
 	vec4 bounds_pos_radius;
-	vec4 bounds_extent;
+	vec4 bounds_extent_and_custom_scale;
 };
 
 layout (std430, set = 1, binding = 0) readonly buffer EntitySceneDataBuffer
@@ -157,7 +157,7 @@ void main()
 
 		// artificially inflate bounds to be more conservative with culling and to prevent
 		// "z-fighting" style cull between bounds and written depth values
-		const float radius = sphere_bounds.w * 1.1;
+		const float radius = sphere_bounds.w * entity_data.entities[object_id].bounds_extent_and_custom_scale.w;
 
 		const bool in_frustum = is_in_frustum(object_id, center, radius);
 		const bool occluded = is_occluded(object_id, center, radius);

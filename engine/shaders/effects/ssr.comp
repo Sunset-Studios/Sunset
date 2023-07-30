@@ -172,6 +172,7 @@ void main()
 	}
 
 	// Calculate several fading factors that will be used to fade out the reflection based on several conditions.
+	const float close_to_reflection_surface = clamp(pow(length(inv_view_start.z - position_to.z) / ssr_constants.max_ray_distance, 4.0), 0.0, 1.0) * (1.0 - dot(-normalize(camera_data.view[3].xyz), unit_position));
 	const float camera_facing_fade = (1.0 - max(dot(unit_position, ref), 0.0));
 	const float intersection_distance_fade = (1.0 - clamp(depth / (depth_thickness_factor), 0.0, 1.0));
 	const float max_distance_fade = (1.0 - clamp(length(position_to - position) / ssr_constants.max_ray_distance, 0.0, 1.0));
@@ -185,6 +186,7 @@ void main()
 	// The visibility of the reflection is the product of the refined hit flag, the w component of the hit position, and all fading factors.
 	float visibility =
 		refined_hit
+		* close_to_reflection_surface
 		* camera_facing_fade
 		* position_to.w
 		* intersection_distance_fade

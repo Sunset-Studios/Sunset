@@ -102,6 +102,8 @@ namespace Sunset
 				image_config.flags |= ImageFlags::TransferDst;
 				image_config.format = image_format;
 				image_config.extent = glm::vec3(image_info.extent[0], image_info.extent[1], image_info.extent[2]);
+				image_config.mip_count = glm::floor(glm::log2(glm::max(static_cast<float>(image_info.extent[0]), static_cast<float>(image_info.extent[1])))) + 1;
+				image_config.linear_mip_filtering = true;
 				image->initialize(gfx_context, image_config);
 
 				{

@@ -28,9 +28,9 @@ namespace Sunset
 	AutoCVar_Float cvar_ssao_radius("ren.ssao.radius", "The contribution radius of SSAO samples", 1.0f);
 
 	AutoCVar_Bool cvar_ssr_enabled("ren.ssr.enable", "Whether or not to do screen space reflections", true);
-	AutoCVar_Int cvar_ssr_max_ray_hit_steps("ren.ssr.max_ray_hit_steps", "Maximum number of shader loop steps to use when checking for depth hits during SSR pass", 8);
-	AutoCVar_Float cvar_ssr_max_ray_distance("ren.ssr.max_ray_distance", "Maximum distance in world units to step the reflection ray during SSR pass", 16.0f);
-	AutoCVar_Float cvar_ssr_strength("ren.ssr.strength", "Multiplier to ramp up final SSR color by", 3.0f);
+	AutoCVar_Int cvar_ssr_max_ray_hit_steps("ren.ssr.max_ray_hit_steps", "Maximum number of shader loop steps to use when checking for depth hits during SSR pass", 16);
+	AutoCVar_Float cvar_ssr_max_ray_distance("ren.ssr.max_ray_distance", "Maximum distance in world units to step the reflection ray during SSR pass", 12.0f);
+	AutoCVar_Float cvar_ssr_strength("ren.ssr.strength", "Multiplier to ramp up final SSR color by", 2.0f);
 
 	AutoCVar_Int cvar_num_bloom_pass_iterations("ren.bloom.num_pass_iterations", "The number of bloom horizontal and vertical blur iterations. (0 to turn bloom off).", 6);
 	AutoCVar_Float cvar_bloom_intensity("ren.bloom.intensity", "The intensity of the applied final bloom", 0.1f);
@@ -43,7 +43,7 @@ namespace Sunset
 
 	AutoCVar_Float cvar_final_image_exposure("ren.final_image_exposure", "The exposure to apply once HDR color gets resolved down to LDR", 2.0f);
 
-	AutoCVar_Bool cvar_show_debug_visualizer("ren.debug.show_visualizer", "Whether or not to show the debug visualizer viewport for rendered intermediate textures", true);
+	AutoCVar_Bool cvar_show_debug_visualizer("ren.debug.show_visualizer", "Whether or not to show the debug visualizer viewport for rendered intermediate textures", false);
 
 	bool DeferredShadingStrategy::render(GraphicsContext* gfx_context, RenderGraph& render_graph, class Swapchain* swapchain, int32_t buffered_frame_number, bool b_offline)
 	{
