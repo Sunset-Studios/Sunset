@@ -191,17 +191,17 @@ vec3 texture_catmull_rom(vec2 uv, int texture_index, vec2 resolution)
 
     vec3 result = vec3(0);
 
-    result += textureLod(textures_2D[nonuniformEXT(texture_index)], vec2(tex_pos_0.x, tex_pos_0.y), 0).rgb * w0.x * w0.y;
-    result += textureLod(textures_2D[nonuniformEXT(texture_index)], vec2(tex_pos_12.x, tex_pos_0.y), 0).rgb * w12.x * w0.y;
-    result += textureLod(textures_2D[nonuniformEXT(texture_index)], vec2(tex_pos_3.x, tex_pos_0.y), 0).rgb * w3.x * w0.y;
+    result += texture(textures_2D[nonuniformEXT(texture_index)], vec2(tex_pos_0.x, tex_pos_0.y)).rgb * w0.x * w0.y;
+    result += texture(textures_2D[nonuniformEXT(texture_index)], vec2(tex_pos_12.x, tex_pos_0.y)).rgb * w12.x * w0.y;
+    result += texture(textures_2D[nonuniformEXT(texture_index)], vec2(tex_pos_3.x, tex_pos_0.y)).rgb * w3.x * w0.y;
 
-    result += textureLod(textures_2D[nonuniformEXT(texture_index)], vec2(tex_pos_0.x, tex_pos_12.y), 0).rgb * w0.x * w12.y;
-    result += textureLod(textures_2D[nonuniformEXT(texture_index)], vec2(tex_pos_12.x, tex_pos_12.y), 0).rgb * w12.x * w12.y;
-    result += textureLod(textures_2D[nonuniformEXT(texture_index)], vec2(tex_pos_3.x, tex_pos_12.y), 0).rgb * w3.x * w12.y;
+    result += texture(textures_2D[nonuniformEXT(texture_index)], vec2(tex_pos_0.x, tex_pos_12.y)).rgb * w0.x * w12.y;
+    result += texture(textures_2D[nonuniformEXT(texture_index)], vec2(tex_pos_12.x, tex_pos_12.y)).rgb * w12.x * w12.y;
+    result += texture(textures_2D[nonuniformEXT(texture_index)], vec2(tex_pos_3.x, tex_pos_12.y)).rgb * w3.x * w12.y;
 
-    result += textureLod(textures_2D[nonuniformEXT(texture_index)], vec2(tex_pos_0.x, tex_pos_3.y), 0).rgb * w0.x * w3.y;
-    result += textureLod(textures_2D[nonuniformEXT(texture_index)], vec2(tex_pos_12.x, tex_pos_3.y), 0).rgb * w12.x * w3.y;
-    result += textureLod(textures_2D[nonuniformEXT(texture_index)], vec2(tex_pos_3.x, tex_pos_3.y), 0).rgb * w3.x * w3.y;
+    result += texture(textures_2D[nonuniformEXT(texture_index)], vec2(tex_pos_0.x, tex_pos_3.y)).rgb * w0.x * w3.y;
+    result += texture(textures_2D[nonuniformEXT(texture_index)], vec2(tex_pos_12.x, tex_pos_3.y)).rgb * w12.x * w3.y;
+    result += texture(textures_2D[nonuniformEXT(texture_index)], vec2(tex_pos_3.x, tex_pos_3.y)).rgb * w3.x * w3.y;
 
     return result;
 }

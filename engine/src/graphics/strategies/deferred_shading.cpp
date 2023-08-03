@@ -28,7 +28,7 @@ namespace Sunset
 	AutoCVar_Float cvar_ssao_radius("ren.ssao.radius", "The contribution radius of SSAO samples", 1.0f);
 
 	AutoCVar_Bool cvar_ssr_enabled("ren.ssr.enable", "Whether or not to do screen space reflections", true);
-	AutoCVar_Int cvar_ssr_max_ray_hit_steps("ren.ssr.max_ray_hit_steps", "Maximum number of shader loop steps to use when checking for depth hits during SSR pass", 16);
+	AutoCVar_Int cvar_ssr_max_ray_hit_steps("ren.ssr.max_ray_hit_steps", "Maximum number of shader loop steps to use when checking for depth hits during SSR pass", 32);
 	AutoCVar_Float cvar_ssr_max_ray_distance("ren.ssr.max_ray_distance", "Maximum distance in world units to step the reflection ray during SSR pass", 12.0f);
 	AutoCVar_Float cvar_ssr_strength("ren.ssr.strength", "Multiplier to ramp up final SSR color by", 2.0f);
 

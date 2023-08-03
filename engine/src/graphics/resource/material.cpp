@@ -56,7 +56,6 @@ namespace Sunset
 						.flags = (ImageFlags::Sampled | ImageFlags::TransferDst),
 						.usage_type = MemoryUsageType::OnlyGPU,
 						.image_filter = ImageFilter::Linear,
-						.mip_count = 3,
 						.linear_mip_filtering = true
 					}
 				);

@@ -99,7 +99,7 @@ namespace Sunset
 					image_view_info.image = image;
 					image_view_info.format = VK_FROM_SUNSET_FORMAT(config.format);
 					image_view_info.subresourceRange.baseMipLevel = i;
-					image_view_info.subresourceRange.levelCount = 1;
+					image_view_info.subresourceRange.levelCount = glm::max(1u, config.mip_count - i);
 					image_view_info.subresourceRange.baseArrayLayer = j;
 					image_view_info.subresourceRange.layerCount = j == 0 ? config.array_count : 1;
 					image_view_info.subresourceRange.aspectMask = VK_FROM_SUNSET_IMAGE_USAGE_ASPECT_FLAGS(config.flags);
@@ -117,7 +117,7 @@ namespace Sunset
 				image_view_info.image = image;
 				image_view_info.format = VK_FROM_SUNSET_FORMAT(config.format);
 				image_view_info.subresourceRange.baseMipLevel = i;
-				image_view_info.subresourceRange.levelCount = 1;
+				image_view_info.subresourceRange.levelCount = glm::max(1u, config.mip_count - i);
 				image_view_info.subresourceRange.baseArrayLayer = 0;
 				image_view_info.subresourceRange.layerCount = config.array_count;
 				image_view_info.subresourceRange.aspectMask = VK_FROM_SUNSET_IMAGE_USAGE_ASPECT_FLAGS(config.flags);
@@ -138,10 +138,10 @@ namespace Sunset
 			sampler_create_info.addressModeV = VK_FROM_SUNSET_SAMPLER_ADDRESS_MODE(config.sampler_address_mode);
 			sampler_create_info.addressModeW = VK_FROM_SUNSET_SAMPLER_ADDRESS_MODE(config.sampler_address_mode);
 			sampler_create_info.minLod = 0.0f;
-			sampler_create_info.maxLod = 16.0f;
+			sampler_create_info.maxLod = config.mip_count;
 			sampler_create_info.mipmapMode = config.linear_mip_filtering ? VK_SAMPLER_MIPMAP_MODE_LINEAR : VK_SAMPLER_MIPMAP_MODE_NEAREST;
 			sampler_create_info.anisotropyEnable = VK_TRUE;
-			sampler_create_info.maxAnisotropy = 1.0f;
+			sampler_create_info.maxAnisotropy = 16.0f;
 
 			VkSamplerReductionModeCreateInfo create_info_sampler_reduction = {};
 			if (config.does_min_reduction)
@@ -201,12 +201,18 @@ namespace Sunset
 			AccessFlags::TransferWrite,
 			layout,
 			ImageLayout::TransferDestination,
-			PipelineStageType::TopOfPipe,
+			PipelineStageType::AllGraphics,
 			PipelineStageType::Transfer
 		);
 
 		{
 			VkCommandBuffer cmd = static_cast<VkCommandBuffer>(command_buffer);
+
+			VkExtent3D image_extent {
+				mip_level == 0 ? static_cast<uint32_t>(config.extent.x) : Maths::ppot(static_cast<unsigned int>(config.extent.x)) >> mip_level,
+				mip_level == 0 ? static_cast<uint32_t>(config.extent.y) : Maths::ppot(static_cast<unsigned int>(config.extent.y)) >> mip_level,
+				mip_level == 0 ? static_cast<uint32_t>(config.extent.z) : glm::max(1u, Maths::ppot(static_cast<unsigned int>(config.extent.z)) >> mip_level)
+			};
 
 			VkBufferImageCopy buffer_image_copy = {};
 			buffer_image_copy.bufferOffset = buffer_offset;
@@ -216,7 +222,7 @@ namespace Sunset
 			buffer_image_copy.imageSubresource.mipLevel = mip_level;
 			buffer_image_copy.imageSubresource.baseArrayLayer = array_layer;
 			buffer_image_copy.imageSubresource.layerCount = array_count;
-			buffer_image_copy.imageExtent = VkExtent3D{ static_cast<unsigned int>(config.extent.x) >> mip_level, static_cast<unsigned int>(config.extent.y) >> mip_level, static_cast<unsigned int>(glm::max(1.0f, config.extent.z)) };
+			buffer_image_copy.imageExtent = image_extent;
 
 			VkBuffer other_buffer = static_cast<VkBuffer>(buffer->get());
 			vkCmdCopyBufferToImage(cmd, other_buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &buffer_image_copy);

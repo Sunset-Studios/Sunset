@@ -102,15 +102,19 @@ namespace Sunset
 				image_config.flags |= ImageFlags::TransferDst;
 				image_config.format = image_format;
 				image_config.extent = glm::vec3(image_info.extent[0], image_info.extent[1], image_info.extent[2]);
-				image_config.mip_count = glm::floor(glm::log2(glm::max(static_cast<float>(image_info.extent[0]), static_cast<float>(image_info.extent[1])))) + 1;
-				image_config.linear_mip_filtering = true;
+				image_config.mip_count = image_info.mips;
 				image->initialize(gfx_context, image_config);
 
 				{
 					ZoneScopedN("ImageFactory::load: copy_from_buffer");
-					gfx_context->get_command_queue(DeviceQueueType::Graphics)->submit_immediate(gfx_context, 0, [image, staging_buffer, gfx_context](void* command_buffer)
+					gfx_context->get_command_queue(DeviceQueueType::Graphics)->submit_immediate(gfx_context, 0, [image, image_info, staging_buffer, gfx_context, mip_count = image_config.mip_count](void* command_buffer)
 					{
-						image->copy_from_buffer(gfx_context, command_buffer, staging_buffer);
+						size_t current_buffer_offset = 0;
+						for (uint32_t mip = 0; mip < mip_count; ++mip)
+						{
+							image->copy_from_buffer(gfx_context, command_buffer, staging_buffer, current_buffer_offset, mip);
+							current_buffer_offset += image_info.mip_buffer_start_indices[mip];
+						}
 					});
 				}
 			}
