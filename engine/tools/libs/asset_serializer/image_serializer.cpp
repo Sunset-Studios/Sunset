@@ -28,6 +28,7 @@ namespace Sunset
 		image_info.size = image_metadata["buffer_size"];
 		image_info.file_path = image_metadata["file_path"];
 		image_info.compressed_block_sizes = image_metadata["compressed_block_sizes"].get<std::vector<size_t>>();
+		image_info.uncompressed_block_sizes = image_metadata["uncompressed_block_sizes"].get<std::vector<size_t>>();
 		image_info.mip_buffer_start_indices = image_metadata["mip_buffer_sizes"].get<std::vector<size_t>>();
 		image_info.mips = image_metadata["mips"];
 		image_info.channels = image_metadata["channels"];
@@ -43,7 +44,7 @@ namespace Sunset
 			int32_t compressed_block_offset = 0, block_idx = 0;
 			for (size_t compressed_block_size : serialized_image_info->compressed_block_sizes)
 			{
-				LZ4_decompress_safe(source_buffer + compressed_block_offset, destination_buffer + block_idx * PACKED_BUFFER_BLOCK_SIZE, compressed_block_size, PACKED_BUFFER_BLOCK_SIZE);
+				LZ4_decompress_safe(source_buffer + compressed_block_offset, destination_buffer + block_idx * serialized_image_info->uncompressed_block_sizes[block_idx], compressed_block_size, PACKED_BUFFER_BLOCK_SIZE);
 				compressed_block_offset += compressed_block_size;
 				++block_idx;
 			}
@@ -61,12 +62,18 @@ namespace Sunset
 		{
 			ZoneScopedN("unpack_image_block: LZ4_decompress_safe");
 			int32_t compressed_block_offset = 0;
+			int32_t uncompressed_block_offset = 0;
 			for (uint32_t i = 0; i < serialized_image_info->compressed_block_sizes.size() && i < block_index; ++i)
 			{
 				compressed_block_offset += serialized_image_info->compressed_block_sizes[i];
+				uncompressed_block_offset += serialized_image_info->uncompressed_block_sizes[i];
 			}
-			const size_t compressed_block_size = serialized_image_info->compressed_block_sizes[block_index];
-			LZ4_decompress_safe(source_buffer + compressed_block_offset, destination_buffer + block_index * PACKED_BUFFER_BLOCK_SIZE, compressed_block_size, PACKED_BUFFER_BLOCK_SIZE);
+			LZ4_decompress_safe(
+				source_buffer + compressed_block_offset,
+				destination_buffer + uncompressed_block_offset,
+				serialized_image_info->compressed_block_sizes[block_index],
+				PACKED_BUFFER_BLOCK_SIZE
+			);
 		}
 		else
 		{
@@ -118,6 +125,10 @@ namespace Sunset
 		compressed_block_sizes.reserve((asset_buffer_size / PACKED_BUFFER_BLOCK_SIZE) + 1);
 		out_metadata["compressed_block_sizes"] = compressed_block_sizes;
 
+		std::vector<size_t> uncompressed_block_sizes;
+		uncompressed_block_sizes.reserve(compressed_block_sizes.capacity());
+		out_metadata["uncompressed_block_sizes"] = uncompressed_block_sizes;
+
 		std::vector<size_t> mip_buffer_start_indices;
 		mip_buffer_start_indices.resize(serialized_image_info->mips, 0);
 		out_metadata["mip_buffer_sizes"] = mip_buffer_start_indices;
@@ -128,6 +139,7 @@ namespace Sunset
 	size_t pack_image_mip(SerializedImageInfo* serialized_image_info, SerializedAsset& asset, void* pixel_buffer, nlohmann::json& metadata, uint32_t mip, size_t mip_width, size_t mip_height, size_t dst_buffer_offset)
 	{
 		std::vector<size_t> block_sizes = metadata["compressed_block_sizes"].get<std::vector<size_t>>();
+		std::vector<size_t> uncompressed_block_sizes = metadata["uncompressed_block_sizes"].get<std::vector<size_t>>();
 		std::vector<size_t> mip_buffer_sizes = metadata["mip_buffer_sizes"].get<std::vector<size_t>>();
 
 		const size_t mip_size = mip_width * mip_height * serialized_image_info->channels;
@@ -141,6 +153,7 @@ namespace Sunset
 
 			const size_t compressed_block_size = LZ4_compress_default((const char*)pixel_buffer + i, asset.binary.data() + dst_buffer_offset + total_compressed_buffer_size, current_block_size, compressed_staging_size);
 			block_sizes.push_back(compressed_block_size);
+			uncompressed_block_sizes.push_back(current_block_size);
 
 			total_compressed_buffer_size += compressed_block_size;
 			total_uncompressed_buffer_size += current_block_size;
@@ -148,6 +161,7 @@ namespace Sunset
 		mip_buffer_sizes[mip] = total_uncompressed_buffer_size;
 
 		metadata["compressed_block_sizes"] = block_sizes;
+		metadata["uncompressed_block_sizes"] = uncompressed_block_sizes;
 		metadata["mip_buffer_sizes"] = mip_buffer_sizes;
 
 		return total_compressed_buffer_size;

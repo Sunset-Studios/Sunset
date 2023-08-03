@@ -103,8 +103,6 @@ namespace Sunset
 				image_config.format = image_format;
 				image_config.extent = glm::vec3(image_info.extent[0], image_info.extent[1], image_info.extent[2]);
 				image_config.mip_count = image_info.mips;
-				image_config.linear_mip_filtering = true;
-				image_config.image_filter = ImageFilter::Linear;
 				image->initialize(gfx_context, image_config);
 
 				{

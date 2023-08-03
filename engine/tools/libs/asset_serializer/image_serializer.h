@@ -17,6 +17,7 @@ namespace Sunset
 		uint32_t extent[3];
 		std::string file_path;
 		std::vector<size_t> compressed_block_sizes;
+		std::vector<size_t> uncompressed_block_sizes;
 		std::vector<size_t> mip_buffer_start_indices;
 		uint32_t mips;
 		uint32_t channels;
