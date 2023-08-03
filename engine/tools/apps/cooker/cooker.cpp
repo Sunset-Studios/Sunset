@@ -2,12 +2,16 @@
 #include <image_serializer.h>
 #include <mesh_serializer.h>
 #include <shader_serializer.h>
+#include <maths.h>
 
 #include <iostream>
 #include <fstream>
 
 #define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_RESIZE_IMPLEMENTATION
+
 #include <stb_image.h>
+#include <stb_image_resize.h>
 #include <tiny_obj_loader.h>
 #include <shaderc/shaderc.hpp>
 #include <ofbx.h>
@@ -26,18 +30,42 @@ namespace Sunset
 		{
 			std::cout << "Failed to load image file " << input_path << std::endl;
 		}
-
-		int texture_size = texture_width * texture_height * 4;
+		
+		const bool b_is_pre_mipped = input_path.string().find("mip_") != std::string::npos;
 
 		SerializedImageInfo image_info;
-		image_info.size = texture_size;
+		image_info.size = texture_width * texture_height * 4;
 		image_info.extent[0] = texture_width;
 		image_info.extent[1] = texture_height;
 		image_info.extent[2] = 1;
 		image_info.format = Format::UNorm4x8;
 		image_info.file_path = input_path.string();
+		image_info.channels = 4;
+		image_info.mips = b_is_pre_mipped ? 1 : glm::floor(glm::log2(glm::max(static_cast<float>(image_info.extent[0]), static_cast<float>(image_info.extent[1])))) + 1;
 
-		SerializedAsset new_image_asset = pack_image(&image_info, pixel_buffer);
+		nlohmann::json image_metadata;
+		SerializedAsset new_image_asset = pack_image_begin(&image_info, image_metadata);
+
+		size_t total_compressed_buffer_size = pack_image_mip(&image_info, new_image_asset, pixel_buffer, image_metadata, 0, image_info.extent[0], image_info.extent[1]);
+
+		{
+			const size_t pot_width = Maths::ppot(texture_width);
+			const size_t pot_height = Maths::ppot(texture_height);
+
+			std::vector<unsigned char> mip_pixel_buffer;
+			mip_pixel_buffer.resize(image_info.size, 0);
+
+			for (uint32_t m = 1; m < image_info.mips; ++m)
+			{
+				const size_t mip_width = glm::clamp(pot_width >> m, size_t(1), pot_width);
+				const size_t mip_height = glm::clamp(pot_height >> m, size_t(1), pot_height);
+				stbir_resize_uint8(pixel_buffer, texture_width, texture_height, 0, mip_pixel_buffer.data(), mip_width, mip_height, 0, image_info.channels);
+				total_compressed_buffer_size += pack_image_mip(&image_info, new_image_asset, mip_pixel_buffer.data(), image_metadata, m, mip_width, mip_height, total_compressed_buffer_size);
+				std::fill(mip_pixel_buffer.begin(), mip_pixel_buffer.end(), 0);
+			}
+		}
+
+		pack_image_end(new_image_asset, image_metadata, total_compressed_buffer_size);
 
 		stbi_image_free(pixel_buffer);
 

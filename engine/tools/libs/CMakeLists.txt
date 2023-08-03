@@ -9,6 +9,7 @@ add_library(AssetSerializer STATIC
 	${CMAKE_CURRENT_SOURCE_DIR}/asset_serializer/mesh_serializer.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/asset_serializer/shader_serializer.h
 	${CMAKE_CURRENT_SOURCE_DIR}/asset_serializer/shader_serializer.cpp
+
 )
 
 set_property(TARGET AssetSerializer PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:AssetSerializer>")
@@ -18,6 +19,7 @@ target_compile_definitions(AssetSerializer PRIVATE PROJECT_PATH="${CMAKE_SOURCE_
 target_include_directories(AssetSerializer PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/asset_serializer
 	${CMAKE_SOURCE_DIR}/engine/src/core
+	${CMAKE_SOURCE_DIR}/engine/src/utility
 	${CMAKE_SOURCE_DIR}/engine/third_party/tracy/public
 	${CMAKE_SOURCE_DIR}/engine/third_party/parallel_hashmap)
 
