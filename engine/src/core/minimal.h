@@ -235,7 +235,7 @@ namespace Sunset
 	constexpr uint16_t MAX_BUFFERED_FRAMES = 2;
 	constexpr uint16_t MAX_MATERIALS = 16536;
 	constexpr uint16_t MAX_MATERIAL_TEXTURES = 16;
-	constexpr uint16_t MAX_MESH_RESOURCE_STATES = 32;
+	constexpr uint16_t MAX_MESH_RESOURCE_STATES = 127;
 	constexpr uint16_t MAX_MESH_MATERIALS = MAX_MESH_RESOURCE_STATES;
 	constexpr uint32_t MIN_ENTITIES = 8192;
 	constexpr uint32_t MAX_SHADOW_CASCADES = 4;

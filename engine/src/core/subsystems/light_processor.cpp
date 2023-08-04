@@ -12,7 +12,7 @@
 namespace Sunset
 {
 	AutoCVar_Bool cvar_light_to_frustum_split_line_draw("ren.debug.light_to_frustum_split_line_draw", "Whether or not to draw a line from the center of every frustum split to the CSM affecting light source", false);
-	AutoCVar_Float cvar_csm_camera_frustum_inflation("ren.csm.camera_frustum_inflation", "How much to scale the camera frustum when computing the tight fitting light space matrices", 1.5f);
+	AutoCVar_Float cvar_csm_camera_frustum_inflation("ren.csm.camera_frustum_inflation", "How much to scale the camera frustum when computing the tight fitting light space matrices", 2.0f);
 
 	void LightProcessor::initialize(class Scene* scene)
 	{

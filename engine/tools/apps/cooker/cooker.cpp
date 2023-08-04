@@ -325,7 +325,7 @@ namespace Sunset
 					VertexPNCUTB32 new_vertex;
 
 					glm::vec4 vertex_pos(fbx_vertices[v].x, fbx_vertices[v].y, fbx_vertices[v].z, 1.0f);
-					vertex_pos = world_matrix * vertex_pos;
+					vertex_pos = world_matrix * geometric_matrix * vertex_pos;
 					
 					new_vertex.position[0] = vertex_pos.x;
 					new_vertex.position[1] = vertex_pos.y;
