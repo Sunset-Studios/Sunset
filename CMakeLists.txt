@@ -179,3 +179,7 @@ if (MSVC)
 endif()
 
 add_subdirectory("${ENGINE_DIR}")
+
+if (DEFINED APPLICATION_NAME)
+  add_subdirectory("${APPLICATION_NAME}")
+endif()

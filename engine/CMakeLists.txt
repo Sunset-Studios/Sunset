@@ -29,7 +29,6 @@ target_link_libraries(Sunset vkbootstrap vma glm imgui lz4 json spirv_reflect Vu
 
 target_include_directories(Sunset PUBLIC ${INCLUDE_DIRS} ${JoltPhysics_SOURCE_DIR}/../Jolt)
 
-add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/examples")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/tools/apps")
 
 add_custom_command(TARGET ${SUNSET_LIB} POST_BUILD

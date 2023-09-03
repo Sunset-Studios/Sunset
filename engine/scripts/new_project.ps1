@@ -2,14 +2,14 @@ param(
     $Name
 )
 
-while ($null -eq $Name -or $Name -eq '')
+while ($Name -eq $null -or $Name -eq '')
 {
     $Name = read-host -Prompt "Enter a path from src for the new source file`n- (Ending the file path with a file extension will generate the single file)`n- (Ending the file without a file extension will generate a .h/.cpp wombo combo for the given file path)`n" 
 }
 
 $SrcPath = "$PSScriptRoot/../src";
 
-Push-Location; Set-Location $SrcPath;
+pushd; cd $SrcPath;
 
 # Only create the single item if a file extension was provided
 if ($Name -like "*`.*")
@@ -27,6 +27,6 @@ else
     New-Item -Path $CPP -ItemType File -Value $CPPContent -Force
 }
 
-Pop-Location;
+popd;
 
 cmd.exe /c 'build.bat'
