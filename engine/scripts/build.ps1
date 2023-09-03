@@ -57,7 +57,8 @@ if ($clean)
 Push-Location
 Set-Location $BinPath
 
-$exec = "cmake -G `"Visual Studio 17 2022`" -DAPPLICATION_NAME=$name"
+$exec = "git submodule update --init --recursive"
+$exec = "$exec; cmake -G `"Visual Studio 17 2022`" -DAPPLICATION_NAME=$name"
 
 if ($development)
 {
