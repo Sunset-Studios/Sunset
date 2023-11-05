@@ -16,4 +16,4 @@ Make sure to install **[CMake](https://cmake.org/download/)**, **[Python](https:
 Sunset is available under the MIT License, and therefore anyone is free to fork the project and modify it as they wish so long as they maintain attributions to the original author of the project.
 
 ## Contributing
-If you wish to contribute to this project (at which you have my many thanks), please submit any pull requests you may have to the gold branch and not master, as it is easier for me to integrate changes selectively if need be. If you have any inquiries or particularly nice ideas, feel free to [DM Me](https://twitter.com/pervasivesense)
+If you wish to contribute to this project (at which you have my many thanks), please fork and submit any pull requests you may have to the gold branch and not master, as it is easier for me to integrate changes selectively if need be. If you have any inquiries, particularly nice ideas, or want to become a direct collaborator for this project feel free to [DM Me](https://twitter.com/pervasivesense)
