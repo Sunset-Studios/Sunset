@@ -301,7 +301,7 @@ namespace Sunset
 		}
 	};
 
-	void EquirectToolsApplication::init(const std::filesystem::path& equirect_path, bool generate_cubemap, bool generate_irradiance_map, bool generate_prefilter_map, bool generate_brdf_lut)
+	void EquirectToolsApplication::init(const std::filesystem::path& equirect_path, bool generate_cubemap, bool generate_irradiance_map, bool generate_prefilter_map, bool generate_brdf_lut, bool flip_writes)
 	{
 		Renderer::get()->setup(nullptr, glm::ivec2(2048, 2048));
 
@@ -311,6 +311,7 @@ namespace Sunset
 		b_generate_irradiance_map = generate_irradiance_map;
 		b_generate_prefilter_map = generate_prefilter_map;
 		b_generate_brdf_lut = generate_brdf_lut;
+		b_flip_writes = b_flip_writes;
 
 		load_equirect_image(equirect_path);
 
@@ -342,22 +343,22 @@ namespace Sunset
 		// Save off output images
 		if (b_generate_cubemap_textures)
 		{
-			write_ibl_texture_to_png(parent_equirect_path, "cubemap", EquirectToolsApplication::equirect_cubemap_image, true, true);
+			write_ibl_texture_to_png(parent_equirect_path, "cubemap", EquirectToolsApplication::equirect_cubemap_image, true, b_flip_writes);
 		}
 
 		if (b_generate_irradiance_map)
 		{
-			write_ibl_texture_to_png(parent_equirect_path, "irradiance", EquirectToolsApplication::irradiance_map_image, false, true);
+			write_ibl_texture_to_png(parent_equirect_path, "irradiance", EquirectToolsApplication::irradiance_map_image, false, b_flip_writes);
 		}
 
 		if (b_generate_prefilter_map)
 		{
-			write_ibl_texture_to_png(parent_equirect_path, "prefilter", EquirectToolsApplication::prefilter_map_image, false, true);
+			write_ibl_texture_to_png(parent_equirect_path, "prefilter", EquirectToolsApplication::prefilter_map_image, false, b_flip_writes);
 		}
 
 		if (b_generate_brdf_lut)
 		{
-			write_ibl_texture_to_png(parent_equirect_path, "brdf_lut", EquirectToolsApplication::brdf_lut_image, true, true);
+			write_ibl_texture_to_png(parent_equirect_path, "brdf_lut", EquirectToolsApplication::brdf_lut_image, true, b_flip_writes);
 		}
 	}
 
