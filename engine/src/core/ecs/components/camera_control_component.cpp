@@ -21,7 +21,7 @@ namespace Sunset
 		camera_comp->data.aspect_ratio = new_aspect_ratio;
 	}
 
-	void set_camera_aspect_ratio(class Scene* scene, EntityID entity, CameraControlComponent* camera_comp, float new_aspect_ratio)
+	void set_camera_aspect_ratio(class Scene* scene, EntityID entity, float new_aspect_ratio)
 	{
 		if (CameraControlComponent* const camera_comp = scene->get_component<CameraControlComponent>(entity))
 		{
@@ -34,7 +34,7 @@ namespace Sunset
 		camera_comp->data.near_plane = new_near_plane;
 	}
 
-	void set_camera_near_plane(class Scene* scene, EntityID entity, CameraControlComponent* camera_comp, float new_near_plane)
+	void set_camera_near_plane(class Scene* scene, EntityID entity, float new_near_plane)
 	{
 		if (CameraControlComponent* const camera_comp = scene->get_component<CameraControlComponent>(entity))
 		{
@@ -47,7 +47,7 @@ namespace Sunset
 		camera_comp->data.far_plane = new_far_plane;
 	}
 
-	void set_camera_far_plane(class Scene* scene, EntityID entity, CameraControlComponent* camera_comp, float new_far_plane)
+	void set_camera_far_plane(class Scene* scene, EntityID entity, float new_far_plane)
 	{
 		if (CameraControlComponent* const camera_comp = scene->get_component<CameraControlComponent>(entity))
 		{
@@ -61,7 +61,7 @@ namespace Sunset
 		camera_comp->data.position = new_position;
 	}
 
-	void set_camera_position(class Scene* scene, EntityID entity, CameraControlComponent* camera_comp, const glm::vec3& new_position)
+	void set_camera_position(class Scene* scene, EntityID entity, const glm::vec3& new_position)
 	{
 		if (CameraControlComponent* const camera_comp = scene->get_component<CameraControlComponent>(entity))
 		{
@@ -106,7 +106,7 @@ namespace Sunset
 		camera_comp->input.look_speed = new_look_speed;
 	}
 
-	void set_camera_move_speed(class Scene* scene, EntityID entity, CameraControlComponent* camera_comp, float new_move_speed)
+	void set_camera_move_speed(class Scene* scene, EntityID entity, float new_move_speed)
 	{
 		if (CameraControlComponent* const camera_comp = scene->get_component<CameraControlComponent>(entity))
 		{
