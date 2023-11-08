@@ -15,7 +15,7 @@ namespace Sunset
 	class EquirectToolsApplication
 	{
 		public:
-			void init(const std::filesystem::path& equirect_path, bool generate_cubemap = false, bool generate_irradiance_map = false, bool generate_prefilter_map = false, bool generate_brdf_lut = false);
+			void init(const std::filesystem::path& equirect_path, bool generate_cubemap = false, bool generate_irradiance_map = false, bool generate_prefilter_map = false, bool generate_brdf_lut = false, bool flip_writes = true);
 			void cleanup();
 			void run();
 
@@ -44,5 +44,6 @@ namespace Sunset
 			bool b_generate_irradiance_map{ false };
 			bool b_generate_prefilter_map{ false };
 			bool b_generate_brdf_lut{ false };
+			bool b_flip_writes{ true };
 	};
 }
