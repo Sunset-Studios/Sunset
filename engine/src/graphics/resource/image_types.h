@@ -41,6 +41,7 @@ namespace Sunset
 		uint8_t does_min_reduction : 1 = 0;
 		uint8_t linear_mip_filtering : 1 = 0;
 		uint8_t split_array_layer_views : 1 = 0;
-		uint8_t padding : 2 = 0;
+		uint8_t mips_in_rendering: 1 = 1;
+		uint8_t padding : 1 = 0;
 	};
 }
