@@ -12,7 +12,7 @@ int main(int argc, char* argv[])
 		{
 			const std::filesystem::path extension = p.path().extension();
 
-			if (extension == ".png")
+			if (extension == ".png" || extension == ".jpg")
 			{
 				std::cout << "Cooking texture: " << p << std::endl;
 				auto new_path = p.path();

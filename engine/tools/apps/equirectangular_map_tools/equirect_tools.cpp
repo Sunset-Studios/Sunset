@@ -347,31 +347,18 @@ namespace Sunset
 
 		if (b_generate_irradiance_map)
 		{
-			write_ibl_texture_to_png(parent_equirect_path, "irradiance", EquirectToolsApplication::irradiance_map_image, false);
+			write_ibl_texture_to_png(parent_equirect_path, "irradiance", EquirectToolsApplication::irradiance_map_image, false, true);
 		}
 
 		if (b_generate_prefilter_map)
 		{
-			write_ibl_texture_to_png(parent_equirect_path, "prefilter", EquirectToolsApplication::prefilter_map_image, false);
+			write_ibl_texture_to_png(parent_equirect_path, "prefilter", EquirectToolsApplication::prefilter_map_image, false, true);
 		}
 
 		if (b_generate_brdf_lut)
 		{
 			write_ibl_texture_to_png(parent_equirect_path, "brdf_lut", EquirectToolsApplication::brdf_lut_image, true, true);
 		}
-
-		//bool bQuit = false;
-
-		//while (!bQuit)
-		//{
-		//	Renderer::get()->context()->get_window()->poll();
-
-		//	{
-		//		ScopedRender<IBLBakingStrategy> scoped_render(Renderer::get());
-
-		//		SimulationCore::get()->update();
-		//	}
-		//}
 	}
 
 	std::filesystem::path EquirectToolsApplication::create_save_directory(const std::filesystem::path& equirect_path)
@@ -427,7 +414,8 @@ namespace Sunset
 					.flags = ImageFlags::Color | ImageFlags::TransferDst | ImageFlags::Sampled,
 					.usage_type = MemoryUsageType::OnlyGPU,
 					.sampler_address_mode = SamplerAddressMode::EdgeClamp,
-					.image_filter = ImageFilter::Linear
+					.image_filter = ImageFilter::Linear,
+					.mips_in_rendering = false
 				};
 				EquirectToolsApplication::equirect_image = ImageFactory::create(Renderer::get()->context(), config);
 
@@ -458,7 +446,8 @@ namespace Sunset
 			.sampler_address_mode = SamplerAddressMode::EdgeClamp,
 			.image_filter = ImageFilter::Linear,
 			.mip_count = static_cast<uint32_t>(std::log2(Maths::npot(viewport_extent.x))),
-			.array_count = 6
+			.array_count = 6,
+			.mips_in_rendering = false 
 		};
 		EquirectToolsApplication::equirect_cubemap_image = ImageFactory::create(Renderer::get()->context(), config);
 	}
@@ -474,7 +463,8 @@ namespace Sunset
 			.usage_type = MemoryUsageType::OnlyGPU,
 			.sampler_address_mode = SamplerAddressMode::EdgeClamp,
 			.image_filter = ImageFilter::Linear,
-			.array_count = 6
+			.array_count = 6,
+			.mips_in_rendering = false 
 		};
 		EquirectToolsApplication::irradiance_map_image = ImageFactory::create(Renderer::get()->context(), config);
 	}
@@ -492,7 +482,8 @@ namespace Sunset
 			.image_filter = ImageFilter::Linear,
 			.mip_count = 5,
 			.array_count = 6,
-			.linear_mip_filtering = true
+			.linear_mip_filtering = true,
+			.mips_in_rendering = false 
 		};
 		EquirectToolsApplication::prefilter_map_image = ImageFactory::create(Renderer::get()->context(), config);
 	}
@@ -507,7 +498,8 @@ namespace Sunset
 			.flags = ImageFlags::Color | ImageFlags::Image2D | ImageFlags::Sampled | ImageFlags::TransferSrc,
 			.usage_type = MemoryUsageType::OnlyGPU,
 			.sampler_address_mode = SamplerAddressMode::EdgeClamp,
-			.image_filter = ImageFilter::Linear
+			.image_filter = ImageFilter::Linear,
+			.mips_in_rendering = false 
 		};
 		EquirectToolsApplication::brdf_lut_image = ImageFactory::create(Renderer::get()->context(), config);
 	}
