@@ -99,7 +99,7 @@ namespace Sunset
 					image_view_info.image = image;
 					image_view_info.format = VK_FROM_SUNSET_FORMAT(config.format);
 					image_view_info.subresourceRange.baseMipLevel = i;
-					image_view_info.subresourceRange.levelCount = glm::max(1u, config.mip_count - i);
+					image_view_info.subresourceRange.levelCount = config.mips_in_rendering ? glm::max(1u, config.mip_count - i) : 1;
 					image_view_info.subresourceRange.baseArrayLayer = j;
 					image_view_info.subresourceRange.layerCount = j == 0 ? config.array_count : 1;
 					image_view_info.subresourceRange.aspectMask = VK_FROM_SUNSET_IMAGE_USAGE_ASPECT_FLAGS(config.flags);
@@ -117,7 +117,7 @@ namespace Sunset
 				image_view_info.image = image;
 				image_view_info.format = VK_FROM_SUNSET_FORMAT(config.format);
 				image_view_info.subresourceRange.baseMipLevel = i;
-				image_view_info.subresourceRange.levelCount = glm::max(1u, config.mip_count - i);
+				image_view_info.subresourceRange.levelCount = config.mips_in_rendering ? glm::max(1u, config.mip_count - i) : 1;
 				image_view_info.subresourceRange.baseArrayLayer = 0;
 				image_view_info.subresourceRange.layerCount = config.array_count;
 				image_view_info.subresourceRange.aspectMask = VK_FROM_SUNSET_IMAGE_USAGE_ASPECT_FLAGS(config.flags);

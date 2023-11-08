@@ -20,6 +20,8 @@ namespace Sunset
 {
 	bool Cooker::cook_image(const std::filesystem::path& input_path, const std::filesystem::path& output_path)
 	{
+		stbi_set_flip_vertically_on_load(true);
+
 		int texture_width, texture_height, texture_channels;
 
 		int file_size = stbi_info((const char*)input_path.u8string().c_str(), &texture_width, &texture_height, &texture_channels);
