@@ -8,11 +8,13 @@
 #include <core/layers/scene.h>
 #include <core/layers/editor_gui.h>
 #include <graphics/resource/mesh.h>
+#include <utility/cvar.h>
 
 #include <core/ecs/components/mesh_component.h>
 #include <core/ecs/components/transform_component.h>
 #include <core/ecs/components/light_component.h>
 #include <core/ecs/components/body_component.h>
+#include <core/ecs/components/camera_control_component.h>
 
 #include <SDL.h>
 #include <SDL_vulkan.h>
@@ -31,7 +33,7 @@ namespace Sunset
 
 		InputProvider::get()->push_context(InputProvider::default_context());
 
-		Physics::get()->context()->set_global_gravity(glm::vec3(0.0f, -9.81f, 0.0f));
+		Physics::get()->context()->set_global_gravity(glm::vec3(0.0f, 0.0f, 0.0f));
 
 #ifndef NDEBUG
 		{
@@ -39,6 +41,8 @@ namespace Sunset
 			SimulationCore::get()->register_layer(std::move(gui));
 		}
 #endif
+
+		CVarSystem::get()->set_bool_cvar("ren.use_skybox", true);
 
 		// Test scene
 		{
@@ -57,6 +61,22 @@ namespace Sunset
 			set_scene_prefilter_map(scene.get(), "../../assets/sky/prefilter/sky_prefilter");
 			set_scene_brdf_lut(scene.get(), "../../assets/sky/brdf_lut/sky_brdf_lut_mip_0_layer_0.sun");
 
+			// Add a camera
+			{
+				const glm::ivec2 res = Renderer::get()->context()->get_surface_resolution();
+				
+				scene->active_camera = scene->make_entity();
+				CameraControlComponent* const camera_control_comp = scene->assign_component<CameraControlComponent>(scene->active_camera);
+				set_fov(camera_control_comp, 75.0f);
+				set_aspect_ratio(camera_control_comp, (float)res.x / (float)res.y);
+				set_near_plane(camera_control_comp, 0.001f);
+				set_far_plane(camera_control_comp, 1000.0f);
+				set_position(camera_control_comp, glm::vec3(50.0f, 0.0f, 0.0f));
+				set_forward(camera_control_comp, glm::vec3(-1.0f, 0.0f, 0.0f), true);
+				set_move_speed(camera_control_comp, 50.0f);
+				set_look_speed(camera_control_comp, 100.0f);
+			}
+
 			// Add directional light
 			{
 				EntityID light_entity = scene->make_entity();
@@ -67,45 +87,12 @@ namespace Sunset
 
 				set_light_color(light_comp, glm::vec3(1.0f, 1.0f, 1.0f));
 				set_light_type(light_comp, LightType::Directional);
+				set_light_direction(light_comp, glm::vec3(1.0f, 1.0f, 0.0f));
 				set_light_intensity(light_comp, 4.0f);
 				set_light_entity_index(light_comp, get_entity_index(light_entity));
 				set_light_should_use_sun_direction(light_comp, true);
 				set_light_is_csm_caster(light_comp, true);
 				set_light_casts_shadows(light_comp, true);
-			}
-
-			// Add point light
-			{
-				EntityID light_entity = scene->make_entity();
-
-				TransformComponent* const transform_comp = scene->assign_component<TransformComponent>(light_entity);
-
-				set_position(transform_comp, glm::vec3(-25.0f, 25.0f, 0.0f));
-
-				LightComponent* const light_comp = scene->assign_component<LightComponent>(light_entity);
-
-				set_light_color(light_comp, glm::vec3(1.0f, 1.0f, 1.0f));
-				set_light_type(light_comp, LightType::Point);
-				set_light_radius(light_comp, 75.0f);
-				set_light_intensity(light_comp, 500.0f);
-				set_light_entity_index(light_comp, get_entity_index(light_entity));
-			}
-
-			// Add another point light
-			{
-				EntityID light_entity = scene->make_entity();
-
-				TransformComponent* const transform_comp = scene->assign_component<TransformComponent>(light_entity);
-
-				set_position(transform_comp, glm::vec3(-15.0f, 5.0f, 0.0f));
-
-				LightComponent* const light_comp = scene->assign_component<LightComponent>(light_entity);
-
-				set_light_color(light_comp, glm::vec3(1.0f, 1.0f, 0.961f));
-				set_light_type(light_comp, LightType::Point);
-				set_light_radius(light_comp, 75.0f);
-				set_light_intensity(light_comp, 250.0f);
-				set_light_entity_index(light_comp, get_entity_index(light_entity));
 			}
 
 			// Add ground plane
@@ -114,8 +101,8 @@ namespace Sunset
 
 				TransformComponent* const transform_comp = scene->assign_component<TransformComponent>(mesh_ent);
 
-				set_rotation(transform_comp, glm::vec3(glm::radians(90.0f), glm::radians(0.0f), glm::radians(0.0f)));
-				set_scale(transform_comp, glm::vec3(500.0f, 500.0f, 500.0f));
+				set_rotation(transform_comp, glm::vec3(glm::radians(0.0f), glm::radians(-90.0f), glm::radians(0.0f)));
+				set_scale(transform_comp, glm::vec3(100.0f, 100.0f, 100.0f));
 
 				MeshComponent* const mesh_comp = scene->assign_component<MeshComponent>(mesh_ent);
 
@@ -124,20 +111,21 @@ namespace Sunset
 					{
 						.textures =
 						{
-							"../../assets/foam-grip-albedo.sun",
-							"../../assets/foam-grip-normal.sun",
-							"../../assets/foam-grip-roughness.sun",
-							"../../assets/foam-grip-metallic.sun",
-							"../../assets/foam-grip-ao.sun"
+							"../../assets/alien-metal/alien-metal-albedo.sun",
+							"../../assets/alien-metal/alien-metal-normal.sun",
+							"../../assets/alien-metal/alien-metal-roughness.sun",
+							"../../assets/alien-metal/alien-metal-metallic.sun",
+							"../../assets/alien-metal/alien-metal-ao.sun"
 						}
 					}
 				);
+
 				material_set_texture_tiling(Renderer::get()->context(), mesh_material, 0, 10.0f);
 				material_set_texture_tiling(Renderer::get()->context(), mesh_material, 1, 10.0f);
 				material_set_texture_tiling(Renderer::get()->context(), mesh_material, 2, 10.0f);
 				material_set_texture_tiling(Renderer::get()->context(), mesh_material, 3, 10.0f);
 				material_set_texture_tiling(Renderer::get()->context(), mesh_material, 4, 10.0f);
-
+				
 				set_mesh(mesh_comp, MeshFactory::create_quad(Renderer::get()->context()));
 				set_material(mesh_comp, mesh_material);
 
@@ -152,7 +140,7 @@ namespace Sunset
 			}
 
 			// Add spheres
-			for (uint32_t i = 0; i < 100; ++i)
+			/*for (uint32_t i = 0; i < 100; ++i)
 			{
 				EntityID mesh_ent = scene->make_entity();
 
@@ -193,38 +181,7 @@ namespace Sunset
 				set_body_type(body_comp, PhysicsBodyType::Dynamic);
 				set_body_gravity_scale(body_comp, 1.0f);
 				set_body_restitution(body_comp, 0.5f);
-			}
-
-			// Add TV 
-			{
-				EntityID mesh_ent = scene->make_entity();
-
-				TransformComponent* const transform_comp = scene->assign_component<TransformComponent>(mesh_ent);
-
-				set_position(transform_comp, glm::vec3(-25.0f, 0.0f, 0.0f));
-				set_rotation(transform_comp, glm::vec3(0.0f, glm::radians(90.0f), 0.0f));
-				set_scale(transform_comp, glm::vec3(0.25f));
-
-				MeshComponent* const mesh_comp = scene->assign_component<MeshComponent>(mesh_ent);
-
-				MaterialID body_material = MaterialFactory::create(
-					Renderer::get()->context(),
-					{
-						.textures =
-						{
-							"../../assets/tv/tv_color.sun",
-							"../../assets/tv/tv_normal.sun",
-							"../../assets/tv/tv_roughness.sun",
-							"../../assets/tv/tv_metallic.sun",
-							"../../assets/tv/tv_ao.sun",
-							"../../assets/default_white.sun"
-						}
-					}
-				);
-
-				set_mesh(mesh_comp, MeshFactory::load(Renderer::get()->context(), "../../assets/tv/tv.sun"));
-				set_material(mesh_comp, body_material);
-			}
+			}*/
 
 			SimulationCore::get()->register_layer(std::move(scene));
 		}
