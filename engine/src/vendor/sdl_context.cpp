@@ -137,9 +137,20 @@ namespace Sunset
 		SDL_DestroyWindow(window_handle);
 	}
 
+	void WindowSDL::capture_mouse(bool capture)
+	{
+		SDL_SetHintWithPriority(SDL_HINT_MOUSE_RELATIVE_MODE_WARP, "1", SDL_HINT_OVERRIDE);
+		SDL_SetRelativeMouseMode(capture ? SDL_TRUE : SDL_FALSE);
+	}
+
 	void InputProcessorSDL::initialize()
 	{
 		lazy_SDL_init();
+
+		for (float& range : ranges_array)
+		{
+			range = 0.0f;
+		}
 	}
 
 	void InputProcessorSDL::update(InputContext* context, Window* window)
@@ -179,11 +190,10 @@ namespace Sunset
 			}
 		}
 
-		if (sdl_event.type == SDL_MOUSEMOTION)
-		{
-			ranges_array[static_cast<int16_t>(InputRange::M_x)] = static_cast<float>(sdl_event.motion.xrel) / window->get_extent().x;
-			ranges_array[static_cast<int16_t>(InputRange::M_y)] = static_cast<float>(sdl_event.motion.yrel) / window->get_extent().y;
-		}
+		int xrel, yrel;
+		SDL_GetRelativeMouseState(&xrel, &yrel);
+		ranges_array[static_cast<int16_t>(InputRange::M_x)] = static_cast<float>(xrel) / window->get_extent().x;
+		ranges_array[static_cast<int16_t>(InputRange::M_y)] = static_cast<float>(yrel) / window->get_extent().y;
 
 		// Use the now updated bitset to update the passed in input context
 		for (int32_t i = 0; i < context->input_states.size(); ++i)

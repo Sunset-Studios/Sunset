@@ -52,11 +52,7 @@ namespace Sunset
 		DeferredShadingPersistentStorage::get()->initialize();
 
 		MeshTaskQueue& mesh_task_queue = Renderer::get()->get_mesh_task_queue(buffered_frame_number);
-		if (mesh_task_queue.get_queue_size() == 0)
-		{
-			return false;
-		}
-
+		
 		mesh_task_queue.set_is_deferred_rendering(true);
 		mesh_task_queue.sort_and_batch(gfx_context);
 
@@ -64,7 +60,7 @@ namespace Sunset
 			gfx_context,
 			{
 				.name = "object_instance_buffer",
-				.buffer_size = mesh_task_queue.get_queue_size() * sizeof(GPUObjectInstance),
+				.buffer_size = std::max(sizeof(GPUObjectInstance), mesh_task_queue.get_queue_size() * sizeof(GPUObjectInstance)),
 				.type = BufferType::TransferDestination | BufferType::StorageBuffer,
 				.memory_usage = MemoryUsageType::OnlyGPU
 			},
@@ -75,7 +71,7 @@ namespace Sunset
 			gfx_context,
 			{
 				.name = "compacted_object_instance_buffer",
-				.buffer_size = mesh_task_queue.get_queue_size() * sizeof(CompactedGPUObjectInstance),
+				.buffer_size = std::max(sizeof(CompactedGPUObjectInstance), mesh_task_queue.get_queue_size() * sizeof(CompactedGPUObjectInstance)),
 				.type = BufferType::TransferDestination | BufferType::StorageBuffer,
 				.memory_usage = MemoryUsageType::OnlyGPU
 			},
@@ -86,7 +82,7 @@ namespace Sunset
 			gfx_context,
 			{
 				.name = "draw_indirect_buffer",
-				.buffer_size = mesh_task_queue.get_num_indirect_batches(),
+				.buffer_size = std::max(1u, mesh_task_queue.get_num_indirect_batches()),
 				.type = BufferType::StorageBuffer | BufferType::Indirect,
 				.memory_usage = MemoryUsageType::CPUToGPU
 			},
@@ -140,77 +136,6 @@ namespace Sunset
 			Renderer::get()->get_persistent_image("ssao_noise", buffered_frame_number),
 			buffered_frame_number
 		);
-
-		// Mesh cull pass
-		{
-			render_graph.add_pass(
-				gfx_context,
-				"set_draw_cull_data_draw_count",
-				RenderPassFlags::GraphLocal,
-				buffered_frame_number,
-				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
-				{
-					MeshTaskQueue& mesh_task_queue = Renderer::get()->get_mesh_task_queue(frame_data.buffered_frame_number);
-					Renderer::get()->get_draw_cull_data(frame_data.buffered_frame_number).draw_count = mesh_task_queue.get_queue_size();
-				}
-			);
-
-			RGShaderDataSetup shader_setup
-			{
-				.pipeline_shaders =
-				{
-					{ PipelineShaderStageType::Compute, "../../shaders/common/cull.comp.sun" }
-				}
-			};
-
-			RGResourceHandle entity_data_buffer_desc = render_graph.register_buffer(
-				gfx_context,
-				EntityGlobals::get()->entity_data.data_buffer[buffered_frame_number],
-				buffered_frame_number
-			);
-
-			render_graph.add_pass(
-				gfx_context,
-				"compute_cull",
-				RenderPassFlags::Compute,
-				buffered_frame_number,
-				{
-					.shader_setup = shader_setup,
-					.inputs = { entity_data_buffer_desc, object_instance_buffer_desc,
-								compacted_object_instance_buffer_desc, draw_indirect_buffer_desc,
-								hzb_image_desc },
-					.outputs = { draw_indirect_buffer_desc }
-				},
-				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
-				{
-					{
-						Image* const hzb_image = CACHE_FETCH(Image, graph.get_physical_resource(hzb_image_desc, frame_data.buffered_frame_number));
-						DrawCullData& draw_cull_data = Renderer::get()->get_draw_cull_data(frame_data.buffered_frame_number);
-						draw_cull_data.hzb_width = hzb_image->get_attachment_config().extent.x;
-						draw_cull_data.hzb_height = hzb_image->get_attachment_config().extent.y;
-						draw_cull_data.hzb_texture = 0x0000ffff & frame_data.pass_bindless_resources.handles.front();
-					}
-
-					PushConstantPipelineData pass_data = PushConstantPipelineData::create(&Renderer::get()->get_draw_cull_data(frame_data.buffered_frame_number), PipelineShaderStageType::Compute);
-
-					gfx_context->push_constants(command_buffer, frame_data.pass_pipeline_state, pass_data);
-
-					Renderer::get()->get_mesh_task_queue(frame_data.buffered_frame_number).set_gpu_draw_indirect_buffers(
-						{
-							.draw_indirect_buffer = static_cast<BufferID>(graph.get_physical_resource(draw_indirect_buffer_desc, frame_data.buffered_frame_number)),
-							.object_instance_buffer = static_cast<BufferID>(graph.get_physical_resource(object_instance_buffer_desc, frame_data.buffered_frame_number)),
-							.compacted_object_instance_buffer = static_cast<BufferID>(graph.get_physical_resource(compacted_object_instance_buffer_desc, frame_data.buffered_frame_number))
-						}
-					);
-					Renderer::get()->get_mesh_task_queue(frame_data.buffered_frame_number).submit_compute_cull(
-						gfx_context,
-						command_buffer,
-						buffered_frame_number,
-						frame_data.resource_deletion_queue
-					);
-				}
-			);
-		}
 
 		// Skydome pass
 		RGResourceHandle sky_image_desc;
@@ -285,6 +210,77 @@ namespace Sunset
 					}
 				);
 			}
+		}
+
+		// Mesh cull pass
+		{
+			render_graph.add_pass(
+				gfx_context,
+				"set_draw_cull_data_draw_count",
+				RenderPassFlags::GraphLocal,
+				buffered_frame_number,
+				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
+				{
+					MeshTaskQueue& mesh_task_queue = Renderer::get()->get_mesh_task_queue(frame_data.buffered_frame_number);
+					Renderer::get()->get_draw_cull_data(frame_data.buffered_frame_number).draw_count = mesh_task_queue.get_queue_size();
+				}
+			);
+
+			RGShaderDataSetup shader_setup
+			{
+				.pipeline_shaders =
+				{
+					{ PipelineShaderStageType::Compute, "../../shaders/common/cull.comp.sun" }
+				}
+			};
+
+			RGResourceHandle entity_data_buffer_desc = render_graph.register_buffer(
+				gfx_context,
+				EntityGlobals::get()->entity_data.data_buffer[buffered_frame_number],
+				buffered_frame_number
+			);
+
+			render_graph.add_pass(
+				gfx_context,
+				"compute_cull",
+				RenderPassFlags::Compute,
+				buffered_frame_number,
+				{
+					.shader_setup = shader_setup,
+					.inputs = { entity_data_buffer_desc, object_instance_buffer_desc,
+								compacted_object_instance_buffer_desc, draw_indirect_buffer_desc,
+								hzb_image_desc },
+					.outputs = { draw_indirect_buffer_desc }
+				},
+				[=](RenderGraph& graph, RGFrameData& frame_data, void* command_buffer)
+				{
+					{
+						Image* const hzb_image = CACHE_FETCH(Image, graph.get_physical_resource(hzb_image_desc, frame_data.buffered_frame_number));
+						DrawCullData& draw_cull_data = Renderer::get()->get_draw_cull_data(frame_data.buffered_frame_number);
+						draw_cull_data.hzb_width = hzb_image->get_attachment_config().extent.x;
+						draw_cull_data.hzb_height = hzb_image->get_attachment_config().extent.y;
+						draw_cull_data.hzb_texture = 0x0000ffff & frame_data.pass_bindless_resources.handles.front();
+					}
+
+					PushConstantPipelineData pass_data = PushConstantPipelineData::create(&Renderer::get()->get_draw_cull_data(frame_data.buffered_frame_number), PipelineShaderStageType::Compute);
+
+					gfx_context->push_constants(command_buffer, frame_data.pass_pipeline_state, pass_data);
+
+					Renderer::get()->get_mesh_task_queue(frame_data.buffered_frame_number).set_gpu_draw_indirect_buffers(
+						{
+							.draw_indirect_buffer = static_cast<BufferID>(graph.get_physical_resource(draw_indirect_buffer_desc, frame_data.buffered_frame_number)),
+							.object_instance_buffer = static_cast<BufferID>(graph.get_physical_resource(object_instance_buffer_desc, frame_data.buffered_frame_number)),
+							.compacted_object_instance_buffer = static_cast<BufferID>(graph.get_physical_resource(compacted_object_instance_buffer_desc, frame_data.buffered_frame_number))
+						}
+					);
+					Renderer::get()->get_mesh_task_queue(frame_data.buffered_frame_number).submit_compute_cull(
+						gfx_context,
+						command_buffer,
+						buffered_frame_number,
+						frame_data.resource_deletion_queue
+					);
+				}
+			);
 		}
 
 		// Shadow pass
