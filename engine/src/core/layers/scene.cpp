@@ -45,6 +45,7 @@ namespace Sunset
 
 	void Scene::update(double delta_time)
 	{
+		// TODO: We can look for a more configurable way to group subsystems into tick buckets that can all update asynchronously at some point
 		for (auto it = subsystems.begin(); it != subsystems.end(); ++it)
 		{
 			(*it)->pre_update(this);
@@ -104,8 +105,7 @@ namespace Sunset
 
 	void Scene::setup_subsystems()
 	{
-		// TODO: Potentially look for a more extensible way to add arbitrary external subsystems
-		add_subsystem<CameraInputController>();
+		// TODO: Look for a more extensible way to add arbitrary external subsystems
 		add_subsystem<CameraControlProcessor>();
 		add_subsystem<TransformProcessor>();
 		add_subsystem<StaticMeshProcessor>();

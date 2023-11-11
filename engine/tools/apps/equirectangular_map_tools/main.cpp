@@ -48,7 +48,9 @@ int main(int argc, char* argv[])
 
 	if ((!b_generate_cubemap_textures && !b_generate_irradiance_map && !b_generate_prefilter_map && !b_generate_brdf_lut) || equirect_map_path.empty())
 	{
-		std::cout << "Usage: EquirectTool [-c|--generate_cubemap_textures] [-i|--generate_irradiance_map] [-p|--generate_prefilter_map] [-b|--generate_brdf_lut] [-f|--dont_flip_writes] <equirect_file>" << std::endl;
+		std::cout << "Usage: EquirectTool [-c|--generate_cubemap_textures] [-i|--generate_irradiance_map] "
+				  << "[-p | --generate_prefilter_map][-b | --generate_brdf_lut][-f | --dont_flip_writes] <equirect_file>"
+				  << std::endl;
 		return -1;
 	}
 

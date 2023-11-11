@@ -30,6 +30,11 @@ namespace Sunset
 				window_policy.destroy();
 			}
 
+			void capture_mouse(bool capture)
+			{
+				window_policy.capture_mouse(capture);
+			}
+
 			void* get_window_handle() const
 			{
 				return window_policy.get_window_handle();
@@ -66,6 +71,9 @@ namespace Sunset
 			}
 
 			void destroy()
+			{ }
+
+			void capture_mouse(bool capture)
 			{ }
 
 			void* get_window_handle() const
