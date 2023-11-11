@@ -13,17 +13,16 @@ namespace Sunset
 	class Application
 	{
 		public:
-			//initializes everything in the engine
 			void init();
 
-			//shuts down the engine
 			void cleanup();
 
-			//run main loop
 			void run();
 
+		public:
+			void load_scene_objects(class Scene* const scene);
+
 		private:
-			bool bIsInitialized{ false };
 			class Window* window{ nullptr };
 	};
 }
