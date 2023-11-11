@@ -1,5 +1,6 @@
 param(
-    $Name
+    $Name,
+    $BasePath = "engine/src"
 )
 
 while ($null -eq $Name -or $Name -eq '')
@@ -7,7 +8,7 @@ while ($null -eq $Name -or $Name -eq '')
     $Name = read-host -Prompt "Enter a path from src for the new source file`n- (Ending the file path with a file extension will generate the single file)`n- (Ending the file without a file extension will generate a .h/.cpp wombo combo for the given file path)`n" 
 }
 
-$SrcPath = "$PSScriptRoot/../src";
+$SrcPath = "$PSScriptRoot/../../$BasePath"
 
 Push-Location; Set-Location $SrcPath;
 
@@ -29,4 +30,4 @@ else
 
 Pop-Location;
 
-cmd.exe /c 'build.bat'
+cmd.exe /c "$PSScriptRoot/../../build.bat"

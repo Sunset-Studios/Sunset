@@ -28,6 +28,7 @@ namespace Sunset
 		void poll();
 		bool is_closing();
 		void destroy();
+		void capture_mouse(bool capture);
 
 		void* get_window_handle() const
 		{
@@ -43,6 +44,7 @@ namespace Sunset
 		{
 			return position;
 		}
+
 
 	private:
 		glm::ivec2 extent;
