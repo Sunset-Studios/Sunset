@@ -1,5 +1,6 @@
 #include <physics/api/jolt/jolt_context.h>
 #include <utility/cvar.h>
+#include <core/delegate.h>
 
 #include <Jolt/Jolt.h>
 #include <Jolt/RegisterTypes.h>
@@ -24,6 +25,10 @@ namespace Sunset
 	AutoCVar_Int cvar_max_physics_body_pairs("phys.max_physics_body_pairs", "Maximum number of body pairs that can be queued at any given time during broadphase update.", 65536);
 	AutoCVar_Int cvar_max_physics_contact_constraints("phys.max_physics_contact_constraints", "Maximum size of the contact constraint buffer used for contact resolution between bodies.", 10240);
 	AutoCVar_Int cvar_num_collision_steps("phys.num_collision_steps", "Number of collision steps to do when updating the physics simulation", 1);
+
+	MultiDelegate<void(BodyHandle,BodyHandle)> on_collision_delegate = MultiDelegate<void(BodyHandle,BodyHandle)>{};
+
+	constexpr float fixed_delta_time = 1.0f / 60.0f;
 
 	void JoltContext::initialize()
 	{
@@ -81,7 +86,6 @@ namespace Sunset
 	void JoltContext::step_simulation()
 	{
 		ZoneScopedN("JoltContext::step_simulation");
-		static const float fixed_delta_time = 1.0f / 60.0f;
 
 		flush_pending_body_adds();
 
@@ -90,39 +94,39 @@ namespace Sunset
 		system_data->pending_body_adds.reset();
 	}
 
-	BodyHandle JoltContext::create_body(const SphereShapeDescription& shape_desc, const glm::vec3& position, const glm::quat& rotation, PhysicsBodyType body_type)
+	BodyHandle JoltContext::create_body(const SphereShapeDescription& shape_desc, const glm::vec3& position, const glm::quat& rotation, PhysicsBodyType body_type, float linear_damping, float angular_damping)
 	{
 		JPH::SphereShapeSettings sphere_shape_settings(shape_desc.radius);
 
-		return create_body_internal(&sphere_shape_settings, position, rotation, body_type);
+		return create_body_internal(&sphere_shape_settings, position, rotation, body_type, linear_damping, angular_damping);
 	}
 
-	BodyHandle JoltContext::create_body(const BoxShapeDescription& shape_desc, const glm::vec3& position, const glm::quat& rotation, PhysicsBodyType body_type)
+	BodyHandle JoltContext::create_body(const BoxShapeDescription& shape_desc, const glm::vec3& position, const glm::quat& rotation, PhysicsBodyType body_type, float linear_damping, float angular_damping)
 	{
 		JPH::BoxShapeSettings box_shape_settings(JPH::Vec3Arg(shape_desc.half_extent.x, shape_desc.half_extent.y, shape_desc.half_extent.z), shape_desc.convex_radius);
 
-		return create_body_internal(&box_shape_settings, position, rotation, body_type);
+		return create_body_internal(&box_shape_settings, position, rotation, body_type, linear_damping, angular_damping);
 	}
 
-	BodyHandle JoltContext::create_body(const CapsuleShapeDescription& shape_desc, const glm::vec3& position, const glm::quat& rotation, PhysicsBodyType body_type)
+	BodyHandle JoltContext::create_body(const CapsuleShapeDescription& shape_desc, const glm::vec3& position, const glm::quat& rotation, PhysicsBodyType body_type, float linear_damping, float angular_damping)
 	{
 		if (shape_desc.bottom_radius == shape_desc.top_radius)
 		{
 			JPH::CapsuleShapeSettings capsule_shape_settings(shape_desc.half_height, shape_desc.top_radius);
-			return create_body_internal(&capsule_shape_settings, position, rotation, body_type);
+			return create_body_internal(&capsule_shape_settings, position, rotation, body_type, linear_damping, angular_damping);
 		}
 		else
 		{
 			JPH::TaperedCapsuleShapeSettings capsule_shape_settings(shape_desc.half_height, shape_desc.top_radius, shape_desc.bottom_radius);
-			return create_body_internal(&capsule_shape_settings, position, rotation, body_type);
+			return create_body_internal(&capsule_shape_settings, position, rotation, body_type, linear_damping, angular_damping);
 		}
 	}
 
-	BodyHandle JoltContext::create_body(const CylinderShapeDescription& shape_desc, const glm::vec3& position, const glm::quat& rotation, PhysicsBodyType body_type)
+	BodyHandle JoltContext::create_body(const CylinderShapeDescription& shape_desc, const glm::vec3& position, const glm::quat& rotation, PhysicsBodyType body_type, float linear_damping, float angular_damping)
 	{
 		JPH::CylinderShapeSettings cylinder_shape_settings(shape_desc.half_height, shape_desc.radius, shape_desc.convex_radius);
 
-		return create_body_internal(&cylinder_shape_settings, position, rotation, body_type);
+		return create_body_internal(&cylinder_shape_settings, position, rotation, body_type, linear_damping, angular_damping);
 	}
 
 	void JoltContext::set_global_gravity(const glm::vec3& g)
@@ -186,6 +190,17 @@ namespace Sunset
 		}
 	}
 
+	void JoltContext::set_body_velocity(BodyHandle body, const glm::vec3& velocity)
+	{
+		if (body >= 0)
+		{
+			JPH::BodyInterface& body_interface = system_data->physics_system.GetBodyInterface();
+
+			const JPH::BodyID jolt_body(body);
+			body_interface.SetLinearVelocity(jolt_body, JPH::RVec3Arg(velocity.x, velocity.y, velocity.z));
+		}
+	}
+
 	void JoltContext::set_body_type(BodyHandle body, PhysicsBodyType body_type)
 	{
 		if (body >= 0)
@@ -217,6 +232,17 @@ namespace Sunset
 
 			const JPH::BodyID jolt_body(body);
 			body_interface.SetRestitution(jolt_body, restitution);
+		}
+	}
+
+	void JoltContext::set_body_friction(BodyHandle body, float friction)
+	{
+		if (body >= 0)
+		{
+			JPH::BodyInterface& body_interface = system_data->physics_system.GetBodyInterface();
+
+			const JPH::BodyID jolt_body(body);
+			body_interface.SetFriction(jolt_body, friction);
 		}
 	}
 
@@ -268,6 +294,19 @@ namespace Sunset
 		return glm::quat();
 	}
 
+	glm::vec3 JoltContext::get_body_velocity(BodyHandle body)
+	{
+		if (body >= 0)
+		{
+			JPH::BodyInterface& body_interface = system_data->physics_system.GetBodyInterface();
+
+			const JPH::BodyID jolt_body(body);
+			const JPH::RVec3 velocity = body_interface.GetLinearVelocity(jolt_body);
+			return glm::vec3(velocity.GetX(), velocity.GetY(), velocity.GetZ());
+		}
+		return glm::vec3();
+	}
+
 	bool JoltContext::get_body_in_simulation(BodyHandle body)
 	{
 		if (body >= 0)
@@ -278,7 +317,20 @@ namespace Sunset
 		return false;
 	}
 
-	BodyHandle JoltContext::create_body_internal(JPH::ShapeSettings* shape_settings, const glm::vec3& position, const glm::quat& rotation, PhysicsBodyType body_type)
+	void JoltContext::move_body(BodyHandle body, const glm::vec3& new_position, const glm::quat& new_rotation)
+	{
+		if (body >= 0)
+		{
+			JPH::BodyInterface& body_interface = system_data->physics_system.GetBodyInterface();
+			return body_interface.MoveKinematic(
+					JPH::BodyID(body),
+					JPH::RVec3Arg(new_position.x, new_position.y, new_position.z),
+					JPH::QuatArg(new_rotation.x, new_rotation.y, new_rotation.z, new_rotation.w),
+					fixed_delta_time);
+		}
+	}
+
+	BodyHandle JoltContext::create_body_internal(JPH::ShapeSettings* shape_settings, const glm::vec3& position, const glm::quat& rotation, PhysicsBodyType body_type, float linear_damping, float angular_damping)
 	{
 		JPH::BodyInterface& body_interface = system_data->physics_system.GetBodyInterface();
 
@@ -291,6 +343,8 @@ namespace Sunset
 
 		// TODO: May be better to opt into this. If the majority of bodies in the scene are static, not setting this would give us some space savings since we aren't creating a MotionProperties object per body.
 		body_settings.mAllowDynamicOrKinematic = true;
+		body_settings.mLinearDamping = linear_damping;
+		body_settings.mAngularDamping = angular_damping;
 
 		JPH::BodyID* new_body_id = system_data->pending_body_adds.get_new();
 		JPH::Body* body = body_interface.CreateBody(body_settings);
@@ -345,6 +399,7 @@ namespace Sunset
 
 	void JoltBodyContactListener::OnContactAdded(const JPH::Body& inBody1, const JPH::Body& inBody2, const JPH::ContactManifold& inManifold, JPH::ContactSettings& ioSettings)
 	{
+		on_collision_delegate(BodyHandle(inBody1.GetID().GetIndexAndSequenceNumber()), BodyHandle(inBody2.GetID().GetIndexAndSequenceNumber()));
 	}
 
 	void JoltBodyContactListener::OnContactPersisted(const JPH::Body& inBody1, const JPH::Body& inBody2, const JPH::ContactManifold& inManifold, JPH::ContactSettings& ioSettings)

@@ -112,10 +112,10 @@ namespace Sunset
 		void destroy();
 		void step_simulation();
 
-		BodyHandle create_body(const SphereShapeDescription& shape_desc, const glm::vec3& position, const glm::quat& rotation, PhysicsBodyType body_type);
-		BodyHandle create_body(const BoxShapeDescription& shape_desc, const glm::vec3& position, const glm::quat& rotation, PhysicsBodyType body_type);
-		BodyHandle create_body(const CapsuleShapeDescription& shape_desc, const glm::vec3& position, const glm::quat& rotation, PhysicsBodyType body_type);
-		BodyHandle create_body(const CylinderShapeDescription& shape_desc, const glm::vec3& position, const glm::quat& rotation, PhysicsBodyType body_type);
+		BodyHandle create_body(const SphereShapeDescription& shape_desc, const glm::vec3& position, const glm::quat& rotation, PhysicsBodyType body_type, float linear_damping, float angular_damping);
+		BodyHandle create_body(const BoxShapeDescription& shape_desc, const glm::vec3& position, const glm::quat& rotation, PhysicsBodyType body_type, float linear_damping, float angular_damping);
+		BodyHandle create_body(const CapsuleShapeDescription& shape_desc, const glm::vec3& position, const glm::quat& rotation, PhysicsBodyType body_type, float linear_damping, float angular_damping);
+		BodyHandle create_body(const CylinderShapeDescription& shape_desc, const glm::vec3& position, const glm::quat& rotation, PhysicsBodyType body_type, float linear_damping, float angular_damping);
 
 		void set_global_gravity(const glm::vec3& g);
 
@@ -124,17 +124,22 @@ namespace Sunset
 		void remove_body_from_simulation(BodyHandle body);
 		void set_body_position(BodyHandle body, const glm::vec3& position);
 		void set_body_rotation(BodyHandle body, const glm::quat& rotation);
+		void set_body_velocity(BodyHandle body, const glm::vec3& velocity);
 		void set_body_type(BodyHandle body, PhysicsBodyType body_type);
 		void set_body_gravity_scale(BodyHandle body, float gravity_scale);
 		void set_body_restitution(BodyHandle body, float restitution);
+		void set_body_friction(BodyHandle body, float friction);
 		void set_body_active(BodyHandle body);
 		void set_body_inactive(BodyHandle body);
 		glm::vec3 get_body_position(BodyHandle body);
 		glm::quat get_body_rotation(BodyHandle body);
+		glm::vec3 get_body_velocity(BodyHandle body);
 		bool get_body_in_simulation(BodyHandle body);
 
+		void move_body(BodyHandle body, const glm::vec3& new_position, const glm::quat& new_rotation);
+
 	protected:
-		BodyHandle create_body_internal(JPH::ShapeSettings* shape_settings, const glm::vec3& position, const glm::quat& rotation, PhysicsBodyType body_type);
+		BodyHandle create_body_internal(JPH::ShapeSettings* shape_settings, const glm::vec3& position, const glm::quat& rotation, PhysicsBodyType body_type, float linear_damping, float angular_damping);
 		void flush_pending_body_adds();
 
 	protected:

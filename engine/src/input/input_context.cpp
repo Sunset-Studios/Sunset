@@ -75,7 +75,7 @@ namespace Sunset
 	void InputContext::set_range(int32_t input_state_index, float new_range)
 	{
 		assert(input_state_index < range_mappings.size() && input_state_index >= 0);
-		if (range_mappings[input_state_index] != new_range)
+		if (0.0f != new_range)
 		{
 			range_mappings[input_state_index] = new_range;
 			input_states[input_state_index].range_value = new_range;

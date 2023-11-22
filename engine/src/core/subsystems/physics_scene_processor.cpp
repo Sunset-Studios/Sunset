@@ -35,6 +35,26 @@ namespace Sunset
 			TransformComponent* const transform_comp = scene->get_component<TransformComponent>(entity);
 
 			const bool b_in_simulation = phys_context->get_body_in_simulation(body_comp->body_data.body);
+			if (!b_in_simulation || (body_comp->body_data.dirty_flags & PhysicsBodyDirtyFlags::BODY) || EntityGlobals::get()->entity_transform_dirty_states.test(get_entity_index(entity)))
+			{
+				continue;
+			}
+
+			if (body_comp->body_data.dirty_flags & PhysicsBodyDirtyFlags::KINEMATIC_MOVE)
+			{
+				phys_context->move_body(body_comp->body_data.body, body_comp->body_data.position, body_comp->body_data.rotation);
+				body_comp->body_data.dirty_flags &= ~(PhysicsBodyDirtyFlags::KINEMATIC_MOVE);
+			}
+		}
+
+		phys_context->step_simulation();
+
+		for (EntityID entity : SceneView<BodyComponent, TransformComponent>(*scene))
+		{
+			BodyComponent* const body_comp = scene->get_component<BodyComponent>(entity);
+			TransformComponent* const transform_comp = scene->get_component<TransformComponent>(entity);
+
+			const bool b_in_simulation = phys_context->get_body_in_simulation(body_comp->body_data.body);
 			if (!b_in_simulation)
 			{
 				continue;
@@ -62,6 +82,12 @@ namespace Sunset
 				body_comp->body_data.dirty_flags &= ~(PhysicsBodyDirtyFlags::ROTATION);
 			}
 
+			if (body_comp->body_data.dirty_flags & PhysicsBodyDirtyFlags::VELOCITY)
+			{
+				phys_context->set_body_velocity(body_comp->body_data.body, body_comp->body_data.velocity);
+				body_comp->body_data.dirty_flags &= ~(PhysicsBodyDirtyFlags::VELOCITY);
+			}
+
 			if (body_comp->body_data.dirty_flags & PhysicsBodyDirtyFlags::BODY_TYPE)
 			{
 				phys_context->set_body_type(body_comp->body_data.body, body_comp->body_data.body_type);
@@ -80,14 +106,20 @@ namespace Sunset
 				body_comp->body_data.dirty_flags &= ~(PhysicsBodyDirtyFlags::RESTITUTION);
 			}
 
+			if (body_comp->body_data.dirty_flags & PhysicsBodyDirtyFlags::FRICTION)
+			{
+				phys_context->set_body_friction(body_comp->body_data.body, body_comp->body_data.friction);
+				body_comp->body_data.dirty_flags &= ~(PhysicsBodyDirtyFlags::FRICTION);
+			}
+
 			if (body_comp->body_data.body_type != PhysicsBodyType::Static)
 			{
 				body_comp->body_data.position = phys_context->get_body_position(body_comp->body_data.body);
 				body_comp->body_data.rotation = phys_context->get_body_rotation(body_comp->body_data.body);
+				body_comp->body_data.velocity = phys_context->get_body_velocity(body_comp->body_data.body);
 				set_position(transform_comp, body_comp->body_data.position);
 				set_rotation(transform_comp, glm::eulerAngles(body_comp->body_data.rotation));
 			}
 		}
-		Physics::get()->context()->step_simulation();
 	}
 }

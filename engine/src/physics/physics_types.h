@@ -1,12 +1,15 @@
 #pragma once
 
 #include <minimal.h>
+#include <core/delegate.h>
 
 namespace Sunset
 {
 	using BodyHandle = int64_t;
 
 	constexpr uint32_t MAX_PHYSICS_BODIES = 65536;
+
+	extern MultiDelegate<void(BodyHandle,BodyHandle)> on_collision_delegate;
 
 	enum class PhysicsBodyType : uint16_t
 	{
