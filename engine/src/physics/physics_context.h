@@ -31,9 +31,9 @@ namespace Sunset
 		}
 
 		template<typename T>
-		BodyHandle create_body(const T& shape_desc, const glm::vec3& position, const glm::quat& rotation, PhysicsBodyType body_type)
+		BodyHandle create_body(const T& shape_desc, const glm::vec3& position, const glm::quat& rotation, PhysicsBodyType body_type, float linear_damping, float angular_damping)
 		{
-			return physics_policy.create_body(shape_desc, position, rotation, body_type);
+			return physics_policy.create_body(shape_desc, position, rotation, body_type, linear_damping, angular_damping);
 		}
 
 		void destroy_body(BodyHandle body)
@@ -61,6 +61,11 @@ namespace Sunset
 			physics_policy.set_body_rotation(body, rotation);
 		}
 
+		void set_body_velocity(BodyHandle body, const glm::vec3& velocity)
+		{
+			physics_policy.set_body_velocity(body, velocity);
+		}
+
 		void set_body_type(BodyHandle body, PhysicsBodyType body_type)
 		{
 			physics_policy.set_body_type(body, body_type);
@@ -74,6 +79,11 @@ namespace Sunset
 		void set_body_restitution(BodyHandle body, float restitution)
 		{
 			physics_policy.set_body_restitution(body, restitution);
+		}
+
+		void set_body_friction(BodyHandle body, float friction)
+		{
+			physics_policy.set_body_friction(body, friction);
 		}
 
 		void set_body_active(BodyHandle body)
@@ -96,9 +106,19 @@ namespace Sunset
 			return physics_policy.get_body_rotation(body);
 		}
 
+		glm::vec3 get_body_velocity(BodyHandle body)
+		{
+			return physics_policy.get_body_velocity(body);
+		}
+
 		bool get_body_in_simulation(BodyHandle body)
 		{
 			return physics_policy.get_body_in_simulation(body);
+		}
+
+		void move_body(BodyHandle body, const glm::vec3& new_position, const glm::quat& new_rotation)
+		{
+			physics_policy.move_body(body, new_position, new_rotation);
 		}
 
 	private:
@@ -123,7 +143,7 @@ namespace Sunset
 		{ }
 
 		template<typename T>
-		BodyHandle create_body(const T& shape_desc, const glm::vec3& position, const glm::quat& rotation, PhysicsBodyType body_type)
+		BodyHandle create_body(const T& shape_desc, const glm::vec3& position, const glm::quat& rotation, PhysicsBodyType body_type, float linear_damping, float angular_damping)
 		{
 			return -1; 
 		}
@@ -143,6 +163,9 @@ namespace Sunset
 		void set_body_rotation(BodyHandle body, const glm::quat& rotation)
 		{ }
 
+		void set_body_velocity(BodyHandle body, const glm::vec3& velocity)
+		{ }
+
 		void set_body_type(BodyHandle body, PhysicsBodyType body_type)
 		{ }
 
@@ -150,6 +173,9 @@ namespace Sunset
 		{ }
 
 		void set_body_restitution(BodyHandle body, float restitution)
+		{ }
+
+		void set_body_friction(BodyHandle body, float friction)
 		{ }
 
 		void set_body_active(BodyHandle body)
@@ -168,10 +194,18 @@ namespace Sunset
 			return glm::quat();
 		}
 
+		glm::vec3 get_body_velocity(BodyHandle body)
+		{
+			return glm::vec3();
+		}
+
 		bool get_body_in_simulation(BodyHandle body)
 		{
 			return false;
 		}
+
+		void move_body(BodyHandle body, const glm::vec3& new_position, const glm::quat& new_rotation)
+		{ }
 	};
 
 #if USE_JOLT_PHYSICS
