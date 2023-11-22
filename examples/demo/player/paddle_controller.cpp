@@ -1,5 +1,6 @@
 #include <player/paddle_controller.h>
 #include <core/ecs/components/transform_component.h>
+#include <core/ecs/components/body_component.h>
 #include <core/ecs/components/camera_control_component.h>
 #include <utility/maths.h>
 
@@ -10,20 +11,29 @@ namespace Sunset
 	void PaddleController::update(Scene* scene, double delta_time)
 	{
 		CameraControlComponent* const camera_control_comp = scene->get_component<CameraControlComponent>(scene->active_camera);
-		const float edge_limit = 15.0f * camera_control_comp->data.aspect_ratio;
+		const float edge_limit = 35.0f;
 
 		if (paddle_entity != 0)
 		{
 			PaddleComponent* const paddle_comp = scene->get_component<PaddleComponent>(paddle_entity);
+
 			TransformComponent* const transform_comp = scene->get_component<TransformComponent>(paddle_entity);
+			BodyComponent* const body_comp = scene->get_component<BodyComponent>(paddle_entity);
+
+			if (locked_paddle_y == 0.0f)
+			{
+				locked_paddle_y = transform_comp->transform.position.y;
+			}
+
+			glm::vec3 pos = transform_comp->transform.position;
+			pos.y = locked_paddle_y;
 
 			const float x = InputProvider::get()->get_range(InputRange::M_x);
 			if (x != 0.0f)
 			{
-				glm::vec3 pos = transform_comp->transform.position;
 				pos.z = glm::clamp(pos.z - static_cast<float>(x * paddle_comp->speed * delta_time), -edge_limit, edge_limit);
-				set_position(transform_comp, pos);
 			}
+			move_body(body_comp, pos, body_comp->body_data.rotation);
 		}
 	}
 

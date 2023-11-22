@@ -27,5 +27,6 @@ namespace Sunset
 
 	protected:
 		EntityID paddle_entity{ 0 };
+		float locked_paddle_y{ 0.0f };
 	};
 }

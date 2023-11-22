@@ -17,6 +17,7 @@
 #include <core/ecs/components/camera_control_component.h>
 
 #include <player/paddle_controller.h>
+#include <player/ball_controller.h>
 
 #include <SDL.h>
 #include <SDL_vulkan.h>
@@ -41,6 +42,7 @@ namespace Sunset
 			std::unique_ptr<Scene> scene = std::make_unique<Scene>();
 
 			scene->add_subsystem<PaddleController>();
+			scene->add_subsystem<BallController>();
 
 			set_scene_sunlight_intensity(scene.get(), 1.0f);
 			set_scene_sunlight_angular_radius(scene.get(), 0.9999566769f);
@@ -160,6 +162,43 @@ namespace Sunset
 			set_material(mesh_comp, mesh_material);
 		}
 
+		// Add Walls 
+		{
+			const std::vector<glm::vec3> wall_positions
+			{
+				{ 25.0f, 20.0f, 0.0f },
+				{ 25.0f, 0.0f, 35.0f },
+				{ 25.0f, 0.0f, -35.0f }
+			};
+			const std::vector<glm::vec3> wall_body_sizes
+			{
+				{ 17.0f, 0.1f, 35.0f },
+				{ 17.0f, 35.0f, 0.1f },
+				{ 17.0f, 35.0f, 0.1f }
+			};
+
+			for (uint8_t i = 0; i < 3; ++i)
+			{
+				EntityID wall_ent = scene->make_entity();
+
+				TransformComponent* const transform_comp = scene->assign_component<TransformComponent>(wall_ent);
+
+				set_position(transform_comp, wall_positions[i]);
+
+				BodyComponent* const body_comp = scene->assign_component<BodyComponent>(wall_ent);
+
+				BoxShapeDescription box_shape
+				{
+					.half_extent = wall_body_sizes[i]
+				};
+				set_body_shape(body_comp, box_shape);
+				set_body_type(body_comp, PhysicsBodyType::Static);
+				set_body_gravity_scale(body_comp, 1.0f);
+				set_body_restitution(body_comp, 1.0f);
+				set_body_friction(body_comp, 0.0f);
+			}
+		}
+
 		// Add bricks
 		{
 			EntityID brick_ent = scene->make_entity();
@@ -188,7 +227,7 @@ namespace Sunset
 
 			BoxShapeDescription box_shape
 			{
-				.half_extent = glm::vec3(1.0f)
+				.half_extent = glm::vec3(0.5f, 0.35f, 2.5f)
 			};
 			set_body_shape(body_comp, box_shape);
 			set_body_type(body_comp, PhysicsBodyType::Static);
@@ -233,10 +272,18 @@ namespace Sunset
 			{
 				.radius = 1.0f
 			};
+			set_body_linear_damping(body_comp, 0.0f);
 			set_body_shape(body_comp, sphere_shape);
 			set_body_type(body_comp, PhysicsBodyType::Dynamic);
-			set_body_gravity_scale(body_comp, 1.0f);
-			set_body_restitution(body_comp, 0.5f);
+			set_body_gravity_scale(body_comp, 0.0f);
+			set_body_restitution(body_comp, 1.0f);
+			set_body_friction(body_comp, 0.0f);
+
+			BallComponent* const ball_comp = scene->assign_component<BallComponent>(ball_ent);
+		
+			set_ball_speed(ball_comp, 10.0f);
+
+			scene->get_subsystem<BallController>()->set_ball(ball_ent);
 		}
 
 		// Add player paddle
@@ -267,18 +314,20 @@ namespace Sunset
 
 			BoxShapeDescription box_shape
 			{
-				.half_extent = glm::vec3(1.0f)
+				.half_extent = glm::vec3(0.5f, 0.25f, 3.0f)
 			};
+			set_body_type(body_comp, PhysicsBodyType::Kinematic);
 			set_body_shape(body_comp, box_shape);
-			set_body_type(body_comp, PhysicsBodyType::Dynamic);
 			set_body_gravity_scale(body_comp, 1.0f);
-			set_body_restitution(body_comp, 0.5f);
+			set_body_restitution(body_comp, 1.0f);
+			set_body_friction(body_comp, 0.0f);
 
 			PaddleComponent* const paddle_comp = scene->assign_component<PaddleComponent>(paddle_ent);
 		
 			set_paddle_speed(paddle_comp, 10000.0f);
 
 			scene->get_subsystem<PaddleController>()->set_paddle(paddle_ent);
+			scene->get_subsystem<BallController>()->set_paddle(paddle_ent);
 		}
 	}
 }
