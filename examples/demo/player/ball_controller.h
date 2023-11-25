@@ -31,6 +31,7 @@ namespace Sunset
 
 		inline void set_ball(EntityID ball) { ball_entity = ball; }
 		inline void set_paddle(EntityID paddle) { paddle_entity = paddle; } 
+		inline void set_speed_increase_increment(float increment) { speed_increase_increment = increment; }
 
 	protected:
 		void on_collision(BodyHandle body1, BodyHandle body2);
@@ -40,6 +41,7 @@ namespace Sunset
 		EntityID paddle_entity{ 0 };
 		BodyHandle ball_body{ 0 };
 		BodyHandle paddle_body{ 0 };
+		float speed_increase_increment{ 0.1f };
 		bool b_nudge_to_paddle_velocity{ false };
 	};
 }

@@ -77,7 +77,7 @@ namespace Sunset
 					const float ball_speed = glm::length(ball_body_comp->body_data.velocity);
 					const glm::vec3 paddle_dir = paddle_body_comp->body_data.velocity / glm::max(paddle_speed, 0.00001f);
 					const glm::vec3 ball_dir = glm::normalize(ball_body_comp->body_data.velocity) / glm::max(ball_speed, 0.00001f);
-					set_body_velocity(ball_body_comp, ball_comp->speed * (WORLD_UP + paddle_dir * 0.5f));
+					set_body_velocity(ball_body_comp, (ball_speed + speed_increase_increment) * (WORLD_UP + paddle_dir * 0.5f));
 				}
 				b_nudge_to_paddle_velocity = false;
 			}
