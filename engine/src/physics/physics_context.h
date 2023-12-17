@@ -95,6 +95,11 @@ namespace Sunset
 		{
 			physics_policy.set_body_inactive(body);
 		}
+
+		void set_body_user_data(BodyHandle body, uint64_t data)
+		{
+			physics_policy.set_body_user_data(body, data);
+		}
 		
 		glm::vec3 get_body_position(BodyHandle body)
 		{
@@ -109,6 +114,11 @@ namespace Sunset
 		glm::vec3 get_body_velocity(BodyHandle body)
 		{
 			return physics_policy.get_body_velocity(body);
+		}
+
+		uint64_t get_body_user_data(BodyHandle body)
+		{
+			return physics_policy.get_body_user_data(body);
 		}
 
 		bool get_body_in_simulation(BodyHandle body)
@@ -184,6 +194,9 @@ namespace Sunset
 		void set_body_inactive(BodyHandle body)
 		{ }
 
+		void set_body_user_data(BodyHandle body, uint64_t data)
+		{ }
+
 		glm::vec3 get_body_position(BodyHandle body)
 		{
 			return glm::vec3();
@@ -197,6 +210,11 @@ namespace Sunset
 		glm::vec3 get_body_velocity(BodyHandle body)
 		{
 			return glm::vec3();
+		}
+
+		uint64_t get_body_user_data(BodyHandle body)
+		{
+			return 0;
 		}
 
 		bool get_body_in_simulation(BodyHandle body)

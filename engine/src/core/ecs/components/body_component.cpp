@@ -48,7 +48,7 @@ namespace Sunset
     {
         assert(body_comp != nullptr && "Cannot set body friction on a null body component!");
         body_comp->body_data.friction = friction;
-        body_comp->body_data.dirty_flags |= PhysicsBodyDirtyFlags::RESTITUTION;
+        body_comp->body_data.dirty_flags |= PhysicsBodyDirtyFlags::FRICTION;
     }
 
     void set_body_linear_damping(BodyComponent* body_comp, float linear_damping)
@@ -63,6 +63,13 @@ namespace Sunset
         assert(body_comp != nullptr && "Cannot set body angular damping on a null body component!");
         body_comp->body_data.angular_damping = angular_damping;
         body_comp->body_data.dirty_flags |= PhysicsBodyDirtyFlags::ANGULAR_DAMPING;
+    }
+
+    void set_body_user_data(BodyComponent* body_comp, uint64_t user_data)
+    {
+        assert(body_comp != nullptr && "Cannot set body user data on a null body component!");
+        body_comp->body_data.user_data = user_data;
+        body_comp->body_data.dirty_flags |= PhysicsBodyDirtyFlags::USER_DATA;
     }
 
     void move_body(BodyComponent* body_comp, const glm::vec3& position, const glm::quat& rotation)
@@ -142,6 +149,14 @@ namespace Sunset
         if (BodyComponent* const body_comp = scene->get_component<BodyComponent>(entity))
         {
             set_body_angular_damping(body_comp, angular_damping);
+        }
+    }
+
+    void set_body_user_data(Scene* scene, EntityID entity, uint64_t user_data)
+    {
+        if (BodyComponent* const body_comp = scene->get_component<BodyComponent>(entity))
+        {
+            set_body_user_data(body_comp, user_data);
         }
     }
 

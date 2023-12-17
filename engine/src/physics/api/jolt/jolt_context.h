@@ -131,9 +131,11 @@ namespace Sunset
 		void set_body_friction(BodyHandle body, float friction);
 		void set_body_active(BodyHandle body);
 		void set_body_inactive(BodyHandle body);
+		void set_body_user_data(BodyHandle body, uint64_t data);
 		glm::vec3 get_body_position(BodyHandle body);
 		glm::quat get_body_rotation(BodyHandle body);
 		glm::vec3 get_body_velocity(BodyHandle body);
+		uint64_t get_body_user_data(BodyHandle body);
 		bool get_body_in_simulation(BodyHandle body);
 
 		void move_body(BodyHandle body, const glm::vec3& new_position, const glm::quat& new_rotation);
