@@ -54,6 +54,12 @@ namespace Sunset
 			BodyComponent* const body_comp = scene->get_component<BodyComponent>(entity);
 			TransformComponent* const transform_comp = scene->get_component<TransformComponent>(entity);
 
+			if (body_comp->body_data.dirty_flags & PhysicsBodyDirtyFlags::USER_DATA)
+			{
+				phys_context->set_body_user_data(body_comp->body_data.body, body_comp->body_data.user_data);
+				body_comp->body_data.dirty_flags &= ~(PhysicsBodyDirtyFlags::USER_DATA);
+			}
+
 			const bool b_in_simulation = phys_context->get_body_in_simulation(body_comp->body_data.body);
 			if (!b_in_simulation)
 			{

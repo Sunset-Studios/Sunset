@@ -268,6 +268,17 @@ namespace Sunset
 		}
 	}
 
+	void JoltContext::set_body_user_data(BodyHandle body, uint64_t data)
+	{
+		if (body >= 0)
+		{
+			JPH::BodyInterface& body_interface = system_data->physics_system.GetBodyInterface();
+
+			const JPH::BodyID jolt_body(body);
+			body_interface.SetUserData(jolt_body, data);
+		}
+	}
+
 	glm::vec3 JoltContext::get_body_position(BodyHandle body)
 	{
 		if (body >= 0)
@@ -305,6 +316,18 @@ namespace Sunset
 			return glm::vec3(velocity.GetX(), velocity.GetY(), velocity.GetZ());
 		}
 		return glm::vec3();
+	}
+
+	uint64_t JoltContext::get_body_user_data(BodyHandle body)
+	{
+		if (body >= 0)
+		{
+			JPH::BodyInterface& body_interface = system_data->physics_system.GetBodyInterface();
+
+			const JPH::BodyID jolt_body(body);
+			return body_interface.GetUserData(jolt_body);
+		}
+		return 0;
 	}
 
 	bool JoltContext::get_body_in_simulation(BodyHandle body)
