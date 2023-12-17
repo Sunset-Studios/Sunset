@@ -76,10 +76,32 @@ namespace Sunset
 				{
 					const float ball_speed = glm::length(ball_body_comp->body_data.velocity);
 					const glm::vec3 paddle_dir = paddle_body_comp->body_data.velocity / glm::max(paddle_speed, 0.00001f);
-					const glm::vec3 ball_dir = glm::normalize(ball_body_comp->body_data.velocity) / glm::max(ball_speed, 0.00001f);
-					set_body_velocity(ball_body_comp, (ball_speed + speed_increase_increment) * (WORLD_UP + paddle_dir * 0.5f));
+					const glm::vec3 ball_dir = ball_body_comp->body_data.velocity / glm::max(ball_speed, 0.00001f);
+					set_body_velocity(ball_body_comp, glm::min(max_ball_speed, (ball_speed + speed_increase_increment)) * (WORLD_UP + paddle_dir * 0.5f));
 				}
 				b_nudge_to_paddle_velocity = false;
+			}
+		}
+	}
+
+	void BallController::post_update(Scene* scene)
+	{
+		if (ball_entity != 0 && paddle_entity != 0)
+		{
+			BallComponent* const ball_comp = scene->get_component<BallComponent>(ball_entity);
+			BodyComponent* const ball_body_comp = scene->get_component<BodyComponent>(ball_entity);
+
+			const float ball_speed = glm::length(ball_body_comp->body_data.velocity);
+			glm::vec3 ball_dir = ball_body_comp->body_data.velocity / glm::max(ball_speed, 0.00001f);
+			if (ball_speed > 0.00001f && ball_dir.y == 0.0f)
+			{
+				ball_dir.y += 0.1f;
+				set_body_velocity(ball_body_comp, ball_dir * ball_comp->speed);
+			}
+			if (ball_speed > 0.00001f && ball_dir.z == 0.0f)
+			{
+				ball_dir.z += 0.1f;
+				set_body_velocity(ball_body_comp, ball_dir * ball_comp->speed);
 			}
 		}
 	}

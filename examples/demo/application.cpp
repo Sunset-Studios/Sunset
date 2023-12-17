@@ -18,6 +18,7 @@
 
 #include <player/paddle_controller.h>
 #include <player/ball_controller.h>
+#include <game/brick_controller.h>
 
 #include <SDL.h>
 #include <SDL_vulkan.h>
@@ -43,6 +44,7 @@ namespace Sunset
 
 			scene->add_subsystem<PaddleController>();
 			scene->add_subsystem<BallController>();
+			scene->add_subsystem<BrickController>();
 
 			set_scene_sunlight_intensity(scene.get(), 1.0f);
 			set_scene_sunlight_angular_radius(scene.get(), 0.9999566769f);
@@ -201,38 +203,54 @@ namespace Sunset
 
 		// Add bricks
 		{
-			EntityID brick_ent = scene->make_entity();
+			const float brick_length = 5.0f;
+			const float brick_height = 0.95f;
 
-			TransformComponent* const transform_comp = scene->assign_component<TransformComponent>(brick_ent);
-
-			set_position(transform_comp, glm::vec3(25.0f, 15.0f, 15.0f * camera_control_comp->data.aspect_ratio));
-			set_scale(transform_comp, glm::vec3(0.5f, 0.95f, 5.0f));
-
-			MeshComponent* const mesh_comp = scene->assign_component<MeshComponent>(brick_ent);
-
-			MaterialID metal_material = MaterialFactory::create(
-				Renderer::get()->context(),
-				{
-					.color = glm::vec3(1.0f, 0.0f, 0.0f),
-					.uniform_roughness = 0.2f,
-					.uniform_metallic = 1.0f
-				}
-			);
-
-			set_mesh(mesh_comp, MeshFactory::create_cube(Renderer::get()->context()));
-			set_material(mesh_comp, metal_material);
-			set_custom_bounds_scale(mesh_comp, 2.0f);
-
-			BodyComponent* const body_comp = scene->assign_component<BodyComponent>(brick_ent);
-
-			BoxShapeDescription box_shape
+			const float x_pos = 25.0f; 
+			const float brick_spacing = 0.5f;
+			for (uint32_t i = 0; i < 80; ++i)
 			{
-				.half_extent = glm::vec3(0.5f, 0.35f, 2.5f)
-			};
-			set_body_shape(body_comp, box_shape);
-			set_body_type(body_comp, PhysicsBodyType::Static);
-			set_body_gravity_scale(body_comp, 1.0f);
-			set_body_restitution(body_comp, 0.5f);
+				EntityID brick_ent = scene->make_entity();
+
+				TransformComponent* const transform_comp = scene->assign_component<TransformComponent>(brick_ent);
+
+				const uint32_t row = static_cast<uint32_t>(glm::floor(i / 10));
+				const uint32_t column = static_cast<uint32_t>(i % 10);
+				const float y_pos = 15.0f - row * (brick_height + brick_spacing);
+				const float z_pos = 15.0f * camera_control_comp->data.aspect_ratio - (column * (brick_length + brick_spacing));
+				set_position(transform_comp, glm::vec3(x_pos, y_pos, z_pos));
+				set_scale(transform_comp, glm::vec3(0.5f, brick_height, brick_length));
+
+				MeshComponent* const mesh_comp = scene->assign_component<MeshComponent>(brick_ent);
+
+				MaterialID metal_material = MaterialFactory::create(
+					Renderer::get()->context(),
+					{
+						.color = glm::vec3(1.0f, 0.0f, 0.0f),
+						.uniform_roughness = 0.2f,
+						.uniform_metallic = 1.0f
+					}
+				);
+
+				set_mesh(mesh_comp, MeshFactory::create_cube(Renderer::get()->context()));
+				set_material(mesh_comp, metal_material);
+				set_custom_bounds_scale(mesh_comp, 2.0f);
+
+				BodyComponent* const body_comp = scene->assign_component<BodyComponent>(brick_ent);
+
+				BoxShapeDescription box_shape
+				{
+					.half_extent = glm::vec3(0.5f, 0.35f, 2.5f)
+				};
+				set_body_shape(body_comp, box_shape);
+				set_body_type(body_comp, PhysicsBodyType::Static);
+				set_body_gravity_scale(body_comp, 1.0f);
+				set_body_restitution(body_comp, 1.0f);
+				set_body_friction(body_comp, 0.0f);
+				set_body_user_data(body_comp, brick_ent);
+
+				BrickComponent* const brick_comp = scene->assign_component<BrickComponent>(brick_ent);
+			}
 		}
 
 		// Add player ball

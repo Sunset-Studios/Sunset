@@ -28,6 +28,7 @@ namespace Sunset
 		virtual void initialize(class Scene* scene) override;
 		virtual void destroy(class Scene* scene) override { };
 		virtual void update(class Scene* scene, double delta_time) override;
+		virtual void post_update(class Scene* scene) override;
 
 		inline void set_ball(EntityID ball) { ball_entity = ball; }
 		inline void set_paddle(EntityID paddle) { paddle_entity = paddle; } 
@@ -41,7 +42,8 @@ namespace Sunset
 		EntityID paddle_entity{ 0 };
 		BodyHandle ball_body{ 0 };
 		BodyHandle paddle_body{ 0 };
-		float speed_increase_increment{ 0.1f };
+		float max_ball_speed{ 10.0f };
+		float speed_increase_increment{ 0.001f };
 		bool b_nudge_to_paddle_velocity{ false };
 	};
 }
