@@ -1,3 +1,0 @@
-[submodule "engine/third_party/tracy"]
-	path = engine/third_party/tracy
-	url = https://github.com/wolfpld/tracy.git

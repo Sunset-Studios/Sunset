@@ -23,4 +23,4 @@ target_include_directories(AssetSerializer PUBLIC
 	${CMAKE_SOURCE_DIR}/engine/third_party/tracy/public
 	${CMAKE_SOURCE_DIR}/engine/third_party/parallel_hashmap)
 
-target_link_libraries(AssetSerializer PRIVATE json lz4 glm parallel_hashmap)
+target_link_libraries(AssetSerializer PRIVATE json lz4 glm parallel_hashmap Tracy::TracyClient)

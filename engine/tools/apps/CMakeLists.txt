@@ -14,7 +14,7 @@ target_include_directories(SunsetCooker PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/cooker
 	${CMAKE_CURRENT_SOURCE_DIR}/../libs/asset_serializer)
 
-target_link_libraries(SunsetCooker PRIVATE tinyobjloader stb_image json lz4 glm AssetSerializer shaderc open_fbx)
+target_link_libraries(SunsetCooker PRIVATE tinyobjloader stb json lz4 glm AssetSerializer shaderc openfbx parallel_hashmap Tracy::TracyClient)
 
 set(EQUIRECT_SOURCES
 	${CMAKE_CURRENT_SOURCE_DIR}/equirectangular_map_tools/equirect_tools.h
@@ -32,7 +32,7 @@ target_include_directories(EquirectTools PUBLIC
 	"${CMAKE_CURRENT_SOURCE_DIR}/equirectangular_map_tools"
 )
 
-target_link_libraries(EquirectTools PRIVATE Sunset stb_image)
+target_link_libraries(EquirectTools PRIVATE Sunset stb)
 
 add_custom_target(CookerRun
 	COMMAND SunsetCooker "${CMAKE_SOURCE_DIR}/engine/assets" "${CMAKE_SOURCE_DIR}/engine/shaders"

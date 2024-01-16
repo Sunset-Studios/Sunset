@@ -5,7 +5,7 @@
 
 #include <glm/glm.hpp>
 #include <SDL.h>
-#include <parallel_hashmap/phmap.h>
+#include <phmap.h>
 
 #include <input_types.h>
 

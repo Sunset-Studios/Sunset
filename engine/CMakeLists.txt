@@ -28,7 +28,6 @@ HEADER_DIRECTORIES(INCLUDE_DIRS src)
 
 list(APPEND INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
-add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/third_party")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/tools/libs")
 
 add_library(Sunset STATIC ${SOURCES})
@@ -44,7 +43,7 @@ target_include_directories(Sunset PUBLIC ${INCLUDE_DIRS} ${JoltPhysics_SOURCE_DI
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/tools/apps")
 
 add_custom_command(TARGET ${SUNSET_LIB} POST_BUILD
-                   COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/third_party/sdl2/lib/x64/SDL2.dll" ${ENGINE_DIR}/bin/$<CONFIG>/SDL2.dll
+                   COMMAND ${CMAKE_COMMAND} -E copy "${sdl2_SOURCE_DIR}/lib/x64/SDL2.dll" ${ENGINE_DIR}/bin/$<CONFIG>/SDL2.dll
                   )
 
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/tests")

@@ -10,7 +10,7 @@
 #include <VkBootstrap.h>
 
 #include <imgui.h>
-#include <imgui_impl_sdl.h>
+#include <imgui_impl_sdl2.h>
 #include <imgui_impl_vulkan.h>
 
 #include <SDL.h>
@@ -76,15 +76,14 @@ namespace Sunset
 			{
 				gfx_context->get_command_queue(DeviceQueueType::Graphics)->submit_immediate(gfx_context, i, [](void* command_buffer)
 				{
-					ImGui_ImplVulkan_CreateFontsTexture(static_cast<VkCommandBuffer>(command_buffer));
+					ImGui_ImplVulkan_CreateFontsTexture();
 				});
 			}
-
-			ImGui_ImplVulkan_DestroyFontUploadObjects();
 
 			gfx_context->add_resource_deletion_execution([=]()
 			{
 				vkDestroyDescriptorPool(context_state->get_device(), imgui_pool, nullptr);
+				ImGui_ImplVulkan_DestroyFontsTexture();
 				ImGui_ImplVulkan_Shutdown();
 			});
 		}
