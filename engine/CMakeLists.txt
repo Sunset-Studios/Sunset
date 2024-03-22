@@ -41,11 +41,6 @@ target_link_libraries(Sunset vkbootstrap vma glm imgui lz4 json spirv_reflect Vu
 target_include_directories(Sunset PUBLIC ${INCLUDE_DIRS} ${JoltPhysics_SOURCE_DIR}/../Jolt)
 
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/tools/apps")
-
-add_custom_command(TARGET ${SUNSET_LIB} POST_BUILD
-                   COMMAND ${CMAKE_COMMAND} -E copy "${sdl2_SOURCE_DIR}/lib/x64/SDL2.dll" ${ENGINE_DIR}/bin/$<CONFIG>/SDL2.dll
-                  )
-
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/tests")
 
 create_source_group(${SOURCES})

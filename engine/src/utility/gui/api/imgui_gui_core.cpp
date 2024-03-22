@@ -69,7 +69,7 @@ namespace Sunset
 				init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 
 				VulkanRenderPassData* render_pass_data = static_cast<VulkanRenderPassData*>(CACHE_FETCH(RenderPass, render_pass)->get_data());
-				ImGui_ImplVulkan_Init(&init_info, render_pass_data->render_pass);
+				ImGui_ImplVulkan_Init(&init_info);
 			}
 
 			for (uint32_t i = 0; i < MAX_BUFFERED_FRAMES; ++i)
@@ -94,7 +94,7 @@ namespace Sunset
 		if (b_initialized)
 		{
 			ImGui_ImplVulkan_NewFrame();
-			ImGui_ImplSDL2_NewFrame(static_cast<SDL_Window*>(window->get_window_handle()));
+			ImGui_ImplSDL2_NewFrame();
 			ImGui::NewFrame();
 		}
 	}
