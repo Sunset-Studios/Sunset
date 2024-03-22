@@ -11,7 +11,7 @@
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
 
 #include <stb_image.h>
-#include <stb_image_resize.h>
+#include <stb_image_resize2.h>
 #include <tiny_obj_loader.h>
 #include <shaderc/shaderc.hpp>
 #include <ofbx.h>
@@ -61,7 +61,7 @@ namespace Sunset
 			{
 				const size_t mip_width = glm::clamp(pot_width >> m, size_t(1), pot_width);
 				const size_t mip_height = glm::clamp(pot_height >> m, size_t(1), pot_height);
-				stbir_resize_uint8(pixel_buffer, texture_width, texture_height, 0, mip_pixel_buffer.data(), mip_width, mip_height, 0, image_info.channels);
+				stbir_resize_uint8_linear(pixel_buffer, texture_width, texture_height, 0, mip_pixel_buffer.data(), mip_width, mip_height, 0, static_cast<stbir_pixel_layout>(image_info.channels));
 				total_compressed_buffer_size += pack_image_mip(&image_info, new_image_asset, mip_pixel_buffer.data(), image_metadata, m, mip_width, mip_height, total_compressed_buffer_size);
 				std::fill(mip_pixel_buffer.begin(), mip_pixel_buffer.end(), 0);
 			}
@@ -253,7 +253,6 @@ namespace Sunset
 		std::vector<char> fbx_buffer{ read_mesh_file(input_path) };
 
 		ofbx::LoadFlags flags =
-			ofbx::LoadFlags::TRIANGULATE |
 			ofbx::LoadFlags::IGNORE_BLEND_SHAPES |
 			ofbx::LoadFlags::IGNORE_CAMERAS |
 			ofbx::LoadFlags::IGNORE_LIGHTS |
@@ -277,8 +276,8 @@ namespace Sunset
 			uint32_t num_indices{ 0 };
 			for (uint32_t g = 0; g < scene->getGeometryCount(); ++g)
 			{
-				num_vertices += scene->getGeometry(g)->getVertexCount();
-				num_indices += scene->getGeometry(g)->getIndexCount();
+				num_vertices += scene->getGeometry(g)->getGeometryData().getPositions().values_count;
+				num_indices += scene->getGeometry(g)->getGeometryData().getPositions().count;
 			}
 
 			std::vector<VertexPNCUTB32> vertices;
@@ -294,14 +293,14 @@ namespace Sunset
 			{
 				const ofbx::Mesh* mesh = scene->getMesh(i);
 
-				const ofbx::Matrix fbx_gm = mesh->getGlobalTransform();
+				const ofbx::DMatrix fbx_gm = mesh->getGlobalTransform();
 				const glm::mat4 world_matrix(
 					fbx_gm.m[0], fbx_gm.m[1], fbx_gm.m[2], fbx_gm.m[3],
 					fbx_gm.m[4], fbx_gm.m[5], fbx_gm.m[6], fbx_gm.m[7],
 					fbx_gm.m[8], fbx_gm.m[9], fbx_gm.m[10], fbx_gm.m[11],
 					fbx_gm.m[12], fbx_gm.m[13], fbx_gm.m[14], fbx_gm.m[15]
 				);
-				const ofbx::Matrix fbx_gmm = mesh->getGeometricMatrix();
+				const ofbx::DMatrix fbx_gmm = mesh->getGeometricMatrix();
 				const glm::mat4 geometric_matrix(
 					fbx_gmm.m[0], fbx_gmm.m[1], fbx_gmm.m[2], fbx_gmm.m[3],
 					fbx_gmm.m[4], fbx_gmm.m[5], fbx_gmm.m[6], fbx_gmm.m[7],
@@ -311,13 +310,13 @@ namespace Sunset
 
 				const ofbx::Geometry* mesh_geo = mesh->getGeometry();
 
-				const uint32_t vertex_count = mesh_geo->getVertexCount();
-				const uint32_t index_count = mesh_geo->getIndexCount();
+				const uint32_t vertex_count = mesh_geo->getGeometryData().getPositions().values_count;
+				const uint32_t index_count = mesh_geo->getGeometryData().getPositions().count;
 
-				const ofbx::Vec3* fbx_vertices = mesh_geo->getVertices();
-				const ofbx::Vec3* fbx_normals = mesh_geo->getNormals();
-				const ofbx::Vec4* fbx_colors = mesh_geo->getColors();
-				const ofbx::Vec2* fbx_uvs = mesh_geo->getUVs();
+				const ofbx::Vec3* fbx_vertices = mesh_geo->getGeometryData().getPositions().values;
+				const ofbx::Vec3* fbx_normals = mesh_geo->getGeometryData().getNormals().values;
+				const ofbx::Vec4* fbx_colors = mesh_geo->getGeometryData().getColors().values;
+				const ofbx::Vec2* fbx_uvs = mesh_geo->getGeometryData().getUVs().values;
 
 				mesh_section_index_count = vertex_count;
 				mesh_section_index_start = indices.size();

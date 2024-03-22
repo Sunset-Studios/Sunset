@@ -10,7 +10,7 @@
 #include <VkBootstrap.h>
 
 #include <imgui.h>
-#include <imgui_impl_sdl.h>
+#include <imgui_impl_sdl2.h>
 #include <imgui_impl_vulkan.h>
 
 #include <SDL.h>
@@ -69,22 +69,21 @@ namespace Sunset
 				init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 
 				VulkanRenderPassData* render_pass_data = static_cast<VulkanRenderPassData*>(CACHE_FETCH(RenderPass, render_pass)->get_data());
-				ImGui_ImplVulkan_Init(&init_info, render_pass_data->render_pass);
+				ImGui_ImplVulkan_Init(&init_info);
 			}
 
 			for (uint32_t i = 0; i < MAX_BUFFERED_FRAMES; ++i)
 			{
 				gfx_context->get_command_queue(DeviceQueueType::Graphics)->submit_immediate(gfx_context, i, [](void* command_buffer)
 				{
-					ImGui_ImplVulkan_CreateFontsTexture(static_cast<VkCommandBuffer>(command_buffer));
+					ImGui_ImplVulkan_CreateFontsTexture();
 				});
 			}
-
-			ImGui_ImplVulkan_DestroyFontUploadObjects();
 
 			gfx_context->add_resource_deletion_execution([=]()
 			{
 				vkDestroyDescriptorPool(context_state->get_device(), imgui_pool, nullptr);
+				ImGui_ImplVulkan_DestroyFontsTexture();
 				ImGui_ImplVulkan_Shutdown();
 			});
 		}
@@ -95,7 +94,7 @@ namespace Sunset
 		if (b_initialized)
 		{
 			ImGui_ImplVulkan_NewFrame();
-			ImGui_ImplSDL2_NewFrame(static_cast<SDL_Window*>(window->get_window_handle()));
+			ImGui_ImplSDL2_NewFrame();
 			ImGui::NewFrame();
 		}
 	}

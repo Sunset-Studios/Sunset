@@ -4,7 +4,7 @@
 #include <set>
 #include <functional>
 #include <input_types.h>
-#include <parallel_hashmap/phmap.h>
+#include <phmap.h>
 
 namespace Sunset
 {

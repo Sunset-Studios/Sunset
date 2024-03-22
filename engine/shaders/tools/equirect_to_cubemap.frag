@@ -27,5 +27,6 @@ void main()
 {
 	vec2 uv = sample_spherical_map(normalize(in_local_frag_pos));
 	vec3 color = texture(textures_2D[nonuniformEXT(equirect_to_cubemap_constants.equirect_map_index)], uv).rgb;
+	color = min(color, vec3(500.0));
 	out_frag_color = vec4(color, 1.0f);
 }

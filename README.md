@@ -8,7 +8,10 @@ git clone git@github.com:gitbetter/Sunset.git
 cd Sunset
 ./build.bat
 ```
-You can then build and run the Visual Studio solution at `Sunset/engine/bin/Sunset.sln`!
+You can then build and run the **SunsetDemo** target in the Visual Studio solution at `Sunset/engine/bin/Sunset.sln`!
+
+If you encounter issues with missing `.SUN` files, make sure to build the **CookerRun** target first.
+
 ## Prerequisites
 Make sure to install **[CMake](https://cmake.org/download/)**, **[Python](https://www.python.org/downloads/)** and **[Visual Studio](https://visualstudio.microsoft.com/downloads/)** and make sure they are all locatable within your system **PATH** before running the build script as mentioned above!
 

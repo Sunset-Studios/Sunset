@@ -3,7 +3,7 @@
 #include <minimal.h>
 #include <job_system/thread_pool.h>
 #include <utility/pattern/singleton.h>
-#include <atomic_queue/atomic_queue.h>
+#include <atomic_queue.h>
 
 #include <coroutine>
 
