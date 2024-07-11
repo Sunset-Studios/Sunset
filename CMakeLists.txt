@@ -74,7 +74,6 @@ if(NOT spirv-tools_POPULATED)
   add_subdirectory(${spirv-tools_SOURCE_DIR} ${spirv-tools_BINARY_DIR})
 
   set_target_third_party(spirv-tools-pkg-config)
-  set_target_third_party(spirv-tools-shared-pkg-config)
   set_target_third_party(core_tables)
   set_target_third_party(enum_string_mapping)
   set_target_third_party(extinst_tables)
@@ -197,7 +196,7 @@ set_target_third_party(vkbootstrap)
 FetchContent_Declare(
     glm
     GIT_REPOSITORY https://github.com/g-truc/glm.git
-    GIT_TAG        master
+    GIT_TAG        1.0.1
 )
 FetchContent_MakeAvailable(glm)
 

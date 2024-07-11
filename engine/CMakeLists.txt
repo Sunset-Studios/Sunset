@@ -44,3 +44,7 @@ add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/tools/apps")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/tests")
 
 create_source_group(${SOURCES})
+
+add_custom_command(TARGET ${SUNSET_LIB} POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E copy "${sdl2_SOURCE_DIR}/lib/x64/SDL2.dll" ${ENGINE_DIR}/bin/$<CONFIG>/SDL2.dll
+                  )

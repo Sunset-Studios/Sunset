@@ -195,37 +195,6 @@ namespace Sunset
 				set_body_restitution(body_comp, 0.5f);
 			}
 
-			// Add TV 
-			{
-				EntityID mesh_ent = scene->make_entity();
-
-				TransformComponent* const transform_comp = scene->assign_component<TransformComponent>(mesh_ent);
-
-				set_position(transform_comp, glm::vec3(-25.0f, 0.0f, 0.0f));
-				set_rotation(transform_comp, glm::vec3(0.0f, glm::radians(90.0f), 0.0f));
-				set_scale(transform_comp, glm::vec3(0.25f));
-
-				MeshComponent* const mesh_comp = scene->assign_component<MeshComponent>(mesh_ent);
-
-				MaterialID body_material = MaterialFactory::create(
-					Renderer::get()->context(),
-					{
-						.textures =
-						{
-							"../../assets/tv/tv_color.sun",
-							"../../assets/tv/tv_normal.sun",
-							"../../assets/tv/tv_roughness.sun",
-							"../../assets/tv/tv_metallic.sun",
-							"../../assets/tv/tv_ao.sun",
-							"../../assets/default_white.sun"
-						}
-					}
-				);
-
-				set_mesh(mesh_comp, MeshFactory::load(Renderer::get()->context(), "../../assets/tv/tv.sun"));
-				set_material(mesh_comp, body_material);
-			}
-
 			SimulationCore::get()->register_layer(std::move(scene));
 		}
 	}
